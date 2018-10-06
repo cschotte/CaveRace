@@ -1,6 +1,12 @@
 # CaveRace
 
-Classic 16-bit game from 1997 developed for MS-DOS
+Classic 16-bit MS-DOS game from 1997 developed by 
+
+- Clemens Schotte (code and concept)
+- Harro Lock (code)
+- Paul Bosselaar (documenation)
+- Paul van Croonenburg (documenation)
+- Marijn Schotte (artwork)
 
 ## Graphics
 
