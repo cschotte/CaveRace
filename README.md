@@ -46,5 +46,11 @@ Start the game using the switch **-powerblast**, now you can use the function ke
 | 1   | screen capture, output is saved to the file screen.raw
 | %   | shows the rendering time
 
+When running the game on old slow systems, you can use the **-slow** switch to speed up the game.
+
+## License
+
+Apache-2.0
+
 [Borland C]: <https://en.wikipedia.org/wiki/Borland_C%2B%2B>
 [Deluxe Paint]: <https://en.wikipedia.org/wiki/Deluxe_Paint>
