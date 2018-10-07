@@ -2,12 +2,7 @@
 
 Classic maze-based video game from 1997.
 
-## Game story
-
 ![menu1](Artwork/MENU1.png)
-![demo1](Artwork/demo1.png)
-![demo2](Artwork/demo2.png)
-![demo3](Artwork/demo3.png)
 
 ## System requirements
 
