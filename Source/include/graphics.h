@@ -1,6 +1,6 @@
 /***************************************************************************
  *                                                                         *
- *        Name : Graphics.inc                                              *
+ *        Name : Graphics.h                                                *
  *                                                                         *
  *     Version : 1.0 (13-06-97)                                            *
  *                                                                         *
@@ -21,15 +21,15 @@
 #define _GRAPHICS
 
 #ifndef _MAIN
-#include "include\main.inc"
+#include "include\main.h"
 #endif
 
 #ifndef _MEMORY
-#include "include\memory.inc"
+#include "include\memory.h"
 #endif
 
 #ifndef _KEYBOARD
-#include "include\keyboard.inc"
+#include "include\keyboard.h"
 #endif
 
 /***************************************************************************/

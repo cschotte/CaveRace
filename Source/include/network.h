@@ -1,6 +1,6 @@
 /***************************************************************************
  *                                                                         *
- *        Name : Network.inc                                               *
+ *        Name : Network.h                                                 *
  *                                                                         *
  *     Version : 1.0 (13-06-97)                                            *
  *                                                                         *
@@ -20,7 +20,7 @@
 #define _NETWORK
 
 #ifndef _MAIN
-#include "include\main.inc"
+#include "include\main.h"
 #endif
 
 /***************************************************************************/

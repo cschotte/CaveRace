@@ -1,6 +1,6 @@
 /***************************************************************************
  *                                                                         *
- *        Name : MapEdit.cpp                                               *
+ *        Name : MapEdit.c                                                 *
  *                                                                         *
  *     Version : 1.1                                                       *
  *                                                                         *
@@ -15,8 +15,8 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "include\keyboard.inc"
-#include "include\mouse.inc"
+#include "include\keyboard.h"
+#include "include\mouse.h"
 
 
 #define XM 8                           // Marge in de x en y richting
@@ -305,7 +305,7 @@ void crpalette(void)
   FILE *pnf;
   WORD i;
 
-  pnf=fopen("..\\graphics\\PAL.bin","rb");
+  pnf=fopen("..\\graphics\\pal.bin","rb");
   fread(PaletteMem,768,1,pnf);
   fclose(pnf);
   SetPalette(PaletteMem);
@@ -315,24 +315,24 @@ void readbgs(WORD nr)
 {
   FILE *pnf;
 
-  pnf=fopen("..\\graphics\\BGS.bin","rb");
+  pnf=fopen("..\\graphics\\bgs.bin","rb");
   fseek(pnf,nr*12800,1);
   fread(bgs,12800,1,pnf);
   fclose(pnf);
 
-  pnf=fopen("..\\graphics\\ENM.bin","rb");
+  pnf=fopen("..\\graphics\\enm.bin","rb");
   fread(enm,sizeof(enm),1,pnf);
   fclose(pnf);
 
-  pnf=fopen("..\\graphics\\MAN.bin","rb");
+  pnf=fopen("..\\graphics\\man.bin","rb");
   fread(man,sizeof(man),1,pnf);
   fclose(pnf);
 
-  pnf=fopen("..\\graphics\\ITM.bin","rb");
+  pnf=fopen("..\\graphics\\itm.bin","rb");
   fread(itm,sizeof(itm),1,pnf);
   fclose(pnf);
 
-  pnf=fopen("..\\graphics\\TRS.bin","rb");
+  pnf=fopen("..\\graphics\\trs.bin","rb");
   fread(trs,sizeof(trs),1,pnf);
   fclose(pnf);
 }

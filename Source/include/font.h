@@ -1,6 +1,6 @@
 /***************************************************************************
  *                                                                         *
- *        Name : Font.inc                                                  *
+ *        Name : Font.h                                                    *
  *                                                                         *
  *     Version : 1.0 (13-06-97)                                            *
  *                                                                         *
@@ -18,7 +18,7 @@
 #define _FONT
 
 #ifndef _GRAPHICS
-#include "include\graphics.inc"
+#include "include\graphics.h"
 #endif
 
 #include <ctype.h>

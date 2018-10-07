@@ -1,6 +1,6 @@
 /***************************************************************************
  *                                                                         *
- *        Name : Game.inc                                                  *
+ *        Name : Game.h                                                    *
  *                                                                         *
  *     Version : 1.0 (13-06-97)                                            *
  *                                                                         *
@@ -20,15 +20,15 @@
 #define _GAME
 
 #ifndef _KEYBOARD
-#include "include\keyboard.inc"
+#include "include\keyboard.h"
 #endif
 
 #ifndef _FONT
-#include "include\font.inc"
+#include "include\font.h"
 #endif
 
 #ifndef _STRING
-#include "include\string.inc"
+#include "include\string.h"
 #endif
 
 #define BOMBTIME 12                 // tijd van de bommen

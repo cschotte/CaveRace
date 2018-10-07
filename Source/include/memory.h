@@ -1,6 +1,6 @@
 /***************************************************************************
  *                                                                         *
- *        Name : KeyBoard.inc                                              *
+ *        Name : Memory.h                                                  *
  *                                                                         *
  *     Version : 1.0 (13-06-97)                                            *
  *                                                                         *
@@ -11,82 +11,74 @@
  *               Paul Bosselaar                                            *
  *               Paul van Croonenburg                                      *
  *                                                                         *
- * Description : Keyboard functions                                        *
+ * Description : Functions for fast 32Bit memory access                    *
+ *                                                                         *
+ *        Note : This program will only work on 386+ PC systems            *
  *                                                                         *
  ***************************************************************************/
 
-#define _KEYBOARD
+#define _MEMORY
 
 #ifndef _MAIN
-#include "include\main.inc"
+#include "include\main.h"
 #endif
 
 /***************************************************************************/
 
-#define ESC   1                         // Veelgebruikte toetsen
-#define ENTER 28
-#define SPACE 57
-#define UP    72
-#define DOWN  80
-#define LEFT  75
-#define RIGHT 77
-
-/***************************************************************************/
-
-WORD GetKey();                    // Leest een toets uit
-void SetTypematicRate(BYTE,BYTE); // Zet de snelheid van het toetsenbord
-void ClearKbBuffer(void);         // Maak het toetsenbord buffer leeg
-
-BYTE keydown[128];
+void MemCopy(BYTE *,BYTE *,WORD);           // Blok data kopieeren
+void MemFill(BYTE *,WORD,BYTE);             // Blok geheugen vullen
 
 /***************************************************************************/
 
 /*
-  Doel      : Leest een key uit het toesenbordbuffer
-  Invoer    : -
-  Uitvoer   : Key + Scan code
-  Opmerking : -
+  Doel      : Datablok kopieren (werkt met array's, strings, pointers,...)
+  Invoer    : Bron, doel, grootte
+  Uitvoer   : -
+  Opmerking : Maakt gebruik van 32-bits instructies (386+)
 */
-WORD GetKey(void)
+void MemCopy(BYTE *source,BYTE *dest,WORD size)
 {
-  WORD k;
   asm{
-    mov ah,0x00;
-    int 0x16;
-    mov k,ax;
+    les  di,[dest];                      // bestemming
+    lds  si,[source];                    // bron
+    mov  cx,[size];                      // grootte
+    mov  bx,cx;
+    shr  cx,2;
+    db   0x66;
+    rep  movsw;
+    and  bx,3;
+    mov  cx,bx;
+    rep  movsb;
   }
-  return(k);
 }
 
 /***************************************************************************/
 
 /*
-  Doel      : Het leeg maken van het toetsenbordbuffer
-  Invoer    : -
+  Doel      : Vult een geheugenblok met een bepaalde waarde
+  Invoer    : Adres, aantal, waarde
   Uitvoer   : -
-  Opmerking : -
+  Opmerking : Maakt gebruik van 32-bits instructies (386+)
 */
-void ClearKbBuffer(void)
-{
-  *(int far *) MK_FP(0x40,0x1a) = *(int far *) MK_FP(0x40,0x1C);
-}
-
-/***************************************************************************/
-
-/*
-  Doel      : Het instellen van de snelheid dat toesen worden ingelezen
-  Invoer    : De vertraging en de snelheid
-  Uitvoer   : -
-  Opmerking : -
-*/
-void SetTypematicRate(BYTE delay,BYTE rate)
+void MemFill(BYTE *addr,WORD count,BYTE value)
 {
   asm{
-    mov ah,3;
-    mov al,5;
-    mov bh,rate;
-    mov bl,delay;
-    int 0x16;
+    les di,[addr];
+    mov cx,[count];
+    mov al,value;
+    mov ah,al;
+    mov bx,ax;
+    db 0x66;
+    shl ax,16;
+    shr ax,16;
+    mov ax,bx;
+    mov bx,cx;
+    shr cx,2;
+    db 0x66;
+    rep stosw;
+    and bx,3;
+    mov cx,bx;
+    rep stosb;
   }
 }
 

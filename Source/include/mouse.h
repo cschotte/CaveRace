@@ -1,6 +1,6 @@
 /***************************************************************************
  *                                                                         *
- *        Name : Mouse.inc                                                 *
+ *        Name : Mouse.h                                                   *
  *                                                                         *
  *     Version : 1.0 (13-06-97)                                            *
  *                                                                         *
@@ -21,11 +21,11 @@
 #define _MOUSE
 
 #ifndef _MAIN
-#include "include\main.inc"
+#include "include\main.h"
 #endif
 
 #ifndef _GRAPHICS
-#include "include\graphics.inc"
+#include "include\graphics.h"
 #endif
 
 /***************************************************************************/

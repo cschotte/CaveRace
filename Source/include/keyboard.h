@@ -1,6 +1,6 @@
 /***************************************************************************
  *                                                                         *
- *        Name : Timer.inc                                                 *
+ *        Name : KeyBoard.h                                                *
  *                                                                         *
  *     Version : 1.0 (13-06-97)                                            *
  *                                                                         *
@@ -11,108 +11,83 @@
  *               Paul Bosselaar                                            *
  *               Paul van Croonenburg                                      *
  *                                                                         *
- * Description : Timer functions                                           *
+ * Description : Keyboard functions                                        *
  *                                                                         *
  ***************************************************************************/
 
-#define _TIMER
+#define _KEYBOARD
 
 #ifndef _MAIN
-#include "include\main.inc"
+#include "include\main.h"
 #endif
 
 /***************************************************************************/
 
-void msTimer(void);                     // Kloksnelheid aanpassen
-void SetTimer(WORD);                    // Zet klok op aantal tikken
-WORD GetTimer(void);                    // Leest klok uit
-void Wait(WORD);                        // Wacht een aantal millisec.
+#define ESC   1                         // Veelgebruikte toetsen
+#define ENTER 28
+#define SPACE 57
+#define UP    72
+#define DOWN  80
+#define LEFT  75
+#define RIGHT 77
+
+/***************************************************************************/
+
+WORD GetKey();                    // Leest een toets uit
+void SetTypematicRate(BYTE,BYTE); // Zet de snelheid van het toetsenbord
+void ClearKbBuffer(void);         // Maak het toetsenbord buffer leeg
+
+BYTE keydown[128];
 
 /***************************************************************************/
 
 /*
-  Doel      : Millisecondentimer
+  Doel      : Leest een key uit het toesenbordbuffer
   Invoer    : -
-  Uitvoer   : -
+  Uitvoer   : Key + Scan code
   Opmerking : -
 */
-void msTimer(void)
+WORD GetKey(void)
 {
-  asm{
-    mov ax,0x36;
-    mov dx,0x43;
-    cli;
-    out dx,ax;
-    mov al,es:[di];
-    sti;
-    mov ax,168.28;
-    mov dx,0x40;
-    cli;
-    out dx,ax;
-    mov al,es:[di];
-    sti;
-    mov ax,4;
-    mov dx,0x40;
-    cli;
-    out dx,ax;
-    mov al,es:[di];
-    sti;
-    mov ah,0x01;
-    mov cx,0x00;
-    mov dx,0x00;
-    int 0x1a;
-  }
-}
-
-/***************************************************************************/
-
-/*
-  Doel      : Zet de klok op een aantal tikken
-  Invoer    : Aantal ms
-  Uitvoer   : -
-  Opmerking : -
-*/
-void SetTimer(WORD t)
-{
-  asm{
-    mov ah,0x01;
-    mov cx,0x00;
-    mov dx,[t];
-    int 0x1a;
-  }
-}
-
-/***************************************************************************/
-
-/*
-  Doel      : Leest de klok uit
-  Invoer    : -
-  Uitvoer   : Aantal kloktikken
-  Opmerking : -
-*/
-WORD GetTimer(void)
-{
-  WORD rv;
+  WORD k;
   asm{
     mov ah,0x00;
-    int 0x1a;
-    mov [rv],dx;
+    int 0x16;
+    mov k,ax;
   }
-  return(rv);
+  return(k);
 }
 
 /***************************************************************************/
 
 /*
-  Doel      : Wacht een aantal milliseconden
-  Invoer    : Aantal milliseconden
+  Doel      : Het leeg maken van het toetsenbordbuffer
+  Invoer    : -
   Uitvoer   : -
-  Opmerking : Tijdsduur afhankelijk van timersnelheid
+  Opmerking : -
 */
-void Wait(WORD ticks)
+void ClearKbBuffer(void)
 {
-  WORD i=GetTimer(),j=GetTimer();
-  while(i<(j+ticks)) i=GetTimer();
+  *(int far *) MK_FP(0x40,0x1a) = *(int far *) MK_FP(0x40,0x1C);
+}
+
+/***************************************************************************/
+
+/*
+  Doel      : Het instellen van de snelheid dat toesen worden ingelezen
+  Invoer    : De vertraging en de snelheid
+  Uitvoer   : -
+  Opmerking : -
+*/
+void SetTypematicRate(BYTE delay,BYTE rate)
+{
+  asm{
+    mov ah,3;
+    mov al,5;
+    mov bh,rate;
+    mov bl,delay;
+    int 0x16;
+  }
 }
 
 /***************************************************************************/

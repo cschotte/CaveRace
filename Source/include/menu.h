@@ -1,6 +1,6 @@
 /***************************************************************************
  *                                                                         *
- *        Name : Menu.inc                                                  *
+ *        Name : Menu.h                                                    *
  *                                                                         *
  *     Version : 1.0 (13-06-97)                                            *
  *                                                                         *
@@ -20,11 +20,11 @@
 #define _MENU
 
 #ifndef _GAME
-#include "include\game.inc"
+#include "include\game.h"
 #endif
 
 #ifndef _STRING
-#include "include\string.inc"
+#include "include\string.h"
 #endif
 
 /***************************************************************************/

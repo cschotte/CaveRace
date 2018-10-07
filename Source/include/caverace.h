@@ -1,6 +1,6 @@
 /***************************************************************************
  *                                                                         *
- *        Name : CaveRace.inc                                              *
+ *        Name : CaveRace.h                                                *
  *                                                                         *
  *     Version : 1.0 (13-06-97)                                            *
  *                                                                         *
@@ -27,43 +27,43 @@
 /***************************************************************************/
 
 #ifndef _MAIN
-#include "include\main.inc"
+#include "include\main.h"
 #endif
 
 #ifndef _GRAPHICS
-#include "include\graphics.inc"
+#include "include\graphics.h"
 #endif
 
 #ifndef _MOUSE
-#include "include\mouse.inc"
+#include "include\mouse.h"
 #endif
 
 #ifndef _MEMORY
-#include "include\memory.inc"
+#include "include\memory.h"
 #endif
 
 #ifndef _TIMER
-#include "include\timer.inc"
+#include "include\timer.h"
 #endif
 
 #ifndef _MENU
-#include "include\menu.inc"
+#include "include\menu.h"
 #endif
 
 #ifndef _KEYBOARD
-#include "include\keyboard.inc"
+#include "include\keyboard.h"
 #endif
 
 #ifndef _STRING
-#include "include\string.inc"
+#include "include\string.h"
 #endif
 
 #ifndef _GAME
-#include "include\game.inc"
+#include "include\game.h"
 #endif
 
 #ifndef _FONT
-#include "include\font.inc"
+#include "include\font.h"
 #endif
 
 /***************************************************************************/
