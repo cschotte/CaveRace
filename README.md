@@ -58,7 +58,7 @@ When running the game on old slow systems, you can use the **-slow** switch to s
 
 ## License
 
-Apache-2.0
+[Apache-2.0](LICENSE)
 
 [Borland C]: <https://en.wikipedia.org/wiki/Borland_C%2B%2B>
 [Deluxe Paint]: <https://en.wikipedia.org/wiki/Deluxe_Paint>
