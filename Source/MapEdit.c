@@ -305,7 +305,7 @@ void crpalette(void)
   FILE *pnf;
   WORD i;
 
-  pnf=fopen("..\\graphics\\pal.bin","rb");
+  pnf=fopen("graphics\\pal.bin","rb");
   fread(PaletteMem,768,1,pnf);
   fclose(pnf);
   SetPalette(PaletteMem);
@@ -315,24 +315,24 @@ void readbgs(WORD nr)
 {
   FILE *pnf;
 
-  pnf=fopen("..\\graphics\\bgs.bin","rb");
+  pnf=fopen("graphics\\bgs.bin","rb");
   fseek(pnf,nr*12800,1);
   fread(bgs,12800,1,pnf);
   fclose(pnf);
 
-  pnf=fopen("..\\graphics\\enm.bin","rb");
+  pnf=fopen("graphics\\enm.bin","rb");
   fread(enm,sizeof(enm),1,pnf);
   fclose(pnf);
 
-  pnf=fopen("..\\graphics\\man.bin","rb");
+  pnf=fopen("graphics\\man.bin","rb");
   fread(man,sizeof(man),1,pnf);
   fclose(pnf);
 
-  pnf=fopen("..\\graphics\\itm.bin","rb");
+  pnf=fopen("graphics\\itm.bin","rb");
   fread(itm,sizeof(itm),1,pnf);
   fclose(pnf);
 
-  pnf=fopen("..\\graphics\\trs.bin","rb");
+  pnf=fopen("graphics\\trs.bin","rb");
   fread(trs,sizeof(trs),1,pnf);
   fclose(pnf);
 }
