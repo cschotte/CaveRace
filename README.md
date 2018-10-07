@@ -1,16 +1,16 @@
 # CaveRace
 
-Classic maze-based video game (16-bit MS-DOS) from 1997 developed by 
+Classic maze-based video game from 1997.
 
-- Clemens Schotte (code and concept)
-- Harro Lock (code)
-- Paul Bosselaar (documenation)
-- Paul van Croonenburg (documenation)
-- Marijn Schotte (artwork)
+## Game story
+
+## System requirements
+
+Intel 80386 IBM compatible PC running MS-DOS and VGA 320×200 pixels (Mode 13h) in 256-color mode video system.
 
 ## Graphics
 
-The original artwork is created by Marijn Schotte on an Amiga using [Deluxe Paint] in the file format IFF (Interchange File Format). The game CaveRace is using a binary RGB byte file format, the original artwork (game tiles (16 x 16 pixels) and screens (320 x 200 pixels)) is converted to this binary RGB byte file format.
+The original artwork is created by Marijn Schotte on an Amiga using [Deluxe Paint] in the file format IFF (Interchange File Format). The game CaveRace is using a binary RGB byte file format. Game tiles (16 x 16 pixels) and screens (320 x 200 pixels) are converted to this binary RGB byte file format.
 
 | File | Tiles         | Bytes   | Description |
 | ---- | ------------- | ------- | ----------- |
@@ -30,7 +30,7 @@ The original artwork is created by Marijn Schotte on an Amiga using [Deluxe Pain
 
 ## How to compile
 
-The source code is mainly plain C, but it also has some Intel 386 assembly code for memory and graphics routines. The compiler and linker used is [Borland C] 3.1 (not Turbo C). In Borland C set the working directory to the project folder and you can compile CaveRace and the MapEditor.
+The source code is mainly plain C, but it also has some assembly code for memory and graphics routines. The compiler and linker used is [Borland C] 3.1 (not Turbo C). In Borland C set the working directory to the project folder and you can compile CaveRace and the MapEditor.
 
 ## Game cheats
 
@@ -47,6 +47,14 @@ Start the game using the switch **-powerblast**, now you can use the function ke
 | %   | shows the rendering time
 
 When running the game on old slow systems, you can use the **-slow** switch to speed up the game.
+
+## Project team 
+
+- Clemens Schotte (code and concept)
+- Harro Lock (code)
+- Marijn Schotte (artwork)
+- Paul Bosselaar (documenation)
+- Paul van Croonenburg (documenation)
 
 ## License
 
