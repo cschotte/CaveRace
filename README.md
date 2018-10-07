@@ -4,6 +4,11 @@ Classic maze-based video game from 1997.
 
 ## Game story
 
+![menu1](Artwork/MENU1.png)
+![demo1](Artwork/demo1.png)
+![demo2](Artwork/demo2.png)
+![demo3](Artwork/demo3.png)
+
 ## System requirements
 
 Intel 80386 IBM compatible PC running MS-DOS and VGA 320×200 pixels (Mode 13h) in 256-color mode video system.
