@@ -10,7 +10,7 @@ Classic maze-based video game (16-bit MS-DOS) from 1997 developed by
 
 ## Graphics
 
-The original artwork is created by Marijn Schotte on an Amiga using Deluxe Paint in the file format IFF (Interchange File Format). The game CaveRace is using a binary RGB byte file format, the original artwork (game tiles (16 x 16 pixels) and screens (320 x 200 pixels)) is converted to this binary RGB byte file format.
+The original artwork is created by Marijn Schotte on an Amiga using [Deluxe Paint] in the file format IFF (Interchange File Format). The game CaveRace is using a binary RGB byte file format, the original artwork (game tiles (16 x 16 pixels) and screens (320 x 200 pixels)) is converted to this binary RGB byte file format.
 
 | File | Tiles         | Bytes   | Description |
 | ---- | ------------- | ------- | ----------- |
@@ -30,11 +30,11 @@ The original artwork is created by Marijn Schotte on an Amiga using Deluxe Paint
 
 ## How to compile
 
-The source code is mainly plain C, but it also has some Intel 386 assembly code for memory and graphics routines. The compiler and linker used is Borland C 3.1 (not Turbo C). In Borland C set the working directory to the project folder and you can compile CaveRace and the MapEditor.
+The source code is mainly plain C, but it also has some Intel 386 assembly code for memory and graphics routines. The compiler and linker used is [Borland C] 3.1 (not Turbo C). In Borland C set the working directory to the project folder and you can compile CaveRace and the MapEditor.
 
 ## Game cheats
 
-Start the game using the switch -powerblast, now you can use the function keys for additional power.
+Start the game using the switch **-powerblast**, now you can use the function keys for additional power.
 
 | Key | Result |
 | --- | ------ |
@@ -45,3 +45,6 @@ Start the game using the switch -powerblast, now you can use the function keys f
 | F5  | double points
 | 1   | screen capture, output is saved to the file screen.raw
 | %   | shows the rendering time
+
+[Borland C]: <https://en.wikipedia.org/wiki/Borland_C%2B%2B>
+[Deluxe Paint]: <https://en.wikipedia.org/wiki/Deluxe_Paint>
