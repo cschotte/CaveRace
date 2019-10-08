@@ -15,7 +15,7 @@ The original artwork is created by Marijn Schotte on an Amiga using [Deluxe Pain
 | File | Tiles         | Bytes   | Description |
 | ---- | ------------- | ------- | ----------- |
 | BGS  | 5 x 50(16x16) | 64000   | BackGrounds
-| BOM  | 17 x (16x16)  | 4352    | Bomgs
+| BOM  | 17 x (16x16)  | 4352    | Boms
 | CAR  | 320 x 200     | 64000   | Carder (Picture)
 | ENM  | 16 x (16x16)  | 4096    | Enemys
 | FNT  | 36 x (3x5)    | 540     | Font
