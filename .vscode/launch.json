@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug CaveRace",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/caverace",
+            "cwd": "${workspaceFolder}/Odin",
+            "preLaunchTask": "odin: build debug",
+            "terminal": "integrated",
+            "stopOnEntry": false
+        }
+    ]
+}

@@ -1,0 +1,35 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "odin: prepare build directory",
+            "type": "process",
+            "command": "/bin/mkdir",
+            "args": [
+                "-p",
+                "${workspaceFolder}/build"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "odin: build debug",
+            "type": "process",
+            "command": "/Users/cschotte/Odin/odin",
+            "args": [
+                "build",
+                ".",
+                "-debug",
+                "-out:${workspaceFolder}/build/caverace"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/Odin"
+            },
+            "dependsOn": "odin: prepare build directory",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}

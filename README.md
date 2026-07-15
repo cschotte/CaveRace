@@ -58,7 +58,7 @@ When running the game on old slow systems, you can use the **-slow** switch to s
 
 ## License
 
-Copyright (c) 2018 by NavaTron. All rights reserved.
+Copyright (c) 2026 by NavaTron B.V. All rights reserved.
 
 *Code License: [Apache-2.0](LICENSE)*
 
