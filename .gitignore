@@ -54,3 +54,4 @@ dkms.conf
 # Generated files
 /build
 .DS_Store
+/old

@@ -9,14 +9,16 @@ Game_Screen :: enum {
 }
 
 Game :: struct {
-	screen:  Game_Screen,
-	level:   Level,
-	options: Launch_Options,
+	screen:    Game_Screen,
+	main_menu: Main_Menu_State,
+	level:     Level,
+	options:   Launch_Options,
 }
 
 init_game :: proc(game: ^Game, options: Launch_Options) {
 	game^ = Game {
-		screen = .Main_Menu,
+		screen    = .Main_Menu,
+		main_menu = {selected = .Start_Game},
 		options = options,
 	}
 }
@@ -43,20 +45,13 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 	}
 }
 
-
-update_main_menu :: proc(game: ^Game) {
-}
-
-draw_main_menu :: proc(game: ^Game, assets: ^Assets) {
-	rl.DrawTexture(assets.screens.menu, 0, 0, rl.WHITE)
-}
-
 update_playing :: proc(game: ^Game) {
 }
 
 draw_playing :: proc(game: ^Game, assets: ^Assets) {
 	rl.DrawTexture(assets.screens.game, 0, 0, rl.WHITE)
 }
+
 
 update_high_scores :: proc(game: ^Game) {
 }

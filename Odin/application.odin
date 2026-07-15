@@ -22,6 +22,8 @@ run_application :: proc(options: Launch_Options) {
 	load_assets(&app.assets)
 	defer unload_assets(&app.assets)
 
+	//rl.SetMouseCursor(rl.MOUSE_CURSOR_NONE);
+
 	for !rl.WindowShouldClose() {
 		// Update game loop
 		update_game(&app.game)
@@ -31,5 +33,8 @@ run_application :: proc(options: Launch_Options) {
 			rl.ClearBackground(rl.RAYWHITE)
 			draw_game(&app.game, &app.assets)
 		rl.EndDrawing()
+
 	}
+
+	//rl.SetMouseCursor(rl.MOUSE_CURSOR_DEFAULT);
 }
