@@ -2,6 +2,10 @@
 
 Classic maze-based video game from 1997.
 
+> **Modern rewrite:** CaveRace is being rewritten from its original C code in
+> [Odin] so the game can run again on modern hardware and operating systems.
+> The original C source remains in this repository for historical reference.
+
 ![demo1](Artwork/demo1.png)
 
 ## System requirements
@@ -66,3 +70,4 @@ Applies to all other files
 
 [Borland C]: <https://en.wikipedia.org/wiki/Borland_C%2B%2B>
 [Deluxe Paint]: <https://en.wikipedia.org/wiki/Deluxe_Paint>
+[Odin]: <https://odin-lang.org/>
