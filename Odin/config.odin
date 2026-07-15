@@ -7,6 +7,5 @@ TARGET_FPS    :: 60
 
 MAP_WIDTH     :: 19
 MAP_HEIGHT    :: 11
-THEME_COUNT   :: 5
 
 MEDIA_PATH    :: "media"

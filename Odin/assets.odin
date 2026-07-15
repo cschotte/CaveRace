@@ -30,7 +30,7 @@ Assets :: struct {
 	screens: Screen_Assets,
 	sounds:  Sound_Assets,
 	sprites: Sprite_Assets,
-	tiles:   [THEME_COUNT]rl.Texture,
+	tiles:   [5]rl.Texture,
 }
 
 load_assets :: proc(assets: ^Assets) {
