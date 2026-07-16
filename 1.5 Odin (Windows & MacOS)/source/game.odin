@@ -45,15 +45,17 @@ update_game :: proc(game: ^Game, input: Game_Input) {
 	}
 }
 
-draw_game :: proc(game: ^Game, assets: ^Assets, pointer: Pointer_State) {
+draw_game :: proc(game: ^Game, assets: ^Assets, mouse: Mouse_State) {
 	switch game.screen {
 	case .Menu:
-		draw_menu(game.menu, assets, pointer)
+		draw_menu(game.menu, assets)
 	case .Playing:
 		draw_playing(assets)
 	case .High_Scores:
 		draw_high_scores(assets)
 	}
+
+	draw_mouse(mouse, assets.sprites.tools)
 }
 
 update_playing :: proc(game: ^Game, input: Game_Input) {
@@ -62,12 +64,4 @@ update_playing :: proc(game: ^Game, input: Game_Input) {
 
 draw_playing :: proc(assets: ^Assets) {
 	rl.DrawTexture(assets.screens.game, 0, 0, rl.WHITE)
-}
-
-update_high_scores :: proc(game: ^Game, input: Game_Input) {
-	if input.back do game.screen = .Menu
-}
-
-draw_high_scores :: proc(assets: ^Assets) {
-	rl.DrawTexture(assets.screens.highscore, 0, 0, rl.WHITE)
 }

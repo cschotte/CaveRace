@@ -47,7 +47,7 @@ run_application :: proc(options: Launch_Options) -> bool {
 
 		rl.BeginDrawing()
 			rl.ClearBackground(rl.RAYWHITE)
-			draw_game(&app.game, &app.assets, input.pointer)
+			draw_game(&app.game, &app.assets, input.mouse)
 		rl.EndDrawing()
 	}
 

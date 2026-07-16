@@ -77,7 +77,9 @@ is not implemented yet.
 | `application.odin` | Window, audio, main loop, and application lifetime |
 | `game.odin` | Game state and screen update/draw dispatch |
 | `menu.odin` | Menu state, navigation, and rendering |
-| `input.odin` | Keyboard input mapping |
+| `high_score.odin` | High-score screen update and rendering |
+| `input.odin` | Keyboard and mouse input mapping |
+| `mouse.odin` | Shared custom mouse state and rendering |
 | `assets.odin` | Texture and sound loading, validation, and cleanup |
 | `level.odin` | Original map data layout and runtime level state |
 | `options.odin` | Legacy command-line option parsing |
