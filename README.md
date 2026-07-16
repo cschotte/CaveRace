@@ -52,13 +52,25 @@ Start the game using the switch **-powerblast**, now you can use the function ke
 
 When running the game on old slow systems, you can use the **-slow** switch to speed up the game.
 
-## Project team 
+## Versions
+
+| Version | Year      | OS      | Lang      | GFX         |
+| ------- | --------- | ------- | --------- | ----------- |
+| 1.2     | 1997      | MS-DOS  | Borland C | VGA         |
+| 1.3     | 2002      | Windows | C         | DirectX 8.1 |
+| 1.4     | 2012      | Windows | C#        | SharpDX     |
+| 2.0     | 2012      | Windows Phone 7 & XBox | C# | XNA |
+| 1.5     | 2026      | Windows & MacOS | Odin | RayLib 6 |
+
+## Origninal project team for version 1.0
 
 - Clemens Schotte (code and concept)
 - Harro Lock (code)
 - Marijn Schotte (artwork)
 - Paul Bosselaar (documenation)
 - Paul van Croonenburg (documenation)
+
+> from version 1.3 and later, coded by Clemens Schotte and artwork by Marijn Schotte
 
 ## License
 
