@@ -10,9 +10,9 @@ bombs, and defeat alien invaders.
 | ![Forest level](Artwork/demo1.png) | ![Winter level](Artwork/demo2.png) | ![Lava level](Artwork/demo3.png) |
 
 More screenshots, background information, and a download of the original
-MS-DOS release are available on the [CaveRace website].
+MS-DOS release are available on the [CaveRace] website.
 
-## The modern Odin version
+## The modern rewrite
 
 CaveRace 1.5 is an in-progress rewrite in [Odin] using the bundled [raylib]
 bindings. Its goal is to bring the game back to modern Windows and macOS
@@ -41,7 +41,7 @@ display refresh rate, and unlike later Windows versions, it has no sound.
 
 ### Building the original source
 
-Install [Borland C 3.1](https://en.wikipedia.org/wiki/Borland_C%2B%2B), set the IDE working directory to the project folder, and
+Install [Borland C] 3.1, set the IDE working directory to the project folder, and
 build CaveRace or MapEditor from the sources in [`Source/`](Source/). This is a
 historical toolchain intended for an MS-DOS environment or a compatible
 emulator.
@@ -100,11 +100,11 @@ art uses the IFF (Interchange File Format). For the MS-DOS game, screens and
 
 Original CaveRace 1.0 team:
 
-- Clemens Schotte — code and concept
+- [Clemens Schotte](https://www.linkedin.com/in/cschotte/) — code and concept
 - Harro Lock — code
-- Marijn Schotte — artwork
-- Paul Bosselaar — documentation
-- Paul van Croonenburg — documentation
+- [Marijn Schotte](https://www.linkedin.com/in/marijn-schotte-a224a2216/) — artwork
+- [Paul Bosselaar](https://www.linkedin.com/in/paul-bosselaar/) — documentation
+- [Paul van Croonenburg](https://www.linkedin.com/in/paul-van-croonenburg-0a389843/) — documentation
 
 From version 1.3 onward, CaveRace was developed by Clemens Schotte with artwork
 by Marijn Schotte.
@@ -115,8 +115,9 @@ Copyright © 1997–2026 NavaTron B.V.
 
 The source code is licensed under the [Apache License 2.0](LICENSE).
 
-[CaveRace website]: https://caverace.com/
+[CaveRace]: https://caverace.com/
 [Dyna Blaster]: https://en.wikipedia.org/wiki/Bomberman_%281990_video_game%29
 [Deluxe Paint]: https://en.wikipedia.org/wiki/Deluxe_Paint
 [Odin]: https://odin-lang.org/
 [raylib]: https://www.raylib.com/
+[Borland C]: https://en.wikipedia.org/wiki/Borland_C%2B%2B

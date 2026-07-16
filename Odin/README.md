@@ -1,4 +1,4 @@
-# CaveRace 1.5 for Odin
+# CaveRace 1.5 rewrite
 
 This directory contains the new, cross-platform CaveRace rewrite in [Odin],
 using Odin's bundled [raylib] bindings for graphics, input, and audio. It brings
@@ -8,7 +8,7 @@ pixel art, level data, and command-line conventions.
 The story remains the same: miners on Eldora collect gold and diamonds, blast
 paths through the caves, and defend the mines from alien visitors. CaveRace was
 inspired by *Dyna Blaster* (*Bomberman*). More history and original screenshots
-are available on the [CaveRace project page].
+are available on the [CaveRace] website.
 
 ## Current status
 
@@ -101,7 +101,7 @@ the repository's [`Artwork/`](../Artwork/) directory.
 Copyright © 1997–2026 NavaTron B.V. The source code is licensed under the
 [Apache License 2.0](../LICENSE).
 
-[CaveRace project page]: https://caverace.com/
+[CaveRace]: https://caverace.com/
 [Odin]: https://odin-lang.org/
 [Odin compiler]: https://odin-lang.org/docs/install/
 [raylib]: https://www.raylib.com/
