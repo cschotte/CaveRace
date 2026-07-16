@@ -2,14 +2,18 @@ package caverace
 
 import rl "vendor:raylib"
 
+Pointer_State :: struct {
+	x: i32,
+	y: i32,
+}
+
 Game_Input :: struct {
 	menu_selection: Maybe(Menu_Item),
 	menu_next:      bool,
 	menu_previous:  bool,
 	confirm:        bool,
 	back:           bool,
-	mouse_x:        i32,
-	mouse_y:        i32,
+	pointer:        Pointer_State,
 }
 
 poll_game_input :: proc() -> Game_Input {
@@ -25,8 +29,10 @@ poll_game_input :: proc() -> Game_Input {
 	input.back          = rl.IsKeyPressed(.ESCAPE)
 
 	mouse := rl.GetMousePosition()
-	input.mouse_x = i32(mouse.x)
-	input.mouse_y = i32(mouse.y)
+	input.pointer = {
+		x = i32(mouse.x),
+		y = i32(mouse.y),
+	}
 
 	return input
 }

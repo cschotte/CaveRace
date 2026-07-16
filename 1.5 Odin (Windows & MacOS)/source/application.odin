@@ -22,6 +22,9 @@ run_application :: proc(options: Launch_Options) -> bool {
 	// Disable the default exit key (ESC) to allow custom handling
 	rl.SetExitKey(.KEY_NULL)
 
+	// Hide the mouse cursor since we are drawing our own
+	rl.HideCursor()
+
 	rl.InitAudioDevice()
 	if !rl.IsAudioDeviceReady() {
 		fmt.eprintln("Failed to initialize the audio device.")
@@ -44,7 +47,7 @@ run_application :: proc(options: Launch_Options) -> bool {
 
 		rl.BeginDrawing()
 			rl.ClearBackground(rl.RAYWHITE)
-			draw_game(&app.game, &app.assets)
+			draw_game(&app.game, &app.assets, input.pointer)
 		rl.EndDrawing()
 	}
 

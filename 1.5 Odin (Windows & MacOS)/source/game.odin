@@ -10,9 +10,8 @@ Game_Screen :: enum {
 
 Game :: struct {
 	screen:         Game_Screen,
-	menu:      Menu_State,
+	menu:           Menu_State,
 	level:          Level,
-	input:          Game_Input,
 	options:        Launch_Options,
 	quit_requested: bool,
 }
@@ -26,11 +25,19 @@ init_game :: proc(game: ^Game, options: Launch_Options) {
 }
 
 update_game :: proc(game: ^Game, input: Game_Input) {
-	game.input = input
-
 	switch game.screen {
 	case .Menu:
-		update_menu(game, input)
+		confirmed := update_menu(&game.menu, input)
+		if selected, ok := confirmed.?; ok {
+			switch selected {
+			case .Start_Game:
+				game.screen = .Playing
+			case .High_Scores:
+				game.screen = .High_Scores
+			case .Quit:
+				game.quit_requested = true
+			}
+		}
 	case .Playing:
 		update_playing(game, input)
 	case .High_Scores:
@@ -38,14 +45,14 @@ update_game :: proc(game: ^Game, input: Game_Input) {
 	}
 }
 
-draw_game :: proc(game: ^Game, assets: ^Assets) {
+draw_game :: proc(game: ^Game, assets: ^Assets, pointer: Pointer_State) {
 	switch game.screen {
 	case .Menu:
-		draw_menu(game, assets)
+		draw_menu(game.menu, assets, pointer)
 	case .Playing:
-		draw_playing(game, assets)
+		draw_playing(assets)
 	case .High_Scores:
-		draw_high_scores(game, assets)
+		draw_high_scores(assets)
 	}
 }
 
@@ -53,7 +60,7 @@ update_playing :: proc(game: ^Game, input: Game_Input) {
 	if input.back do game.screen = .Menu
 }
 
-draw_playing :: proc(game: ^Game, assets: ^Assets) {
+draw_playing :: proc(assets: ^Assets) {
 	rl.DrawTexture(assets.screens.game, 0, 0, rl.WHITE)
 }
 
@@ -61,6 +68,6 @@ update_high_scores :: proc(game: ^Game, input: Game_Input) {
 	if input.back do game.screen = .Menu
 }
 
-draw_high_scores :: proc(game: ^Game, assets: ^Assets) {
+draw_high_scores :: proc(assets: ^Assets) {
 	rl.DrawTexture(assets.screens.highscore, 0, 0, rl.WHITE)
 }
