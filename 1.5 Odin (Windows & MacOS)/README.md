@@ -57,6 +57,7 @@ with this version's `source/` directory as its working directory.
 | Up / Down | Move through the main menu |
 | 1 / 2 / 3 | Select Start Game / High Scores / Quit |
 | Enter | Confirm the selected menu item |
+| Mouse | Select and confirm a main-menu item |
 | Escape | Return to the main menu from game or high scores |
 
 The application recognizes the original `-powerblast` and `-slow` arguments:

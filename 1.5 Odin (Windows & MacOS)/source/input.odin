@@ -24,9 +24,12 @@ poll_game_input :: proc() -> Game_Input {
 	input.back          = rl.IsKeyPressed(.ESCAPE)
 
 	mouse := rl.GetMousePosition()
+	mouse_delta := rl.GetMouseDelta()
 	input.mouse = {
-		x = i32(mouse.x),
-		y = i32(mouse.y),
+		x            = i32(mouse.x),
+		y            = i32(mouse.y),
+		moved        = mouse_delta.x != 0 || mouse_delta.y != 0,
+		left_pressed = rl.IsMouseButtonPressed(.LEFT),
 	}
 
 	return input

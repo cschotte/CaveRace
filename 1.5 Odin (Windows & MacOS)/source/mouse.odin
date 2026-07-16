@@ -5,8 +5,10 @@ import rl "vendor:raylib"
 MOUSE_POINTER_TILE_INDEX :: 4
 
 Mouse_State :: struct {
-	x: i32,
-	y: i32,
+	x:            i32,
+	y:            i32,
+	moved:        bool,
+	left_pressed: bool,
 }
 
 draw_mouse :: proc(mouse: Mouse_State, texture: rl.Texture) {
