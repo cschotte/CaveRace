@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/2010/manifest">
+  <Identity Name="270NavaTron.CaveRace" Publisher="CN=3E567FD4-563E-4CA2-9863-D982D9A36413" Version="1.0.0.1" />
+  <Properties>
+    <DisplayName>CaveRace</DisplayName>
+    <PublisherDisplayName>NavaTron</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+  <Prerequisites>
+    <OSMinVersion>6.2.1</OSMinVersion>
+    <OSMaxVersionTested>6.2.1</OSMaxVersionTested>
+  </Prerequisites>
+  <Resources>
+    <Resource Language="x-generate" />
+  </Resources>
+  <Applications>
+    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="CaveRace_Classic.App">
+      <VisualElements DisplayName="CaveRace" Logo="Assets\Logo.png" SmallLogo="Assets\SmallLogo.png" Description="Boooooom! It’s the sound of a big explosion. Now that’s how you kill a monster! While collecting precious stones, you need to defeat the monsters in the Forest, Desert, Winter and Lava levels. Clear a path by blowing the lighter colored stones. Darker stones are too dense to blow up. Be careful not to blow-up your treasure or power-up’s. More than 25 beautiful levels specially designed for the Windows 8. Have fun playing CaveRace." ForegroundText="dark" BackgroundColor="#85EEFD">
+        <DefaultTile ShowName="noLogos" />
+        <SplashScreen Image="Assets\SplashScreen.png" />
+        <InitialRotationPreference>
+          <Rotation Preference="landscape" />
+          <Rotation Preference="landscapeFlipped" />
+        </InitialRotationPreference>
+      </VisualElements>
+    </Application>
+  </Applications>
+</Package>

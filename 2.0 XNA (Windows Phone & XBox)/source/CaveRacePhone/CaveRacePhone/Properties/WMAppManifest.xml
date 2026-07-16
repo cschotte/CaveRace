@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Deployment xmlns="http://schemas.microsoft.com/windowsphone/2009/deployment" AppPlatformVersion="7.1">
+  <App xmlns="" ProductID="{b53cb72a-b5c5-4073-9af1-4455e45a806b}" Title="CaveRace 2" RuntimeType="XNA" Version="2.0.0.0" Genre="Apps.Normal" Author="NavaTron" Description="CaveRace 2" Publisher="NavaTron">
+    <IconPath IsRelative="true" IsResource="false">
+    </IconPath>
+    <Capabilities>
+
+    </Capabilities>
+    <Tasks>
+      <DefaultTask Name="_default" />
+    </Tasks>
+    <Tokens>
+      <PrimaryToken TokenID="CaveRacePhoneToken" TaskName="_default">
+        <TemplateType5>
+          <BackgroundImageURI IsRelative="true" IsResource="false">
+          </BackgroundImageURI>
+          <Count>0</Count>
+          <Title>
+          </Title>
+        </TemplateType5>
+      </PrimaryToken>
+    </Tokens>
+  </App>
+</Deployment>

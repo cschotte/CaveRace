@@ -1,0 +1,96 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CaveRace", "CaveRace Classic\CaveRace.csproj", "{54ECB3E9-ABD1-4B37-947E-53AB3F516053}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommonDX", "CommonDX\CommonDX.csproj", "{D99F41F5-9143-45D9-B340-770664D8B2C1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SharpDX", "SharpDX", "{2AEBBCC6-D4FC-41F1-8D97-8C618C3077E8}"
+	ProjectSection(SolutionItems) = preProject
+		SharpDX\SharpDX.D3DCompiler.dll = SharpDX\SharpDX.D3DCompiler.dll
+		SharpDX\SharpDX.D3DCompiler.xml = SharpDX\SharpDX.D3DCompiler.xml
+		SharpDX\SharpDX.Direct2D1.dll = SharpDX\SharpDX.Direct2D1.dll
+		SharpDX\SharpDX.Direct2D1.xml = SharpDX\SharpDX.Direct2D1.xml
+		SharpDX\SharpDX.Direct3D11.dll = SharpDX\SharpDX.Direct3D11.dll
+		SharpDX\SharpDX.Direct3D11.xml = SharpDX\SharpDX.Direct3D11.xml
+		SharpDX\SharpDX.dll = SharpDX\SharpDX.dll
+		SharpDX\SharpDX.DXGI.dll = SharpDX\SharpDX.DXGI.dll
+		SharpDX\SharpDX.DXGI.xml = SharpDX\SharpDX.DXGI.xml
+		SharpDX\SharpDX.MediaFoundation.dll = SharpDX\SharpDX.MediaFoundation.dll
+		SharpDX\SharpDX.MediaFoundation.xml = SharpDX\SharpDX.MediaFoundation.xml
+		SharpDX\SharpDX.XAudio2.dll = SharpDX\SharpDX.XAudio2.dll
+		SharpDX\SharpDX.XAudio2.xml = SharpDX\SharpDX.XAudio2.xml
+		SharpDX\SharpDX.XInput.dll = SharpDX\SharpDX.XInput.dll
+		SharpDX\SharpDX.XInput.xml = SharpDX\SharpDX.XInput.xml
+		SharpDX\SharpDX.xml = SharpDX\SharpDX.xml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 3
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://navatron.tfspreview.com/defaultcollection
+		SccProjectUniqueName0 = CommonDX\\CommonDX.csproj
+		SccProjectName0 = CommonDX
+		SccLocalPath0 = CommonDX
+		SccLocalPath1 = .
+		SccProjectUniqueName2 = CaveRace\u0020Classic\\CaveRace.csproj
+		SccProjectName2 = CaveRace\u0020Classic
+		SccLocalPath2 = CaveRace\u0020Classic
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|ARM = Debug|ARM
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|ARM = Release|ARM
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Debug|ARM.ActiveCfg = Debug|ARM
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Debug|ARM.Build.0 = Debug|ARM
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Debug|ARM.Deploy.0 = Debug|ARM
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Debug|x64.ActiveCfg = Debug|x64
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Debug|x64.Build.0 = Debug|x64
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Debug|x64.Deploy.0 = Debug|x64
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Debug|x86.ActiveCfg = Debug|x86
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Debug|x86.Build.0 = Debug|x86
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Debug|x86.Deploy.0 = Debug|x86
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Release|ARM.ActiveCfg = Release|ARM
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Release|ARM.Build.0 = Release|ARM
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Release|ARM.Deploy.0 = Release|ARM
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Release|x64.ActiveCfg = Release|x64
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Release|x64.Build.0 = Release|x64
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Release|x64.Deploy.0 = Release|x64
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Release|x86.ActiveCfg = Release|x86
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Release|x86.Build.0 = Release|x86
+		{54ECB3E9-ABD1-4B37-947E-53AB3F516053}.Release|x86.Deploy.0 = Release|x86
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Debug|ARM.ActiveCfg = Debug|ARM
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Debug|ARM.Build.0 = Debug|ARM
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Debug|x64.ActiveCfg = Debug|x64
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Debug|x64.Build.0 = Debug|x64
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Debug|x86.ActiveCfg = Debug|x86
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Debug|x86.Build.0 = Debug|x86
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Release|ARM.ActiveCfg = Release|ARM
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Release|ARM.Build.0 = Release|ARM
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Release|x64.ActiveCfg = Release|x64
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Release|x64.Build.0 = Release|x64
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Release|x86.ActiveCfg = Release|x86
+		{D99F41F5-9143-45D9-B340-770664D8B2C1}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

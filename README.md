@@ -7,7 +7,7 @@ bombs, and defeat alien invaders.
 
 | Forest | Winter | Lava |
 | --- | --- | --- |
-| ![Forest level](Artwork/demo1.png) | ![Winter level](Artwork/demo2.png) | ![Lava level](Artwork/demo3.png) |
+| ![Forest level](images/demo1.png) | ![Winter level](images/demo2.png) | ![Lava level](images/demo3.png) |
 
 More screenshots, background information, and a download of the original
 MS-DOS release are available on the [CaveRace] website.
@@ -18,16 +18,22 @@ CaveRace 1.5 is an in-progress rewrite in [Odin] using the bundled [raylib]
 bindings. Its goal is to bring the game back to modern Windows and macOS
 systems while preserving the original levels, artwork, sounds, and feel.
 
-See [Odin/README.md](Odin/README.md) for the current status, controls, build
-instructions, and source layout.
+See the [CaveRace 1.5 README](<1.5 Odin (Windows & MacOS)/README.md>) for the
+current status, controls, build instructions, and source layout.
 
-## Repository layout
+## Version guides
 
-| Path | Contents |
-| --- | --- |
-| [`Odin/`](Odin/) | Modern CaveRace 1.5 rewrite and converted runtime assets |
-| [`Source/`](Source/) | Original MS-DOS CaveRace and MapEditor C source |
-| [`Artwork/`](Artwork/) | Original IFF artwork and converted PNG files |
+Every preserved CaveRace version has its own README with version-specific
+requirements, build instructions, controls, source layout, and compatibility
+notes.
+
+| Version | Platform and technology | Documentation |
+| --- | --- | --- |
+| 1.2 | Original MS-DOS release, written for Borland C with x86 assembly | [CaveRace 1.2 README](<1.2 Original (MS-DOS)/README.md>) |
+| 1.3 | Windows port using Visual C++ and DirectX 8.1 | [CaveRace 1.3 README](<1.3 DirectX (Windows)/README.md>) |
+| 1.4 | Windows 8 Store app written in C# with SharpDX | [CaveRace 1.4 README](<1.4 SharpDX (Windows)/README.md>) |
+| 1.5 | Modern Windows and macOS rewrite using Odin and raylib | [CaveRace 1.5 README](<1.5 Odin (Windows & MacOS)/README.md>) |
+| 2.0 | C# and XNA edition for Windows, Windows Phone, and Xbox 360 | [CaveRace 2.0 README](<2.0 XNA (Windows Phone & XBox)/README.md>) |
 
 ## Original MS-DOS version
 
@@ -42,7 +48,8 @@ display refresh rate, and unlike later Windows versions, it has no sound.
 ### Building the original source
 
 Install [Borland C] 3.1, set the IDE working directory to the project folder, and
-build CaveRace or MapEditor from the sources in [`Source/`](Source/). This is a
+build CaveRace or MapEditor from the sources in
+[`1.2 Original (MS-DOS)/source/`](<1.2 Original (MS-DOS)/source/>). This is a
 historical toolchain intended for an MS-DOS environment or a compatible
 emulator.
 
@@ -91,9 +98,9 @@ art uses the IFF (Interchange File Format). For the MS-DOS game, screens and
 | Version | Year | Platform | Language | Graphics API |
 | --- | ---: | --- | --- | --- |
 | 1.2 | 1997 | MS-DOS | Borland C and x86 assembly | VGA Mode 13h |
-| 1.3 | 2002 | Windows | C | DirectX 8.1 |
+| 1.3 | 2002 | Windows | C++ | DirectX 8.1 |
 | 1.4 | 2012 | Windows | C# | SharpDX |
-| 2.0 | 2012 | Windows Phone 7 and Xbox | C# | XNA |
+| 2.0 | 2012 | Windows, Windows Phone, and Xbox 360 | C# | XNA |
 | 1.5 | 2026 | Windows and macOS | Odin | raylib 6 |
 
 ## Credits

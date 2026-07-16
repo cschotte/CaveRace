@@ -1,0 +1,120 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MapEdit", "MapEdit\MapEdit\MapEdit.csproj", "{039899D2-98AC-4BBE-B7D7-B7E81E2EB3C8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MapEditContent", "MapEdit\MapEditContent\MapEditContent.contentproj", "{6786BC33-4B99-4AFD-B7D7-52CB8E78321F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CaveRace2Phone", "CaveRacePhone\CaveRacePhone\CaveRace2Phone.csproj", "{33DC8459-6869-44FA-B98F-0DB01221DC30}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CaveRace2Content", "CaveRacePhone\CaveRacePhoneContent\CaveRace2Content.contentproj", "{B486B122-3E13-4D2D-B77B-5A479BA73A5E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CaveRace2Windows", "CaveRacePhone\CaveRacePhone\CaveRace2Windows.csproj", "{B105048A-0FB5-4B13-BF2B-C4720DD1D5FD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CaveRace2Xbox360", "CaveRacePhone\CaveRacePhone\CaveRace2Xbox360.csproj", "{9F7A2388-E8FC-4C67-A47D-192D9F49D809}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Media", "Media", "{15B31B45-DF57-49A1-9C05-47FD270FE979}"
+	ProjectSection(SolutionItems) = preProject
+		Media\Background art.png = Media\Background art.png
+		Media\Background173.png = Media\Background173.png
+		Media\Background200.png = Media\Background200.png
+		Media\Background99.png = Media\Background99.png
+		Media\Boooooom.docx = Media\Boooooom.docx
+		Media\CaveRace Desert.png = Media\CaveRace Desert.png
+		Media\CaveRace Forest.png = Media\CaveRace Forest.png
+		Media\CaveRace Intro.png = Media\CaveRace Intro.png
+		Media\CaveRace Lava.png = Media\CaveRace Lava.png
+		Media\CaveRace Winter.png = Media\CaveRace Winter.png
+		Media\StatusBar.pdn = Media\StatusBar.pdn
+		Media\Untitled.pdn = Media\Untitled.pdn
+		Media\Zune.txt = Media\Zune.txt
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 7
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://navatron.tfspreview.com/defaultcollection
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = MapEdit\\MapEdit\\MapEdit.csproj
+		SccProjectName1 = MapEdit/MapEdit
+		SccLocalPath1 = MapEdit\\MapEdit
+		SccProjectUniqueName2 = MapEdit\\MapEditContent\\MapEditContent.contentproj
+		SccProjectName2 = MapEdit/MapEditContent
+		SccLocalPath2 = MapEdit\\MapEditContent
+		SccProjectUniqueName3 = CaveRacePhone\\CaveRacePhone\\CaveRace2Phone.csproj
+		SccProjectName3 = CaveRacePhone/CaveRacePhone
+		SccLocalPath3 = CaveRacePhone\\CaveRacePhone
+		SccProjectUniqueName4 = CaveRacePhone\\CaveRacePhoneContent\\CaveRace2Content.contentproj
+		SccProjectName4 = CaveRacePhone/CaveRacePhoneContent
+		SccLocalPath4 = CaveRacePhone\\CaveRacePhoneContent
+		SccProjectUniqueName5 = CaveRacePhone\\CaveRacePhone\\CaveRace2Windows.csproj
+		SccProjectName5 = CaveRacePhone/CaveRacePhone
+		SccLocalPath5 = CaveRacePhone\\CaveRacePhone
+		SccProjectUniqueName6 = CaveRacePhone\\CaveRacePhone\\CaveRace2Xbox360.csproj
+		SccProjectName6 = CaveRacePhone/CaveRacePhone
+		SccLocalPath6 = CaveRacePhone\\CaveRacePhone
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Windows Phone = Debug|Windows Phone
+		Debug|x86 = Debug|x86
+		Debug|Xbox 360 = Debug|Xbox 360
+		Release|Windows Phone = Release|Windows Phone
+		Release|x86 = Release|x86
+		Release|Xbox 360 = Release|Xbox 360
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{039899D2-98AC-4BBE-B7D7-B7E81E2EB3C8}.Debug|Windows Phone.ActiveCfg = Debug|x86
+		{039899D2-98AC-4BBE-B7D7-B7E81E2EB3C8}.Debug|x86.ActiveCfg = Debug|x86
+		{039899D2-98AC-4BBE-B7D7-B7E81E2EB3C8}.Debug|x86.Build.0 = Debug|x86
+		{039899D2-98AC-4BBE-B7D7-B7E81E2EB3C8}.Debug|Xbox 360.ActiveCfg = Debug|x86
+		{039899D2-98AC-4BBE-B7D7-B7E81E2EB3C8}.Release|Windows Phone.ActiveCfg = Release|x86
+		{039899D2-98AC-4BBE-B7D7-B7E81E2EB3C8}.Release|x86.ActiveCfg = Release|x86
+		{039899D2-98AC-4BBE-B7D7-B7E81E2EB3C8}.Release|x86.Build.0 = Release|x86
+		{039899D2-98AC-4BBE-B7D7-B7E81E2EB3C8}.Release|Xbox 360.ActiveCfg = Release|x86
+		{6786BC33-4B99-4AFD-B7D7-52CB8E78321F}.Debug|Windows Phone.ActiveCfg = Debug|x86
+		{6786BC33-4B99-4AFD-B7D7-52CB8E78321F}.Debug|x86.ActiveCfg = Debug|x86
+		{6786BC33-4B99-4AFD-B7D7-52CB8E78321F}.Debug|Xbox 360.ActiveCfg = Debug|x86
+		{6786BC33-4B99-4AFD-B7D7-52CB8E78321F}.Release|Windows Phone.ActiveCfg = Release|x86
+		{6786BC33-4B99-4AFD-B7D7-52CB8E78321F}.Release|x86.ActiveCfg = Release|x86
+		{6786BC33-4B99-4AFD-B7D7-52CB8E78321F}.Release|Xbox 360.ActiveCfg = Release|x86
+		{33DC8459-6869-44FA-B98F-0DB01221DC30}.Debug|Windows Phone.ActiveCfg = Debug|Windows Phone
+		{33DC8459-6869-44FA-B98F-0DB01221DC30}.Debug|Windows Phone.Build.0 = Debug|Windows Phone
+		{33DC8459-6869-44FA-B98F-0DB01221DC30}.Debug|Windows Phone.Deploy.0 = Debug|Windows Phone
+		{33DC8459-6869-44FA-B98F-0DB01221DC30}.Debug|x86.ActiveCfg = Debug|Windows Phone
+		{33DC8459-6869-44FA-B98F-0DB01221DC30}.Debug|Xbox 360.ActiveCfg = Debug|Windows Phone
+		{33DC8459-6869-44FA-B98F-0DB01221DC30}.Release|Windows Phone.ActiveCfg = Release|Windows Phone
+		{33DC8459-6869-44FA-B98F-0DB01221DC30}.Release|Windows Phone.Build.0 = Release|Windows Phone
+		{33DC8459-6869-44FA-B98F-0DB01221DC30}.Release|Windows Phone.Deploy.0 = Release|Windows Phone
+		{33DC8459-6869-44FA-B98F-0DB01221DC30}.Release|x86.ActiveCfg = Release|Windows Phone
+		{33DC8459-6869-44FA-B98F-0DB01221DC30}.Release|Xbox 360.ActiveCfg = Release|Windows Phone
+		{B486B122-3E13-4D2D-B77B-5A479BA73A5E}.Debug|Windows Phone.ActiveCfg = Debug|Windows Phone
+		{B486B122-3E13-4D2D-B77B-5A479BA73A5E}.Debug|Windows Phone.Build.0 = Debug|Windows Phone
+		{B486B122-3E13-4D2D-B77B-5A479BA73A5E}.Debug|x86.ActiveCfg = Debug|Windows Phone
+		{B486B122-3E13-4D2D-B77B-5A479BA73A5E}.Debug|Xbox 360.ActiveCfg = Debug|Windows Phone
+		{B486B122-3E13-4D2D-B77B-5A479BA73A5E}.Release|Windows Phone.ActiveCfg = Release|Windows Phone
+		{B486B122-3E13-4D2D-B77B-5A479BA73A5E}.Release|x86.ActiveCfg = Release|Windows Phone
+		{B486B122-3E13-4D2D-B77B-5A479BA73A5E}.Release|Xbox 360.ActiveCfg = Release|Windows Phone
+		{B105048A-0FB5-4B13-BF2B-C4720DD1D5FD}.Debug|Windows Phone.ActiveCfg = Debug|x86
+		{B105048A-0FB5-4B13-BF2B-C4720DD1D5FD}.Debug|x86.ActiveCfg = Debug|x86
+		{B105048A-0FB5-4B13-BF2B-C4720DD1D5FD}.Debug|x86.Build.0 = Debug|x86
+		{B105048A-0FB5-4B13-BF2B-C4720DD1D5FD}.Debug|Xbox 360.ActiveCfg = Debug|x86
+		{B105048A-0FB5-4B13-BF2B-C4720DD1D5FD}.Release|Windows Phone.ActiveCfg = Release|x86
+		{B105048A-0FB5-4B13-BF2B-C4720DD1D5FD}.Release|x86.ActiveCfg = Release|x86
+		{B105048A-0FB5-4B13-BF2B-C4720DD1D5FD}.Release|x86.Build.0 = Release|x86
+		{B105048A-0FB5-4B13-BF2B-C4720DD1D5FD}.Release|Xbox 360.ActiveCfg = Release|x86
+		{9F7A2388-E8FC-4C67-A47D-192D9F49D809}.Debug|Windows Phone.ActiveCfg = Debug|Xbox 360
+		{9F7A2388-E8FC-4C67-A47D-192D9F49D809}.Debug|x86.ActiveCfg = Debug|Xbox 360
+		{9F7A2388-E8FC-4C67-A47D-192D9F49D809}.Debug|Xbox 360.ActiveCfg = Debug|Xbox 360
+		{9F7A2388-E8FC-4C67-A47D-192D9F49D809}.Debug|Xbox 360.Build.0 = Debug|Xbox 360
+		{9F7A2388-E8FC-4C67-A47D-192D9F49D809}.Debug|Xbox 360.Deploy.0 = Debug|Xbox 360
+		{9F7A2388-E8FC-4C67-A47D-192D9F49D809}.Release|Windows Phone.ActiveCfg = Release|Xbox 360
+		{9F7A2388-E8FC-4C67-A47D-192D9F49D809}.Release|x86.ActiveCfg = Release|Xbox 360
+		{9F7A2388-E8FC-4C67-A47D-192D9F49D809}.Release|Xbox 360.ActiveCfg = Release|Xbox 360
+		{9F7A2388-E8FC-4C67-A47D-192D9F49D809}.Release|Xbox 360.Build.0 = Release|Xbox 360
+		{9F7A2388-E8FC-4C67-A47D-192D9F49D809}.Release|Xbox 360.Deploy.0 = Release|Xbox 360
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

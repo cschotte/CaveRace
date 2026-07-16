@@ -7,22 +7,22 @@
             "command": "/bin/mkdir",
             "args": [
                 "-p",
-                "${workspaceFolder}/build"
+                "${workspaceFolder}/1.5 Odin (Windows & MacOS)/build"
             ],
             "problemMatcher": []
         },
         {
             "label": "odin: build debug",
             "type": "process",
-            "command": "/Users/cschotte/Odin/odin",
+            "command": "odin",
             "args": [
                 "build",
                 ".",
                 "-debug",
-                "-out:${workspaceFolder}/build/caverace"
+                "-out:../build/caverace"
             ],
             "options": {
-                "cwd": "${workspaceFolder}/Odin"
+                "cwd": "${workspaceFolder}/1.5 Odin (Windows & MacOS)/source"
             },
             "dependsOn": "odin: prepare build directory",
             "group": {

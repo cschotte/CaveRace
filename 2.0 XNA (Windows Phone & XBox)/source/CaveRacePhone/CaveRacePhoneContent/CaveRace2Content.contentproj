@@ -1,0 +1,281 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{B486B122-3E13-4D2D-B77B-5A479BA73A5E}</ProjectGuid>
+    <ProjectTypeGuids>{96E2B04D-8817-42c6-938A-82C39BA4D311};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <XnaFrameworkVersion>v4.0</XnaFrameworkVersion>
+    <OutputPath>bin\$(Platform)\$(Configuration)</OutputPath>
+    <ContentRootDirectory>Content</ContentRootDirectory>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|Windows Phone'">
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|Windows Phone'">
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace>CaveRacePhoneContent</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Xna.Framework.Content.Pipeline.EffectImporter, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework.Content.Pipeline.FBXImporter, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework.Content.Pipeline.TextureImporter, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework.Content.Pipeline.XImporter, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework.Content.Pipeline.AudioImporters, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework.Content.Pipeline.VideoImporters, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Sprites\Desert.png">
+      <Name>Desert</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Sprites\Bomb.png">
+      <Name>Bomb</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Sprites\Enemy.png">
+      <Name>Enemy</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Sprites\Player.png">
+      <Name>Player</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Sprites\Stone.png">
+      <Name>Stone</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Sprites\Treasure.png">
+      <Name>Treasure</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Sprites\Forest.png">
+      <Name>Forest</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Interface\StatusBar.png">
+      <Name>StatusBar</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Interface\StatusTools.png">
+      <Name>StatusTools</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Sprites\Winter.png">
+      <Name>Winter</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Interface\IntroScreen.png">
+      <Name>IntroScreen</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Sounds\Bomb01.wma">
+      <Name>Bomb01</Name>
+      <Importer>WmaImporter</Importer>
+      <Processor>SoundEffectProcessor</Processor>
+    </Compile>
+    <Compile Include="Sounds\Bomb02.wma">
+      <Name>Bomb02</Name>
+      <Importer>WmaImporter</Importer>
+      <Processor>SoundEffectProcessor</Processor>
+    </Compile>
+    <Compile Include="Sounds\Bomb03.wma">
+      <Name>Bomb03</Name>
+      <Importer>WmaImporter</Importer>
+      <Processor>SoundEffectProcessor</Processor>
+    </Compile>
+    <Compile Include="Sounds\Bomb04.wma">
+      <Name>Bomb04</Name>
+      <Importer>WmaImporter</Importer>
+      <Processor>SoundEffectProcessor</Processor>
+    </Compile>
+    <Compile Include="Sounds\Item.wma">
+      <Name>Item</Name>
+      <Importer>WmaImporter</Importer>
+      <Processor>SoundEffectProcessor</Processor>
+    </Compile>
+    <Compile Include="Sounds\Squish.wma">
+      <Name>Squish</Name>
+      <Importer>WmaImporter</Importer>
+      <Processor>SoundEffectProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Font.spritefont">
+      <Name>Font</Name>
+      <Importer>FontDescriptionImporter</Importer>
+      <Processor>FontDescriptionProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Interface\Text.png">
+      <Name>Text</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Sprites\Lava.png">
+      <Name>Lava</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Levels\Desert 1.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Desert 1</Name>
+    </Content>
+    <Content Include="Levels\Desert 2.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Desert 2</Name>
+    </Content>
+    <Content Include="Levels\Desert 3.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Desert 3</Name>
+    </Content>
+    <Content Include="Levels\Desert 4.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Desert 4</Name>
+    </Content>
+    <Content Include="Levels\Desert 5.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Desert 5</Name>
+    </Content>
+    <Content Include="Levels\End.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>End</Name>
+    </Content>
+    <Content Include="Levels\Forest 1.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Forest 1</Name>
+    </Content>
+    <Content Include="Levels\Forest 2.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Forest 2</Name>
+    </Content>
+    <Content Include="Levels\Forest 3.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Forest 3</Name>
+    </Content>
+    <Content Include="Levels\Forest 4.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Forest 4</Name>
+    </Content>
+    <Content Include="Levels\Forest 5.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Forest 5</Name>
+    </Content>
+    <Content Include="Levels\Intro.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Intro</Name>
+    </Content>
+    <Content Include="Levels\Lava 1.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Lava 1</Name>
+    </Content>
+    <Content Include="Levels\Lava 2.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Lava 2</Name>
+    </Content>
+    <Content Include="Levels\Lava 3.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Lava 3</Name>
+    </Content>
+    <Content Include="Levels\Lava 4.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Lava 4</Name>
+    </Content>
+    <Content Include="Levels\Lava 5.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Lava 5</Name>
+    </Content>
+    <Content Include="Levels\Winter 1.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Winter 1</Name>
+    </Content>
+    <Content Include="Levels\Winter 2.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Winter 2</Name>
+    </Content>
+    <Content Include="Levels\Winter 3.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Winter 3</Name>
+    </Content>
+    <Content Include="Levels\Winter 4.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Winter 4</Name>
+    </Content>
+    <Content Include="Levels\Winter 5.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Name>Winter 5</Name>
+    </Content>
+    <Compile Include="Sprites\Gamepad.png">
+      <Name>Gamepad</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Levels\Lava 6.bin">
+      <Name>Lava 6</Name>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Levels\Lava 7.bin">
+      <Name>Lava 7</Name>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Levels\Lava 8.bin">
+      <Name>Lava 8</Name>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\$(XnaFrameworkVersion)\Microsoft.Xna.GameStudio.ContentPipeline.targets" />
+  <!--  To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -1,0 +1,20 @@
+﻿<Page
+    x:Class="CaveRace_Classic.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:CaveRace_Classic"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d" Background="Black">
+
+    <Viewbox>
+    <Grid HorizontalAlignment="Left" VerticalAlignment="Top" Width="800" Height="480">
+        <Grid.Background>
+            <ImageBrush Stretch="None" ImageSource="ms-appx:///Assets/Interface/IntroScreen.png"/>
+        </Grid.Background>
+        <Button x:Name="StartButton" Content="" HorizontalAlignment="Left" Margin="25,99,0,0" VerticalAlignment="Top" Height="63" Width="228" BorderThickness="0" Opacity="0.45" Click="StartButton_Click"/>
+        <Button x:Name="ResumeButton" Content="" HorizontalAlignment="Left" Margin="25,164,0,0" VerticalAlignment="Top" Height="63" Width="228" BorderThickness="0" Opacity="0.45" Click="ResumeButton_Click"/>
+    </Grid>
+    </Viewbox>
+
+</Page>
