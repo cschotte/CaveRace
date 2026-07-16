@@ -13,12 +13,12 @@ parse_launch_options :: proc() -> Launch_Options {
 
 	for argument in os.args[1:] {
 		switch argument {
-			case "-powerblast":
-				options.cheats_enabled = true
-			case "-slow":
-				options.slow_mode = true
-			case:
-				fmt.println("Unknown argument: ", argument)
+		case "-powerblast":
+			options.cheats_enabled = true
+		case "-slow":
+			options.slow_mode = true
+		case:
+			fmt.println("Unknown argument: ", argument)
 		}
 	}
 

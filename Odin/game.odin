@@ -3,57 +3,59 @@ package caverace
 import rl "vendor:raylib"
 
 Game_Screen :: enum {
-	Main_Menu,
+	Menu,
 	Playing,
 	High_Scores,
 }
 
 Game :: struct {
-	screen:    Game_Screen,
-	main_menu: Main_Menu_State,
-	level:     Level,
-	options:   Launch_Options,
+	screen:         Game_Screen,
+	menu:      Menu_State,
+	level:          Level,
+	options:        Launch_Options,
+	quit_requested: bool,
 }
 
 init_game :: proc(game: ^Game, options: Launch_Options) {
 	game^ = Game {
-		screen    = .Main_Menu,
-		main_menu = {selected = .Start_Game},
-		options = options,
+		screen    = .Menu,
+		menu      = {selected = .Start_Game},
+		options   = options,
 	}
 }
 
-update_game :: proc(game: ^Game) {
+update_game :: proc(game: ^Game, input: Game_Input) {
 	switch game.screen {
-		case .Main_Menu:
-			update_main_menu(game)
-		case .Playing:
-			update_playing(game)
-		case .High_Scores:
-			update_high_scores(game)
+	case .Menu:
+		update_menu(game, input)
+	case .Playing:
+		update_playing(game, input)
+	case .High_Scores:
+		update_high_scores(game, input)
 	}
 }
 
 draw_game :: proc(game: ^Game, assets: ^Assets) {
 	switch game.screen {
-		case .Main_Menu:
-			draw_main_menu(game, assets)
-		case .Playing:
-			draw_playing(game, assets)
-		case .High_Scores:
-			draw_high_scores(game, assets)
+	case .Menu:
+		draw_menu(game, assets)
+	case .Playing:
+		draw_playing(game, assets)
+	case .High_Scores:
+		draw_high_scores(game, assets)
 	}
 }
 
-update_playing :: proc(game: ^Game) {
+update_playing :: proc(game: ^Game, input: Game_Input) {
+	if input.back do game.screen = .Menu
 }
 
 draw_playing :: proc(game: ^Game, assets: ^Assets) {
 	rl.DrawTexture(assets.screens.game, 0, 0, rl.WHITE)
 }
 
-
-update_high_scores :: proc(game: ^Game) {
+update_high_scores :: proc(game: ^Game, input: Game_Input) {
+	if input.back do game.screen = .Menu
 }
 
 draw_high_scores :: proc(game: ^Game, assets: ^Assets) {
