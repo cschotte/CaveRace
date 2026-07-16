@@ -16,6 +16,7 @@ MENU_ITEM_COUNT     :: len(Menu_Item)
 MENU_SELECTION_X    :: 120 // in pixels
 MENU_SELECTION_Y    :: 220 // in pixels
 MENU_SELECTION_STEP :: 45  // in pixels
+MOUSE_POINTER_TILE  :: 4
 
 update_menu :: proc(game: ^Game, input: Game_Input) {
 	if selected, ok := input.menu_selection.?; ok {
@@ -53,4 +54,22 @@ draw_menu :: proc(game: ^Game, assets: ^Assets) {
 		menu_selection_y,
 		rl.WHITE,
 	)
+
+	draw_mouse(game, assets)
+}
+
+draw_mouse :: proc(game: ^Game, assets: ^Assets) {
+	tile_size := f32(assets.sprites.tools.width)
+	source := rl.Rectangle {
+		x      = 0,
+		y      = tile_size * MOUSE_POINTER_TILE,
+		width  = tile_size,
+		height = tile_size,
+	}
+	position := rl.Vector2 {
+		f32(game.input.mouse_x),
+		f32(game.input.mouse_y),
+	}
+
+	rl.DrawTextureRec(assets.sprites.tools, source, position, rl.WHITE)
 }

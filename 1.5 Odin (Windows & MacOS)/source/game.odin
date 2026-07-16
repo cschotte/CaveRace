@@ -12,6 +12,7 @@ Game :: struct {
 	screen:         Game_Screen,
 	menu:      Menu_State,
 	level:          Level,
+	input:          Game_Input,
 	options:        Launch_Options,
 	quit_requested: bool,
 }
@@ -25,6 +26,8 @@ init_game :: proc(game: ^Game, options: Launch_Options) {
 }
 
 update_game :: proc(game: ^Game, input: Game_Input) {
+	game.input = input
+
 	switch game.screen {
 	case .Menu:
 		update_menu(game, input)

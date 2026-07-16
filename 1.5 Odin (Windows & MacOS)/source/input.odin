@@ -8,6 +8,8 @@ Game_Input :: struct {
 	menu_previous:  bool,
 	confirm:        bool,
 	back:           bool,
+	mouse_x:        i32,
+	mouse_y:        i32,
 }
 
 poll_game_input :: proc() -> Game_Input {
@@ -21,6 +23,10 @@ poll_game_input :: proc() -> Game_Input {
 	input.menu_previous = rl.IsKeyPressed(.UP)
 	input.confirm       = rl.IsKeyPressed(.ENTER)
 	input.back          = rl.IsKeyPressed(.ESCAPE)
+
+	mouse := rl.GetMousePosition()
+	input.mouse_x = i32(mouse.x)
+	input.mouse_y = i32(mouse.y)
 
 	return input
 }
