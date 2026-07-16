@@ -27,13 +27,13 @@ Every preserved CaveRace version has its own README with version-specific
 requirements, build instructions, controls, source layout, and compatibility
 notes.
 
-| Version | Platform and technology | Documentation |
-| --- | --- | --- |
-| 1.2 | Original MS-DOS release, written for Borland C with x86 assembly | [CaveRace 1.2 README](<1.2 Original (MS-DOS)/README.md>) |
-| 1.3 | Windows port using Visual C++ and DirectX 8.1 | [CaveRace 1.3 README](<1.3 DirectX (Windows)/README.md>) |
-| 1.4 | Windows 8 Store app written in C# with SharpDX | [CaveRace 1.4 README](<1.4 SharpDX (Windows)/README.md>) |
-| 1.5 | Modern Windows and macOS rewrite using Odin and raylib | [CaveRace 1.5 README](<1.5 Odin (Windows & MacOS)/README.md>) |
-| 2.0 | C# and XNA edition for Windows, Windows Phone, and Xbox 360 | [CaveRace 2.0 README](<2.0 XNA (Windows Phone & XBox)/README.md>) |
+| Version | Year | Platform and technology | Documentation |
+| --- | --- | --- | --- |
+| 1.2 | 1997 | Original MS-DOS release, written for Borland C with x86 assembly | [CaveRace 1.2 README](<1.2 Original (MS-DOS)/README.md>) |
+| 1.3 | 2002 | Windows port using Visual C++ and DirectX 8.1 | [CaveRace 1.3 README](<1.3 DirectX (Windows)/README.md>) |
+| 1.4 | 2012 | Windows 8 Store app written in C# with SharpDX | [CaveRace 1.4 README](<1.4 SharpDX (Windows)/README.md>) |
+| 2.0 | 2012 | C# and XNA edition for Windows, Windows Phone, and Xbox 360 | [CaveRace 2.0 README](<2.0 XNA (Windows Phone & XBox)/README.md>) |
+| 1.5 | 2026 | Modern Windows and macOS rewrite using Odin and raylib | [CaveRace 1.5 README](<1.5 Odin (Windows & MacOS)/README.md>) |
 
 ## Original MS-DOS version
 
@@ -92,16 +92,6 @@ art uses the IFF (Interchange File Format). For the MS-DOS game, screens and
 | PAL | 256 RGB entries | 768 | Palette |
 | STS | 4 tiles (16×16) | 1,024 | Status |
 | TRS | 6 tiles (16×16) | 1,536 | Treasure |
-
-## Version history
-
-| Version | Year | Platform | Language | Graphics API |
-| --- | ---: | --- | --- | --- |
-| 1.2 | 1997 | MS-DOS | Borland C and x86 assembly | VGA Mode 13h |
-| 1.3 | 2002 | Windows | C++ | DirectX 8.1 |
-| 1.4 | 2012 | Windows | C# | SharpDX |
-| 2.0 | 2012 | Windows, Windows Phone, and Xbox 360 | C# | XNA |
-| 1.5 | 2026 | Windows and macOS | Odin | raylib 6 |
 
 ## Credits
 
