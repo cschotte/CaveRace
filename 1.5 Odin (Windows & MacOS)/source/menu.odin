@@ -12,6 +12,11 @@ Menu_State :: struct {
 	selected: Menu_Item,
 }
 
+Menu_Update_Result :: struct {
+	confirmed:         Maybe(Menu_Item),
+	selection_changed: bool,
+}
+
 MENU_ITEM_COUNT          :: len(Menu_Item)
 MENU_SELECTION_X         :: 120 // in pixels
 MENU_SELECTION_Y         :: 220 // in pixels
@@ -19,8 +24,11 @@ MENU_SELECTION_WIDTH     :: 400 // in pixels
 MENU_SELECTION_HEIGHT    :: 40  // in pixels
 MENU_SELECTION_STEP      :: 45  // in pixels
 
-update_menu :: proc(menu: ^Menu_State, input: Game_Input) -> Maybe(Menu_Item) {
-	if selected, ok := input.menu_selection.?; ok {
+update_menu :: proc(menu: ^Menu_State, input: Game_Input) -> Menu_Update_Result {
+	result: Menu_Update_Result
+	previous_selection := menu.selected
+
+	if selected, ok := input.menu_shortcut.?; ok {
 		menu.selected = selected
 	}
 
@@ -33,12 +41,12 @@ update_menu :: proc(menu: ^Menu_State, input: Game_Input) -> Maybe(Menu_Item) {
 			menu.selected = hovered_item
 		}
 
-		if input.mouse.left_pressed do return hovered_item
+		if input.mouse.left_pressed do result.confirmed = hovered_item
 	}
 
-	confirmed: Maybe(Menu_Item)
-	if input.confirm do confirmed = menu.selected
-	return confirmed
+	if input.confirm do result.confirmed = menu.selected
+	result.selection_changed = menu.selected != previous_selection
+	return result
 }
 
 menu_item_at_mouse :: proc(mouse: Mouse_State) -> Maybe(Menu_Item) {
@@ -63,12 +71,12 @@ move_menu_selection :: proc(menu: ^Menu_State, direction: int) {
 	menu.selected = Menu_Item(next)
 }
 
-draw_menu :: proc(menu: Menu_State, assets: ^Assets) {
-	rl.DrawTexture(assets.screens.menu, 0, 0, rl.WHITE)
+draw_menu :: proc(menu: Menu_State, background, selection: rl.Texture) {
+	rl.DrawTexture(background, 0, 0, rl.WHITE)
 
 	menu_selection_y := MENU_SELECTION_Y + i32(menu.selected) * MENU_SELECTION_STEP
 	rl.DrawTexture(
-		assets.screens.select,
+		selection,
 		MENU_SELECTION_X,
 		menu_selection_y,
 		rl.WHITE,

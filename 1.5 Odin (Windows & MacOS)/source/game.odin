@@ -16,6 +16,10 @@ Game :: struct {
 	quit_requested: bool,
 }
 
+Game_Update_Result :: struct {
+	menu_selection_changed: bool,
+}
+
 init_game :: proc(game: ^Game, options: Launch_Options) {
 	game^ = Game {
 		screen    = .Menu,
@@ -24,11 +28,15 @@ init_game :: proc(game: ^Game, options: Launch_Options) {
 	}
 }
 
-update_game :: proc(game: ^Game, input: Game_Input) {
+update_game :: proc(game: ^Game, input: Game_Input) -> Game_Update_Result {
+	result: Game_Update_Result
+
 	switch game.screen {
 	case .Menu:
-		confirmed := update_menu(&game.menu, input)
-		if selected, ok := confirmed.?; ok {
+		menu_result := update_menu(&game.menu, input)
+		result.menu_selection_changed = menu_result.selection_changed
+
+		if selected, ok := menu_result.confirmed.?; ok {
 			switch selected {
 			case .Start_Game:
 				game.screen = .Playing
@@ -39,29 +47,33 @@ update_game :: proc(game: ^Game, input: Game_Input) {
 			}
 		}
 	case .Playing:
-		update_playing(game, input)
+		back_requested := update_playing(input)
+		if back_requested do game.screen = .Menu
 	case .High_Scores:
-		update_high_scores(game, input)
+		back_requested := update_high_scores(input)
+		if back_requested do game.screen = .Menu
 	}
+
+	return result
 }
 
 draw_game :: proc(game: ^Game, assets: ^Assets, mouse: Mouse_State) {
 	switch game.screen {
 	case .Menu:
-		draw_menu(game.menu, assets)
+		draw_menu(game.menu, assets.screens.menu, assets.screens.select)
 	case .Playing:
-		draw_playing(assets)
+		draw_playing(assets.screens.game)
 	case .High_Scores:
-		draw_high_scores(assets)
+		draw_high_scores(assets.screens.highscore)
 	}
 
 	draw_mouse(mouse, assets.sprites.tools)
 }
 
-update_playing :: proc(game: ^Game, input: Game_Input) {
-	if input.back do game.screen = .Menu
+update_playing :: proc(input: Game_Input) -> (back_requested: bool) {
+	return input.back
 }
 
-draw_playing :: proc(assets: ^Assets) {
-	rl.DrawTexture(assets.screens.game, 0, 0, rl.WHITE)
+draw_playing :: proc(background: rl.Texture) {
+	rl.DrawTexture(background, 0, 0, rl.WHITE)
 }

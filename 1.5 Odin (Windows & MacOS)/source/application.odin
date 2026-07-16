@@ -43,7 +43,10 @@ run_application :: proc(options: Launch_Options) -> bool {
 
 	for !app.game.quit_requested && !rl.WindowShouldClose() {
 		input := poll_game_input()
-		update_game(&app.game, input)
+		update_result := update_game(&app.game, input)
+		if update_result.menu_selection_changed {
+			rl.PlaySound(app.assets.sounds.menu)
+		}
 
 		rl.BeginDrawing()
 			rl.ClearBackground(rl.RAYWHITE)
