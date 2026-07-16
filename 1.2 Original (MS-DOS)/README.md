@@ -14,7 +14,7 @@ enemies in the mines of Eldora.
 The easiest way to run this historical version is with DOSBox or a comparable
 MS-DOS environment:
 
-1. Extract `release/caverace-1.2-dos.zip`.
+1. Extract `/releases/caverace-1.2-dos.zip`.
 2. Mount the extracted directory in DOSBox.
 3. Run `CAVERACE.EXE`.
 
@@ -53,7 +53,7 @@ APIs that are no longer available.
 
 | Path | Contents |
 | --- | --- |
-| `release/` | Ready-to-run executables, game data, and the DOS ZIP archive |
+| `release/` | Ready-to-run executables and game data |
 | `source/` | Original C/C++ source, headers, converted graphics, and levels |
 | `artwork/` | Original Amiga IFF artwork and PNG conversions |
 

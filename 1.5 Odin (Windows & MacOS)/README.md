@@ -1,4 +1,4 @@
-# CaveRace 1.5 rewrite
+# CaveRace 1.5 rewrite for modern Windows and MacOS
 
 This directory contains the new, cross-platform CaveRace rewrite in [Odin],
 using Odin's bundled [raylib] bindings for graphics, input, and audio. It brings

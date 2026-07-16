@@ -7,7 +7,7 @@ gameplay.
 
 ## Running the game
 
-`release/caverace-1.3-win.zip` contains the complete historical release. Extract
+`/releases/caverace-1.3-win.zip` contains the complete historical release. Extract
 the entire archive and run `CaveRace.exe` on a compatible 32-bit Windows system.
 Keep the `Levels` and `Media` directories beside the executable; the game loads
 those files through relative paths.
