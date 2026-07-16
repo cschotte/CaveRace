@@ -1,7 +1,7 @@
 # CaveRace
 
 CaveRace is a maze-based action game created in 1997 by Clemens Schotte and
-fellow students. Inspired by *Dyna Blaster* (*Bomberman*), the game sends miners
+fellow students. Inspired by *[Dyna Blaster]* (*Bomberman*), the game sends miners
 into the caves of Eldora to collect gold and diamonds, clear passages with
 bombs, and defeat alien invaders.
 
@@ -10,19 +10,13 @@ bombs, and defeat alien invaders.
 | ![Forest level](Artwork/demo1.png) | ![Winter level](Artwork/demo2.png) | ![Lava level](Artwork/demo3.png) |
 
 More screenshots, background information, and a download of the original
-MS-DOS release are available on the [CaveRace project page].
+MS-DOS release are available on the [CaveRace website].
 
 ## The modern Odin version
 
 CaveRace 1.5 is an in-progress rewrite in [Odin] using the bundled [raylib]
 bindings. Its goal is to bring the game back to modern Windows and macOS
 systems while preserving the original levels, artwork, sounds, and feel.
-
-The port currently provides a 640×400, 60 FPS application shell, asset loading,
-the main menu, game and high-score screen transitions, converted graphics and
-sound effects, and a data model matching the original 1,045-byte level format.
-Player movement, bombs, enemies, scoring, and complete level rendering are not
-implemented yet.
 
 See [Odin/README.md](Odin/README.md) for the current status, controls, build
 instructions, and source layout.
@@ -47,7 +41,7 @@ display refresh rate, and unlike later Windows versions, it has no sound.
 
 ### Building the original source
 
-Install Borland C 3.1, set the IDE working directory to the project folder, and
+Install [Borland C 3.1](https://en.wikipedia.org/wiki/Borland_C%2B%2B), set the IDE working directory to the project folder, and
 build CaveRace or MapEditor from the sources in [`Source/`](Source/). This is a
 historical toolchain intended for an MS-DOS environment or a compatible
 emulator.
@@ -67,8 +61,7 @@ Start the MS-DOS game with `-powerblast` to enable the function-key cheats.
 | % | Show rendering time |
 
 The `-slow` option speeds up the game on older, slower systems. The Odin port
-recognizes both original command-line options for compatibility, but their
-gameplay effects are not implemented yet.
+recognizes both original command-line options for compatibility.
 
 ## Original graphics
 
@@ -122,7 +115,8 @@ Copyright © 1997–2026 NavaTron B.V.
 
 The source code is licensed under the [Apache License 2.0](LICENSE).
 
-[CaveRace project page]: https://clemens.ms/caverace/
+[CaveRace website]: https://caverace.com/
+[Dyna Blaster]: https://en.wikipedia.org/wiki/Bomberman_%281990_video_game%29
 [Deluxe Paint]: https://en.wikipedia.org/wiki/Deluxe_Paint
 [Odin]: https://odin-lang.org/
 [raylib]: https://www.raylib.com/
