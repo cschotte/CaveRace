@@ -2,7 +2,7 @@ package caverace
 
 // Gameplay limits and values preserved from the 1.3 MainLoop.h constants and
 // MainLoop.cpp rules. Keeping them here makes the simulation contract explicit
-// before movement and bombs are added.
+// as each gameplay system is added.
 MAX_ENEMIES :: 16
 MAX_BOMBS   :: 4
 
@@ -48,10 +48,17 @@ PLAYER_SPAWN_MARKER :: 1
 PLAYER_IDLE_SPRITE  :: 2
 BOMB_TICKING_SPRITE :: 1
 
+PLAYER_DOWN_FIRST_SPRITE     :: 1
+PLAYER_UP_FIRST_SPRITE       :: 5
+PLAYER_LEFT_FIRST_SPRITE     :: 9
+PLAYER_RIGHT_FIRST_SPRITE    :: 13
+PLAYER_DIRECTION_FRAME_COUNT :: 4
+
 #assert(MAX_BOMBS == PLAYER_MAX_BOMB_CAPACITY)
 #assert(MOVEMENT_STEPS_PER_TILE * MOVEMENT_PIXELS_PER_STEP == MAP_TILE_SIZE)
 #assert(MAX_SIMULATION_STEPS_PER_FRAME < MOVEMENT_STEPS_PER_TILE)
 #assert(PLAYER_IDLE_SPRITE < PLAYER_SPRITE_COUNT)
+#assert(PLAYER_RIGHT_FIRST_SPRITE + PLAYER_DIRECTION_FRAME_COUNT == PLAYER_SPRITE_COUNT)
 #assert(BOMB_TICKING_SPRITE < BOMB_SPRITE_COUNT)
 
 Grid_Position :: struct {
@@ -101,6 +108,9 @@ Gameplay_Simulation_Result :: struct {
 
 Player_State :: struct {
 	position:      Grid_Position,
+	move_from:     Grid_Position,
+	move_to:       Grid_Position,
+	movement_step: int,
 	direction:     Direction,
 	lives:         int,
 	energy:        int,
@@ -130,7 +140,7 @@ Level_Runtime_Error :: enum {
 	Too_Many_Enemies,
 }
 
-grid_position_is_valid :: proc(position: Grid_Position) -> bool {
+is_in_map :: proc(position: Grid_Position) -> bool {
 	return position.x >= 0 && position.x < MAP_WIDTH &&
 	       position.y >= 0 && position.y < MAP_HEIGHT
 }
@@ -152,6 +162,9 @@ new_player_state :: proc() -> Player_State {
 // The legacy game keeps lives and score between attempts/levels, but restores
 // the per-level energy and bomb upgrades whenever the map is reloaded.
 reset_player_for_level_start :: proc(player: ^Player_State) {
+	player.move_from = player.position
+	player.move_to = player.position
+	player.movement_step = 0
 	player.direction = .None
 	player.energy = PLAYER_START_ENERGY
 	player.bomb_capacity = PLAYER_START_BOMB_CAPACITY
@@ -188,10 +201,11 @@ select_gameplay_action :: proc(input: ^Gameplay_Input_Buffer) -> Gameplay_Action
 }
 
 advance_gameplay_simulation :: proc(
-	simulation: ^Gameplay_Simulation_State,
+	gameplay: ^Gameplay,
 	frame_seconds: f64,
 ) -> Gameplay_Simulation_Result {
 	result: Gameplay_Simulation_Result
+	simulation := &gameplay.simulation
 	clamped_seconds := frame_seconds
 	if clamped_seconds < 0 do clamped_seconds = 0
 	if clamped_seconds > MAX_FRAME_DELTA_SECONDS {
@@ -216,10 +230,15 @@ advance_gameplay_simulation :: proc(
 		if simulation.action_step == 0 {
 			result.last_action = select_gameplay_action(&simulation.input)
 			result.action_decisions += 1
+			begin_player_action(gameplay, result.last_action)
 			if result.last_action == .Place_Bomb {
 				result.bomb_action_started = true
 			}
 		}
+		advance_player_action_step(
+			&gameplay.player,
+			simulation.action_step + 1,
+		)
 
 		simulation.action_step =
 			(simulation.action_step + 1) % MOVEMENT_STEPS_PER_TILE
@@ -260,6 +279,9 @@ initialize_level_runtime :: proc(gameplay: ^Gameplay) -> Level_Runtime_Error {
 	if player_count == 0 do return .Missing_Player
 
 	gameplay.player.position = player_position
+	gameplay.player.move_from = player_position
+	gameplay.player.move_to = player_position
+	gameplay.player.movement_step = 0
 	gameplay.player.direction = .None
 	gameplay.enemies = enemies
 	gameplay.enemy_count = enemy_count

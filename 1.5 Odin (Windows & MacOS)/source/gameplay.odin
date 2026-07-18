@@ -73,9 +73,9 @@ update_gameplay :: proc(
 
 	case .Playing:
 		buffer_gameplay_input(&gameplay.simulation, input)
-		result.simulation = advance_gameplay_simulation(&gameplay.simulation, frame_seconds)
-		// Milestone 3 consumes movement actions. Bomb, enemy, collision, and
-		// win-condition updates remain intentionally unimplemented here.
+		result.simulation = advance_gameplay_simulation(gameplay, frame_seconds)
+		// Bomb, enemy, collision, and win-condition updates remain
+		// intentionally unimplemented here.
 
 	case .Dead:
 		if input.confirm {

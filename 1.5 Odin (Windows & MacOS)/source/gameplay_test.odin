@@ -6,6 +6,7 @@ Simulation_Test_Summary :: struct {
 	steps:              int,
 	action_decisions:   int,
 	movement_decisions: int,
+	player_position:    Grid_Position,
 }
 
 run_held_direction_simulation :: proc(render_fps, seconds: int) -> Simulation_Test_Summary {
@@ -22,6 +23,7 @@ run_held_direction_simulation :: proc(render_fps, seconds: int) -> Simulation_Te
 			summary.movement_decisions += 1
 		}
 	}
+	summary.player_position = gameplay.player.position
 	return summary
 }
 
@@ -88,14 +90,14 @@ all_levels_load_and_extract_spawns_test :: proc(t: ^testing.T) {
 		testing.expect_value(t, runtime_error, Level_Runtime_Error.None)
 		testing.expect_value(t, expected_player_count, 1)
 		testing.expect_value(t, gameplay.player.position, expected_player)
-		testing.expect(t, grid_position_is_valid(gameplay.player.position))
+		testing.expect(t, is_in_map(gameplay.player.position))
 		testing.expect_value(t, gameplay.enemy_count, expected_enemy_count)
 		testing.expect(t, gameplay.enemy_count <= MAX_ENEMIES)
 
 		for enemy_index in 0 ..< gameplay.enemy_count {
 			enemy := gameplay.enemies[enemy_index]
 			testing.expect(t, enemy.active)
-			testing.expect(t, grid_position_is_valid(enemy.position))
+			testing.expect(t, is_in_map(enemy.position))
 			testing.expect_value(
 				t,
 				enemy.kind,
@@ -208,12 +210,12 @@ spawn_extraction_clears_stale_runtime_state_test :: proc(t: ^testing.T) {
 
 @(test)
 grid_position_helpers_test :: proc(t: ^testing.T) {
-	testing.expect(t, grid_position_is_valid({0, 0}))
-	testing.expect(t, grid_position_is_valid({MAP_WIDTH - 1, MAP_HEIGHT - 1}))
-	testing.expect(t, !grid_position_is_valid({-1, 0}))
-	testing.expect(t, !grid_position_is_valid({0, -1}))
-	testing.expect(t, !grid_position_is_valid({MAP_WIDTH, 0}))
-	testing.expect(t, !grid_position_is_valid({0, MAP_HEIGHT}))
+	testing.expect(t, is_in_map({0, 0}))
+	testing.expect(t, is_in_map({MAP_WIDTH - 1, MAP_HEIGHT - 1}))
+	testing.expect(t, !is_in_map({-1, 0}))
+	testing.expect(t, !is_in_map({0, -1}))
+	testing.expect(t, !is_in_map({MAP_WIDTH, 0}))
+	testing.expect(t, !is_in_map({0, MAP_HEIGHT}))
 
 	x, y := grid_position_to_screen({0, 0})
 	testing.expect_value(t, x, i32(MAP_OFFSET_X))
@@ -234,6 +236,7 @@ fixed_simulation_is_render_rate_independent_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, at_60_fps.steps, 4 * SIMULATION_HZ)
 	testing.expect_value(t, at_60_fps.action_decisions, 15)
 	testing.expect_value(t, at_60_fps.movement_decisions, 15)
+	testing.expect_value(t, at_60_fps.player_position, Grid_Position {15, 0})
 }
 
 @(test)
@@ -261,44 +264,44 @@ legacy_action_priority_test :: proc(t: ^testing.T) {
 
 @(test)
 bomb_press_is_latched_until_action_boundary_test :: proc(t: ^testing.T) {
-	simulation := Gameplay_Simulation_State {action_step = 1}
-	buffer_gameplay_input(&simulation, Game_Input {space_pressed = true})
+	gameplay := Gameplay {simulation = {action_step = 1}}
+	buffer_gameplay_input(&gameplay.simulation, Game_Input {space_pressed = true})
 
-	before_step := advance_gameplay_simulation(&simulation, 1.0 / 240.0)
+	before_step := advance_gameplay_simulation(&gameplay, 1.0 / 240.0)
 	testing.expect_value(t, before_step.steps_run, 0)
-	testing.expect(t, simulation.input.bomb_pending)
+	testing.expect(t, gameplay.simulation.input.bomb_pending)
 
 	before_boundary := advance_gameplay_simulation(
-		&simulation,
+		&gameplay,
 		f64(MOVEMENT_STEPS_PER_TILE - 1) * SIMULATION_STEP_SECONDS,
 	)
 	testing.expect_value(t, before_boundary.steps_run, MOVEMENT_STEPS_PER_TILE - 1)
 	testing.expect_value(t, before_boundary.action_decisions, 0)
-	testing.expect(t, simulation.input.bomb_pending)
+	testing.expect(t, gameplay.simulation.input.bomb_pending)
 
-	at_boundary := advance_gameplay_simulation(&simulation, SIMULATION_STEP_SECONDS)
+	at_boundary := advance_gameplay_simulation(&gameplay, SIMULATION_STEP_SECONDS)
 	testing.expect_value(t, at_boundary.action_decisions, 1)
 	testing.expect_value(t, at_boundary.last_action, Gameplay_Action.Place_Bomb)
 	testing.expect(t, at_boundary.bomb_action_started)
-	testing.expect(t, !simulation.input.bomb_pending)
+	testing.expect(t, !gameplay.simulation.input.bomb_pending)
 }
 
 @(test)
 edge_input_and_simulation_limits_test :: proc(t: ^testing.T) {
-	simulation: Gameplay_Simulation_State
+	gameplay: Gameplay
 	input: Game_Input
 	input.cheat_pressed[.F3] = true
-	buffer_gameplay_input(&simulation, input)
+	buffer_gameplay_input(&gameplay.simulation, input)
 
-	before_step := advance_gameplay_simulation(&simulation, 0)
-	testing.expect(t, simulation.input.cheat_pending[.F3])
+	before_step := advance_gameplay_simulation(&gameplay, 0)
+	testing.expect(t, gameplay.simulation.input.cheat_pending[.F3])
 	testing.expect(t, !before_step.cheat_pressed[.F3])
 
-	after_step := advance_gameplay_simulation(&simulation, SIMULATION_STEP_SECONDS)
+	after_step := advance_gameplay_simulation(&gameplay, SIMULATION_STEP_SECONDS)
 	testing.expect(t, after_step.cheat_pressed[.F3])
-	testing.expect(t, !simulation.input.cheat_pending[.F3])
+	testing.expect(t, !gameplay.simulation.input.cheat_pending[.F3])
 
-	clamped := advance_gameplay_simulation(&simulation, 1.0)
+	clamped := advance_gameplay_simulation(&gameplay, 1.0)
 	testing.expect_value(t, clamped.steps_run, MAX_SIMULATION_STEPS_PER_FRAME)
 	testing.expect(t, MAX_SIMULATION_STEPS_PER_FRAME < MOVEMENT_STEPS_PER_TILE)
 }

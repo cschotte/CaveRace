@@ -16,8 +16,9 @@ CaveRace 1.5 is a work in progress. Gameplay is not complete.
 The game screen loads the original map data, validates it, extracts player and
 enemy spawns into fixed runtime state, and renders the resulting level. It has
 a gameplay state machine and a 60 Hz fixed-step action scheduler independent
-from rendering. Player movement, bombs, enemy movement, collisions, scoring,
-high-score storage, and the original cheat effects still need to be
+from rendering. Player movement uses the original collision rules, 16-step
+tile timing, and directional animation. Bombs, enemy movement, collisions,
+scoring, high-score storage, and the original cheat effects still need to be
 implemented.
 
 ## Requirements
@@ -67,6 +68,7 @@ with this version's `source/` directory as its working directory.
 | Enter | Confirm the selected menu item |
 | Mouse | Select and confirm a main-menu item |
 | Escape | Return to the main menu from game or high scores |
+| Arrow keys | Move the player during gameplay |
 | Space / either mouse button | Return from the high-score screen |
 
 The application recognizes the original `-powerblast` and `-slow` arguments:
@@ -91,6 +93,8 @@ implemented yet.
 | `gameplay_runtime.odin` | Gameplay rules, fixed runtime entities, input scheduling, and spawn extraction |
 | `gameplay_test.odin` | Map, runtime-state, input-priority, and fixed-timing regression tests |
 | `level_render.odin` | Layered rendering of map tiles and runtime entities |
+| `player_movement.odin` | Player walkability, tile movement, coordinate conversion, and animation |
+| `player_movement_test.odin` | Player collision, movement, conversion, and animation regression tests |
 | `menu.odin` | Menu state, navigation, and rendering |
 | `high_score.odin` | High-score screen update and rendering |
 | `input.odin` | Frame-level keyboard, text, and mouse input mapping |
