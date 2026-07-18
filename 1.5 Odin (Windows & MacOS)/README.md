@@ -13,8 +13,9 @@ are available on the [CaveRace] website.
 ## Current status
 
 CaveRace 1.5 is a work in progress. Gameplay is not complete.
-The game screen currently displays its background;
-level loading and rendering, player movement, bombs, enemies, treasure,
+The game screen currently loads the original map data and has a gameplay state
+machine driven by the application frame loop; level rendering, player movement,
+bombs, enemies, treasure,
 collisions, scoring, high-score storage, and the original cheat effects still
 need to be implemented.
 
@@ -76,13 +77,15 @@ is not implemented yet.
 | --- | --- |
 | `caverace.odin` | Entry point and launch messages |
 | `application.odin` | Window, audio, main loop, and application lifetime |
-| `game.odin` | Game state and screen update/draw dispatch |
+| `game.odin` | Application screen state and update/draw dispatch |
+| `gameplay.odin` | Playing-session state, simulation update, and rendering |
+| `gameplay_test.odin` | Level-loading and gameplay-state regression tests |
 | `menu.odin` | Menu state, navigation, and rendering |
 | `high_score.odin` | High-score screen update and rendering |
 | `input.odin` | Keyboard and mouse input mapping |
 | `mouse.odin` | Shared custom mouse state and rendering |
 | `assets.odin` | Texture and sound loading, validation, and cleanup |
-| `level.odin` | Original map data layout and runtime level state |
+| `level.odin` | Original map data layout, loading, and runtime level state |
 | `options.odin` | Legacy command-line option parsing |
 | `config.odin` | Window, frame-rate, map, and media constants |
 

@@ -124,6 +124,10 @@ unload_assets :: proc(assets: ^Assets) {
 	for tile in assets.tiles {
 		unload_texture(tile)
 	}
+
+	// Clear resource handles so ownership has visibly ended and an accidental
+	// second cleanup remains harmless.
+	assets^ = {}
 }
 
 unload_texture :: proc(texture: rl.Texture) {

@@ -1,17 +1,15 @@
 package caverace
 
-import rl "vendor:raylib"
-
-Game_Screen :: enum {
+App_Screen :: enum {
 	Menu,
 	Playing,
 	High_Scores,
 }
 
 Game :: struct {
-	screen:         Game_Screen,
+	screen:         App_Screen,
 	menu:           Menu_State,
-	level:          Level,
+	gameplay:       Gameplay,
 	options:        Launch_Options,
 	quit_requested: bool,
 }
@@ -24,8 +22,14 @@ init_game :: proc(game: ^Game, options: Launch_Options) {
 	game^ = Game {
 		screen    = .Menu,
 		menu      = {selected = .Start_Game},
+		gameplay  = {state = .Load_Level},
 		options   = options,
 	}
+}
+
+start_new_game :: proc(game: ^Game) {
+	init_gameplay(&game.gameplay)
+	game.screen = .Playing
 }
 
 update_game :: proc(game: ^Game, input: Game_Input) -> Game_Update_Result {
@@ -39,7 +43,7 @@ update_game :: proc(game: ^Game, input: Game_Input) -> Game_Update_Result {
 		if selected, ok := menu_result.confirmed.?; ok {
 			switch selected {
 			case .Start_Game:
-				game.screen = .Playing
+				start_new_game(game)
 			case .High_Scores:
 				game.screen = .High_Scores
 			case .Quit:
@@ -47,7 +51,7 @@ update_game :: proc(game: ^Game, input: Game_Input) -> Game_Update_Result {
 			}
 		}
 	case .Playing:
-		back_requested := update_playing(input)
+		back_requested := update_gameplay(&game.gameplay, input)
 		if back_requested do game.screen = .Menu
 	case .High_Scores:
 		back_requested := update_high_scores(input)
@@ -62,18 +66,10 @@ draw_game :: proc(game: ^Game, assets: ^Assets, mouse: Mouse_State) {
 	case .Menu:
 		draw_menu(game.menu, assets.screens.menu, assets.screens.select)
 	case .Playing:
-		draw_playing(assets.screens.game)
+		draw_gameplay(&game.gameplay, assets.screens.game)
 	case .High_Scores:
 		draw_high_scores(assets.screens.highscore)
 	}
 
 	draw_mouse(mouse, assets.sprites.tools)
-}
-
-update_playing :: proc(input: Game_Input) -> (back_requested: bool) {
-	return input.back
-}
-
-draw_playing :: proc(background: rl.Texture) {
-	rl.DrawTexture(background, 0, 0, rl.WHITE)
 }
