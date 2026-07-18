@@ -66,7 +66,7 @@ draw_game :: proc(game: ^Game, assets: ^Assets, mouse: Mouse_State) {
 	case .Menu:
 		draw_menu(game.menu, assets.screens.menu, assets.screens.select)
 	case .Playing:
-		draw_gameplay(&game.gameplay, assets.screens.game)
+		draw_gameplay(&game.gameplay, assets)
 	case .High_Scores:
 		draw_high_scores(assets.screens.highscore)
 	}

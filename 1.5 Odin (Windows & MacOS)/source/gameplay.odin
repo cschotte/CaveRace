@@ -1,5 +1,6 @@
 package caverace
 
+import "core:math/rand"
 import rl "vendor:raylib"
 
 // Gameplay_State describes the lifecycle within the Playing screen. Gameplay
@@ -16,6 +17,7 @@ Gameplay :: struct {
 	state:       Gameplay_State,
 	level:       Level,
 	level_index: int,
+	theme:       Tile_Theme,
 }
 
 init_gameplay :: proc(gameplay: ^Gameplay) {
@@ -36,6 +38,7 @@ update_gameplay :: proc(gameplay: ^Gameplay, input: Game_Input) -> (back_request
 	switch gameplay.state {
 	case .Load_Level:
 		if load_level(&gameplay.level, gameplay.level_index) {
+			gameplay.theme = Tile_Theme(rand.int_max(len(Tile_Theme)))
 			change_gameplay_state(gameplay, .Playing)
 		} else {
 			change_gameplay_state(gameplay, .Load_Failed)
@@ -60,9 +63,17 @@ update_gameplay :: proc(gameplay: ^Gameplay, input: Game_Input) -> (back_request
 	return false
 }
 
-draw_gameplay :: proc(gameplay: ^Gameplay, background: rl.Texture) {
-	rl.DrawTexture(background, 0, 0, rl.WHITE)
+draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {
+	rl.DrawTexture(assets.screens.game, 0, 0, rl.WHITE)
 
+	// Draw the level, if applicable.
+	switch gameplay.state {
+	case .Playing, .Dead, .Won:
+		draw_level(&gameplay.level, assets.tiles[gameplay.theme], &assets.sprites)
+	case .Load_Level, .Load_Failed:
+	}
+
+	// Draw the gameplay message on top of the level, if applicable.
 	switch gameplay.state {
 	case .Load_Level:
 		draw_gameplay_message("Loading level...")
@@ -73,7 +84,6 @@ draw_gameplay :: proc(gameplay: ^Gameplay, background: rl.Texture) {
 	case .Load_Failed:
 		draw_gameplay_message("Could not load level - Enter to retry, Esc for menu")
 	case .Playing:
-		draw_gameplay_message("Playing...")
 	}
 }
 
