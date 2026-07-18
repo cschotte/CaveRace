@@ -15,9 +15,10 @@ are available on the [CaveRace] website.
 CaveRace 1.5 is a work in progress. Gameplay is not complete.
 The game screen loads the original map data, validates it, extracts player and
 enemy spawns into fixed runtime state, and renders the resulting level. It has
-a gameplay state machine driven by the application frame loop. Player
-movement, bombs, enemy movement, collisions, scoring, high-score storage, and
-the original cheat effects still need to be implemented.
+a gameplay state machine and a 60 Hz fixed-step action scheduler independent
+from rendering. Player movement, bombs, enemy movement, collisions, scoring,
+high-score storage, and the original cheat effects still need to be
+implemented.
 
 ## Requirements
 
@@ -66,6 +67,7 @@ with this version's `source/` directory as its working directory.
 | Enter | Confirm the selected menu item |
 | Mouse | Select and confirm a main-menu item |
 | Escape | Return to the main menu from game or high scores |
+| Space / either mouse button | Return from the high-score screen |
 
 The application recognizes the original `-powerblast` and `-slow` arguments:
 
@@ -74,23 +76,24 @@ The application recognizes the original `-powerblast` and `-slow` arguments:
 ../build/caverace -slow
 ```
 
-These options are parsed and reported at startup, but their gameplay behavior
-is not implemented yet.
+`-slow` limits rendering to 30 FPS while gameplay simulation remains at 60 Hz.
+`-powerblast` and F1-F5 input are recognized, but the cheat effects are not
+implemented yet.
 
 ## Source guide
 
 | File | Responsibility |
 | --- | --- |
 | `caverace.odin` | Entry point and launch messages |
-| `application.odin` | Window, audio, main loop, and application lifetime |
+| `application.odin` | Window, audio, render loop, and application lifetime |
 | `game.odin` | Application screen state and update/draw dispatch |
 | `gameplay.odin` | Playing-session state, transitions, and simulation update |
-| `gameplay_runtime.odin` | Gameplay rules, fixed runtime entities, and spawn extraction |
-| `gameplay_test.odin` | Map validation and runtime-state regression tests |
+| `gameplay_runtime.odin` | Gameplay rules, fixed runtime entities, input scheduling, and spawn extraction |
+| `gameplay_test.odin` | Map, runtime-state, input-priority, and fixed-timing regression tests |
 | `level_render.odin` | Layered rendering of map tiles and runtime entities |
 | `menu.odin` | Menu state, navigation, and rendering |
 | `high_score.odin` | High-score screen update and rendering |
-| `input.odin` | Keyboard and mouse input mapping |
+| `input.odin` | Frame-level keyboard, text, and mouse input mapping |
 | `mouse.odin` | Shared custom mouse state and rendering |
 | `assets.odin` | Texture and sound loading, validation, and cleanup |
 | `level.odin` | Original map data layout, loading, and index validation |

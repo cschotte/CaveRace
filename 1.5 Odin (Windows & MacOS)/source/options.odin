@@ -37,6 +37,10 @@ print_launch_options :: proc(options: Launch_Options) {
 	}
 
 	if options.slow_mode {
-		fmt.println("Slow mode enabled! Game will run faster.")
+		fmt.printf(
+			"Slow mode enabled: %d FPS rendering, %d Hz simulation.\n",
+			SLOW_RENDER_FPS,
+			SIMULATION_HZ,
+		)
 	}
 }

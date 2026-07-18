@@ -50,6 +50,7 @@ BOMB_TICKING_SPRITE :: 1
 
 #assert(MAX_BOMBS == PLAYER_MAX_BOMB_CAPACITY)
 #assert(MOVEMENT_STEPS_PER_TILE * MOVEMENT_PIXELS_PER_STEP == MAP_TILE_SIZE)
+#assert(MAX_SIMULATION_STEPS_PER_FRAME < MOVEMENT_STEPS_PER_TILE)
 #assert(PLAYER_IDLE_SPRITE < PLAYER_SPRITE_COUNT)
 #assert(BOMB_TICKING_SPRITE < BOMB_SPRITE_COUNT)
 
@@ -64,6 +65,38 @@ Direction :: enum {
 	Up,
 	Right,
 	Left,
+}
+
+Gameplay_Action :: enum {
+	None,
+	Place_Bomb,
+	Move_Down,
+	Move_Up,
+	Move_Right,
+	Move_Left,
+}
+
+Gameplay_Input_Buffer :: struct {
+	move_down:     bool,
+	move_up:       bool,
+	move_right:    bool,
+	move_left:     bool,
+	bomb_pending:  bool,
+	cheat_pending: [Cheat_Key]bool,
+}
+
+Gameplay_Simulation_State :: struct {
+	accumulator_seconds: f64,
+	action_step:         int,
+	input:               Gameplay_Input_Buffer,
+}
+
+Gameplay_Simulation_Result :: struct {
+	steps_run:           int,
+	action_decisions:    int,
+	last_action:         Gameplay_Action,
+	bomb_action_started: bool,
+	cheat_pressed:       [Cheat_Key]bool,
 }
 
 Player_State :: struct {
@@ -125,6 +158,76 @@ reset_player_for_level_start :: proc(player: ^Player_State) {
 	player.bomb_power = PLAYER_START_BOMB_POWER
 }
 
+buffer_gameplay_input :: proc(simulation: ^Gameplay_Simulation_State, input: Game_Input) {
+	simulation.input.move_down = input.move_down
+	simulation.input.move_up = input.move_up
+	simulation.input.move_right = input.move_right
+	simulation.input.move_left = input.move_left
+	if input.space_pressed do simulation.input.bomb_pending = true
+
+	for cheat_index in 0 ..< len(Cheat_Key) {
+		cheat := Cheat_Key(cheat_index)
+		if input.cheat_pressed[cheat] {
+			simulation.input.cheat_pending[cheat] = true
+		}
+	}
+}
+
+// The 1.3 input order is intentional: bomb, down, up, right, then left. This
+// returns one action only and is called exclusively at a 16-step boundary.
+select_gameplay_action :: proc(input: ^Gameplay_Input_Buffer) -> Gameplay_Action {
+	if input.bomb_pending {
+		input.bomb_pending = false
+		return .Place_Bomb
+	}
+	if input.move_down  do return .Move_Down
+	if input.move_up    do return .Move_Up
+	if input.move_right do return .Move_Right
+	if input.move_left  do return .Move_Left
+	return .None
+}
+
+advance_gameplay_simulation :: proc(
+	simulation: ^Gameplay_Simulation_State,
+	frame_seconds: f64,
+) -> Gameplay_Simulation_Result {
+	result: Gameplay_Simulation_Result
+	clamped_seconds := frame_seconds
+	if clamped_seconds < 0 do clamped_seconds = 0
+	if clamped_seconds > MAX_FRAME_DELTA_SECONDS {
+		clamped_seconds = MAX_FRAME_DELTA_SECONDS
+	}
+	simulation.accumulator_seconds += clamped_seconds
+
+	for simulation.accumulator_seconds + 1e-12 >= SIMULATION_STEP_SECONDS &&
+	    result.steps_run < MAX_SIMULATION_STEPS_PER_FRAME {
+		simulation.accumulator_seconds -= SIMULATION_STEP_SECONDS
+		if simulation.accumulator_seconds < 0 do simulation.accumulator_seconds = 0
+		result.steps_run += 1
+
+		for cheat_index in 0 ..< len(Cheat_Key) {
+			cheat := Cheat_Key(cheat_index)
+			if simulation.input.cheat_pending[cheat] {
+				result.cheat_pressed[cheat] = true
+				simulation.input.cheat_pending[cheat] = false
+			}
+		}
+
+		if simulation.action_step == 0 {
+			result.last_action = select_gameplay_action(&simulation.input)
+			result.action_decisions += 1
+			if result.last_action == .Place_Bomb {
+				result.bomb_action_started = true
+			}
+		}
+
+		simulation.action_step =
+			(simulation.action_step + 1) % MOVEMENT_STEPS_PER_TILE
+	}
+
+	return result
+}
+
 // initialize_level_runtime converts immutable map spawn markers into mutable,
 // fixed-capacity gameplay state. It validates into locals first, so failure
 // never leaves a partly initialized session behind.
@@ -162,5 +265,6 @@ initialize_level_runtime :: proc(gameplay: ^Gameplay) -> Level_Runtime_Error {
 	gameplay.enemy_count = enemy_count
 	gameplay.bombs = {}
 	gameplay.bomb_occupancy = {}
+	gameplay.simulation = {}
 	return .None
 }

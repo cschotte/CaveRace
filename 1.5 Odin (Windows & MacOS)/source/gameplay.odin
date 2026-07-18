@@ -24,6 +24,12 @@ Gameplay :: struct {
 	enemy_count:    int,
 	bombs:          [MAX_BOMBS]Bomb_State,
 	bomb_occupancy: Map_Grid,
+	simulation:     Gameplay_Simulation_State,
+}
+
+Gameplay_Frame_Result :: struct {
+	back_requested: bool,
+	simulation:     Gameplay_Simulation_Result,
 }
 
 init_gameplay :: proc(gameplay: ^Gameplay) {
@@ -37,10 +43,19 @@ change_gameplay_state :: proc(gameplay: ^Gameplay, next_state: Gameplay_State) {
 	gameplay.state = next_state
 }
 
-// update_gameplay performs one non-blocking update per application frame. The
-// application loop remains responsible for platform events, drawing, and audio.
-update_gameplay :: proc(gameplay: ^Gameplay, input: Game_Input) -> (back_requested: bool) {
-	if input.back do return true
+// update_gameplay performs one non-blocking frame update. Playing-state logic
+// advances through the fixed-step accumulator; screen transitions remain
+// immediate so menu/back input is responsive at any render rate.
+update_gameplay :: proc(
+	gameplay: ^Gameplay,
+	input: Game_Input,
+	frame_seconds: f64,
+) -> Gameplay_Frame_Result {
+	result: Gameplay_Frame_Result
+	if input.back {
+		result.back_requested = true
+		return result
+	}
 
 	switch gameplay.state {
 	case .Load_Level:
@@ -57,7 +72,10 @@ update_gameplay :: proc(gameplay: ^Gameplay, input: Game_Input) -> (back_request
 		}
 
 	case .Playing:
-		// Player, enemy, bomb, collision, and win-condition updates belong here.
+		buffer_gameplay_input(&gameplay.simulation, input)
+		result.simulation = advance_gameplay_simulation(&gameplay.simulation, frame_seconds)
+		// Milestone 3 consumes movement actions. Bomb, enemy, collision, and
+		// win-condition updates remain intentionally unimplemented here.
 
 	case .Dead:
 		if input.confirm {
@@ -76,7 +94,7 @@ update_gameplay :: proc(gameplay: ^Gameplay, input: Game_Input) -> (back_request
 		if input.confirm do change_gameplay_state(gameplay, .Load_Level)
 	}
 
-	return false
+	return result
 }
 
 draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {

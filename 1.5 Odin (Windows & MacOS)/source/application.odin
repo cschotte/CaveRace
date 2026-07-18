@@ -39,12 +39,14 @@ run_application :: proc(options: Launch_Options) -> bool {
 	// Hide the mouse cursor since we are drawing our own
 	rl.HideCursor()
 
-	// Set the target FPS for the game loop
-	rl.SetTargetFPS(TARGET_FPS)
+	// Slow mode reduces rendering work only. Gameplay always advances at the
+	// fixed SIMULATION_HZ rate through its accumulator.
+	rl.SetTargetFPS(target_render_fps(options))
 
 	for !app.game.quit_requested && !rl.WindowShouldClose() {
 		input := poll_game_input()
-		update_result := update_game(&app.game, input)
+		frame_seconds := f64(rl.GetFrameTime())
+		update_result := update_game(&app.game, input, frame_seconds)
 		if update_result.menu_selection_changed {
 			rl.PlaySound(app.assets.sounds.menu)
 		}
@@ -56,4 +58,9 @@ run_application :: proc(options: Launch_Options) -> bool {
 	}
 
 	return true
+}
+
+target_render_fps :: proc(options: Launch_Options) -> i32 {
+	if options.slow_mode do return SLOW_RENDER_FPS
+	return TARGET_RENDER_FPS
 }

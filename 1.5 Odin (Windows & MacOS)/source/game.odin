@@ -16,15 +16,16 @@ Game :: struct {
 
 Game_Update_Result :: struct {
 	menu_selection_changed: bool,
+	gameplay:               Gameplay_Frame_Result,
 }
 
 init_game :: proc(game: ^Game, options: Launch_Options) {
 	game^ = Game {
 		screen    = .Menu,
 		menu      = {selected = .Start_Game},
-		gameplay  = {state = .Load_Level},
 		options   = options,
 	}
+	init_gameplay(&game.gameplay)
 }
 
 start_new_game :: proc(game: ^Game) {
@@ -32,7 +33,7 @@ start_new_game :: proc(game: ^Game) {
 	game.screen = .Playing
 }
 
-update_game :: proc(game: ^Game, input: Game_Input) -> Game_Update_Result {
+update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_Update_Result {
 	result: Game_Update_Result
 
 	switch game.screen {
@@ -51,8 +52,8 @@ update_game :: proc(game: ^Game, input: Game_Input) -> Game_Update_Result {
 			}
 		}
 	case .Playing:
-		back_requested := update_gameplay(&game.gameplay, input)
-		if back_requested do game.screen = .Menu
+		result.gameplay = update_gameplay(&game.gameplay, input, frame_seconds)
+		if result.gameplay.back_requested do game.screen = .Menu
 	case .High_Scores:
 		back_requested := update_high_scores(input)
 		if back_requested do game.screen = .Menu

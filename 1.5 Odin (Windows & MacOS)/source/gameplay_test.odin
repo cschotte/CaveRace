@@ -2,6 +2,29 @@ package caverace
 
 import "core:testing"
 
+Simulation_Test_Summary :: struct {
+	steps:              int,
+	action_decisions:   int,
+	movement_decisions: int,
+}
+
+run_held_direction_simulation :: proc(render_fps, seconds: int) -> Simulation_Test_Summary {
+	gameplay := Gameplay {state = .Playing}
+	input := Game_Input {move_right = true}
+	summary: Simulation_Test_Summary
+
+	for _ in 0 ..< render_fps * seconds {
+		frame_result := update_gameplay(&gameplay, input, 1.0 / f64(render_fps))
+		summary.steps += frame_result.simulation.steps_run
+		summary.action_decisions += frame_result.simulation.action_decisions
+		if frame_result.simulation.action_decisions > 0 &&
+		   frame_result.simulation.last_action == .Move_Right {
+			summary.movement_decisions += 1
+		}
+	}
+	return summary
+}
+
 @(test)
 gameplay_initial_state_test :: proc(t: ^testing.T) {
 	gameplay: Gameplay
@@ -161,6 +184,11 @@ spawn_extraction_clears_stale_runtime_state_test :: proc(t: ^testing.T) {
 		power        = 2,
 	}
 	gameplay.bomb_occupancy[1][1] = 1
+	gameplay.simulation = Gameplay_Simulation_State {
+		accumulator_seconds = 0.1,
+		action_step         = 7,
+		input               = {move_left = true, bomb_pending = true},
+	}
 
 	testing.expect_value(
 		t,
@@ -172,6 +200,7 @@ spawn_extraction_clears_stale_runtime_state_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, gameplay.player.energy, PLAYER_START_ENERGY)
 	testing.expect(t, !gameplay.bombs[0].active)
 	testing.expect_value(t, gameplay.bomb_occupancy[1][1], u8(0))
+	testing.expect_value(t, gameplay.simulation, Gameplay_Simulation_State {})
 	for enemy_index in gameplay.enemy_count ..< MAX_ENEMIES {
 		testing.expect(t, !gameplay.enemies[enemy_index].active)
 	}
@@ -192,4 +221,98 @@ grid_position_helpers_test :: proc(t: ^testing.T) {
 	x, y = grid_position_to_screen({MAP_WIDTH - 1, MAP_HEIGHT - 1})
 	testing.expect_value(t, x, i32(MAP_OFFSET_X + (MAP_WIDTH - 1) * MAP_TILE_SIZE))
 	testing.expect_value(t, y, i32(MAP_OFFSET_Y + (MAP_HEIGHT - 1) * MAP_TILE_SIZE))
+}
+
+@(test)
+fixed_simulation_is_render_rate_independent_test :: proc(t: ^testing.T) {
+	at_30_fps := run_held_direction_simulation(30, 4)
+	at_60_fps := run_held_direction_simulation(60, 4)
+	at_240_fps := run_held_direction_simulation(240, 4)
+
+	testing.expect_value(t, at_30_fps, at_60_fps)
+	testing.expect_value(t, at_60_fps, at_240_fps)
+	testing.expect_value(t, at_60_fps.steps, 4 * SIMULATION_HZ)
+	testing.expect_value(t, at_60_fps.action_decisions, 15)
+	testing.expect_value(t, at_60_fps.movement_decisions, 15)
+}
+
+@(test)
+legacy_action_priority_test :: proc(t: ^testing.T) {
+	input := Gameplay_Input_Buffer {
+		move_down   = true,
+		move_up     = true,
+		move_right  = true,
+		move_left   = true,
+		bomb_pending = true,
+	}
+
+	testing.expect_value(t, select_gameplay_action(&input), Gameplay_Action.Place_Bomb)
+	testing.expect(t, !input.bomb_pending)
+	testing.expect_value(t, select_gameplay_action(&input), Gameplay_Action.Move_Down)
+	input.move_down = false
+	testing.expect_value(t, select_gameplay_action(&input), Gameplay_Action.Move_Up)
+	input.move_up = false
+	testing.expect_value(t, select_gameplay_action(&input), Gameplay_Action.Move_Right)
+	input.move_right = false
+	testing.expect_value(t, select_gameplay_action(&input), Gameplay_Action.Move_Left)
+	input.move_left = false
+	testing.expect_value(t, select_gameplay_action(&input), Gameplay_Action.None)
+}
+
+@(test)
+bomb_press_is_latched_until_action_boundary_test :: proc(t: ^testing.T) {
+	simulation := Gameplay_Simulation_State {action_step = 1}
+	buffer_gameplay_input(&simulation, Game_Input {space_pressed = true})
+
+	before_step := advance_gameplay_simulation(&simulation, 1.0 / 240.0)
+	testing.expect_value(t, before_step.steps_run, 0)
+	testing.expect(t, simulation.input.bomb_pending)
+
+	before_boundary := advance_gameplay_simulation(
+		&simulation,
+		f64(MOVEMENT_STEPS_PER_TILE - 1) * SIMULATION_STEP_SECONDS,
+	)
+	testing.expect_value(t, before_boundary.steps_run, MOVEMENT_STEPS_PER_TILE - 1)
+	testing.expect_value(t, before_boundary.action_decisions, 0)
+	testing.expect(t, simulation.input.bomb_pending)
+
+	at_boundary := advance_gameplay_simulation(&simulation, SIMULATION_STEP_SECONDS)
+	testing.expect_value(t, at_boundary.action_decisions, 1)
+	testing.expect_value(t, at_boundary.last_action, Gameplay_Action.Place_Bomb)
+	testing.expect(t, at_boundary.bomb_action_started)
+	testing.expect(t, !simulation.input.bomb_pending)
+}
+
+@(test)
+edge_input_and_simulation_limits_test :: proc(t: ^testing.T) {
+	simulation: Gameplay_Simulation_State
+	input: Game_Input
+	input.cheat_pressed[.F3] = true
+	buffer_gameplay_input(&simulation, input)
+
+	before_step := advance_gameplay_simulation(&simulation, 0)
+	testing.expect(t, simulation.input.cheat_pending[.F3])
+	testing.expect(t, !before_step.cheat_pressed[.F3])
+
+	after_step := advance_gameplay_simulation(&simulation, SIMULATION_STEP_SECONDS)
+	testing.expect(t, after_step.cheat_pressed[.F3])
+	testing.expect(t, !simulation.input.cheat_pending[.F3])
+
+	clamped := advance_gameplay_simulation(&simulation, 1.0)
+	testing.expect_value(t, clamped.steps_run, MAX_SIMULATION_STEPS_PER_FRAME)
+	testing.expect(t, MAX_SIMULATION_STEPS_PER_FRAME < MOVEMENT_STEPS_PER_TILE)
+}
+
+@(test)
+render_rate_and_high_score_input_test :: proc(t: ^testing.T) {
+	testing.expect_value(t, target_render_fps({}), i32(TARGET_RENDER_FPS))
+	testing.expect_value(
+		t,
+		target_render_fps({slow_mode = true}),
+		i32(SLOW_RENDER_FPS),
+	)
+	testing.expect(t, !update_high_scores({}))
+	testing.expect(t, update_high_scores({space_pressed = true}))
+	testing.expect(t, update_high_scores({mouse = {left_pressed = true}}))
+	testing.expect(t, update_high_scores({mouse = {right_pressed = true}}))
 }
