@@ -17,10 +17,19 @@ Map_Data :: struct {
 
 #assert(size_of(Map_Data) == 1045)
 
-// Bombs are runtime state and are not stored in the original level files.
+// Level contains only data loaded from the original level file. Mutable player,
+// enemy, and bomb state is owned by Gameplay.
 Level :: struct {
-	data:  Map_Data,
-	bombs: Map_Grid,
+	data: Map_Data,
+}
+
+Level_Data_Error :: enum {
+	None,
+	Invalid_Background,
+	Invalid_Item,
+	Invalid_Treasure,
+	Invalid_Enemy,
+	Invalid_Player,
 }
 
 LEVEL_COUNT :: 10
@@ -36,6 +45,29 @@ level_paths := [LEVEL_COUNT]string {
 	"levels/08.bin",
 	"levels/09.bin",
 	"levels/10.bin",
+}
+
+validate_level_data :: proc(data: ^Map_Data) -> Level_Data_Error {
+	for grid_y in 0 ..< MAP_HEIGHT {
+		for grid_x in 0 ..< MAP_WIDTH {
+			if data.background[grid_x][grid_y] >= TERRAIN_SPRITE_COUNT {
+				return .Invalid_Background
+			}
+			if data.item[grid_x][grid_y] >= ITEM_SPRITE_COUNT {
+				return .Invalid_Item
+			}
+			if data.treasure[grid_x][grid_y] >= TREASURE_SPRITE_COUNT {
+				return .Invalid_Treasure
+			}
+			if data.enemy[grid_x][grid_y] >= ENEMY_SPRITE_COUNT {
+				return .Invalid_Enemy
+			}
+			if data.player[grid_x][grid_y] > PLAYER_SPAWN_MARKER {
+				return .Invalid_Player
+			}
+		}
+	}
+	return .None
 }
 
 load_level :: proc(level: ^Level, level_index: int) -> bool {
@@ -73,6 +105,11 @@ load_level :: proc(level: ^Level, level_index: int) -> bool {
 	bytes_read, read_error := os.read_full(file, data_bytes)
 	if read_error != nil || bytes_read != len(data_bytes) {
 		fmt.eprintln("Failed to read level:", path, read_error)
+		return false
+	}
+
+	if validation_error := validate_level_data(&data); validation_error != .None {
+		fmt.eprintln("Level contains invalid map data:", path, validation_error)
 		return false
 	}
 

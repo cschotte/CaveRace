@@ -13,10 +13,11 @@ are available on the [CaveRace] website.
 ## Current status
 
 CaveRace 1.5 is a work in progress. Gameplay is not complete.
-The game screen currently loads and renders the original map data and has a
-gameplay state machine driven by the application frame loop. Player movement,
-bombs, enemy movement, collisions, scoring, high-score storage, and the
-original cheat effects still need to be implemented.
+The game screen loads the original map data, validates it, extracts player and
+enemy spawns into fixed runtime state, and renders the resulting level. It has
+a gameplay state machine driven by the application frame loop. Player
+movement, bombs, enemy movement, collisions, scoring, high-score storage, and
+the original cheat effects still need to be implemented.
 
 ## Requirements
 
@@ -36,6 +37,12 @@ directory is important because the application loads assets from the relative
 mkdir -p ../build
 odin build . -debug -out:../build/caverace
 ../build/caverace
+```
+
+Run the automated map and runtime-state tests from the same directory:
+
+```sh
+odin test .
 ```
 
 For an optimized build, omit `-debug`. On Windows, use an `.exe` output name if
@@ -78,19 +85,22 @@ is not implemented yet.
 | `application.odin` | Window, audio, main loop, and application lifetime |
 | `game.odin` | Application screen state and update/draw dispatch |
 | `gameplay.odin` | Playing-session state, transitions, and simulation update |
-| `level_render.odin` | Layered rendering of loaded map and spawn data |
+| `gameplay_runtime.odin` | Gameplay rules, fixed runtime entities, and spawn extraction |
+| `gameplay_test.odin` | Map validation and runtime-state regression tests |
+| `level_render.odin` | Layered rendering of map tiles and runtime entities |
 | `menu.odin` | Menu state, navigation, and rendering |
 | `high_score.odin` | High-score screen update and rendering |
 | `input.odin` | Keyboard and mouse input mapping |
 | `mouse.odin` | Shared custom mouse state and rendering |
 | `assets.odin` | Texture and sound loading, validation, and cleanup |
-| `level.odin` | Original map data layout, loading, and runtime level state |
+| `level.odin` | Original map data layout, loading, and index validation |
 | `options.odin` | Legacy command-line option parsing |
 | `config.odin` | Window, frame-rate, map, and media constants |
 
 The map is 19×11 cells. A stored level consists of five byte grids for the
-background, items, treasure, enemies, and player state. Bombs are runtime state
-and are therefore kept outside the original on-disk structure.
+background, items, treasure, enemy spawns, and the player spawn. Mutable
+player, enemy, bomb, and bomb-occupancy state is kept outside the original
+on-disk structure.
 
 ## Assets
 

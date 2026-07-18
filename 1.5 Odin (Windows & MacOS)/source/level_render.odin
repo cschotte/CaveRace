@@ -2,16 +2,12 @@ package caverace
 
 import rl "vendor:raylib"
 
-PLAYER_IDLE_SPRITE :: 2
-
-// draw_level follows the 1.3 renderer's layer order. Player and enemy map
-// values are spawn data; they can be replaced by runtime entity rendering once
-// movement is implemented.
-draw_level :: proc(level: ^Level, terrain: rl.Texture, sprites: ^Sprite_Assets) {
+// draw_level_tiles draws only persistent map layers. Spawn grids remain part of
+// the loaded file data, but runtime entities are rendered separately.
+draw_level_tiles :: proc(level: ^Level, terrain: rl.Texture, sprites: ^Sprite_Assets) {
 	for grid_y in 0 ..< MAP_HEIGHT {
 		for grid_x in 0 ..< MAP_WIDTH {
-			screen_x := i32(MAP_OFFSET_X + grid_x * MAP_TILE_SIZE)
-			screen_y := i32(MAP_OFFSET_Y + grid_y * MAP_TILE_SIZE)
+			screen_x, screen_y := grid_position_to_screen({grid_x, grid_y})
 
 			draw_vertical_sprite(terrain, level.data.background[grid_x][grid_y], screen_x, screen_y)
 
@@ -21,17 +17,25 @@ draw_level :: proc(level: ^Level, terrain: rl.Texture, sprites: ^Sprite_Assets) 
 			if tile := level.data.item[grid_x][grid_y]; tile != 0 {
 				draw_vertical_sprite(sprites.objects, tile, screen_x, screen_y)
 			}
-			if tile := level.bombs[grid_x][grid_y]; tile != 0 {
-				draw_vertical_sprite(sprites.bomb, tile, screen_x, screen_y)
-			}
-
-			if level.data.player[grid_x][grid_y] != 0 {
-				draw_vertical_sprite(sprites.player, PLAYER_IDLE_SPRITE, screen_x, screen_y)
-			}
-			if tile := level.data.enemy[grid_x][grid_y]; tile != 0 {
-				draw_vertical_sprite(sprites.enemy, tile, screen_x, screen_y)
-			}
 		}
+	}
+}
+
+draw_level_entities :: proc(gameplay: ^Gameplay, sprites: ^Sprite_Assets) {
+	for &bomb in gameplay.bombs {
+		if !bomb.active do continue
+		screen_x, screen_y := grid_position_to_screen(bomb.position)
+		draw_vertical_sprite(sprites.bomb, BOMB_TICKING_SPRITE, screen_x, screen_y)
+	}
+
+	screen_x, screen_y := grid_position_to_screen(gameplay.player.position)
+	draw_vertical_sprite(sprites.player, PLAYER_IDLE_SPRITE, screen_x, screen_y)
+
+	for enemy_index in 0 ..< gameplay.enemy_count {
+		enemy := &gameplay.enemies[enemy_index]
+		if !enemy.active do continue
+		screen_x, screen_y := grid_position_to_screen(enemy.position)
+		draw_vertical_sprite(sprites.enemy, enemy.kind, screen_x, screen_y)
 	}
 }
 

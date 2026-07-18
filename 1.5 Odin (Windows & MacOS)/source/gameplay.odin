@@ -1,5 +1,6 @@
 package caverace
 
+import "core:fmt"
 import "core:math/rand"
 import rl "vendor:raylib"
 
@@ -14,15 +15,21 @@ Gameplay_State :: enum {
 }
 
 Gameplay :: struct {
-	state:       Gameplay_State,
-	level:       Level,
-	level_index: int,
-	theme:       Tile_Theme,
+	state:          Gameplay_State,
+	level:          Level,
+	level_index:    int,
+	theme:          Tile_Theme,
+	player:         Player_State,
+	enemies:        [MAX_ENEMIES]Enemy_State,
+	enemy_count:    int,
+	bombs:          [MAX_BOMBS]Bomb_State,
+	bomb_occupancy: Map_Grid,
 }
 
 init_gameplay :: proc(gameplay: ^Gameplay) {
 	gameplay^ = Gameplay {
-		state = .Load_Level,
+		state  = .Load_Level,
+		player = new_player_state(),
 	}
 }
 
@@ -38,8 +45,13 @@ update_gameplay :: proc(gameplay: ^Gameplay, input: Game_Input) -> (back_request
 	switch gameplay.state {
 	case .Load_Level:
 		if load_level(&gameplay.level, gameplay.level_index) {
-			gameplay.theme = Tile_Theme(rand.int_max(len(Tile_Theme)))
-			change_gameplay_state(gameplay, .Playing)
+			if runtime_error := initialize_level_runtime(gameplay); runtime_error == .None {
+				gameplay.theme = Tile_Theme(rand.int_max(len(Tile_Theme)))
+				change_gameplay_state(gameplay, .Playing)
+			} else {
+				fmt.eprintln("Failed to initialize level runtime:", runtime_error)
+				change_gameplay_state(gameplay, .Load_Failed)
+			}
 		} else {
 			change_gameplay_state(gameplay, .Load_Failed)
 		}
@@ -48,10 +60,14 @@ update_gameplay :: proc(gameplay: ^Gameplay, input: Game_Input) -> (back_request
 		// Player, enemy, bomb, collision, and win-condition updates belong here.
 
 	case .Dead:
-		if input.confirm do change_gameplay_state(gameplay, .Load_Level)
+		if input.confirm {
+			reset_player_for_level_start(&gameplay.player)
+			change_gameplay_state(gameplay, .Load_Level)
+		}
 
 	case .Won:
 		if input.confirm {
+			reset_player_for_level_start(&gameplay.player)
 			gameplay.level_index = (gameplay.level_index + 1) % LEVEL_COUNT
 			change_gameplay_state(gameplay, .Load_Level)
 		}
@@ -69,7 +85,8 @@ draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {
 	// Draw the level, if applicable.
 	switch gameplay.state {
 	case .Playing, .Dead, .Won:
-		draw_level(&gameplay.level, assets.tiles[gameplay.theme], &assets.sprites)
+		draw_level_tiles(&gameplay.level, assets.tiles[gameplay.theme], &assets.sprites)
+		draw_level_entities(gameplay, &assets.sprites)
 	case .Load_Level, .Load_Failed:
 	}
 

@@ -73,10 +73,10 @@ load_assets :: proc(assets: ^Assets) -> bool {
 }
 
 assets_are_valid :: proc(assets: ^Assets) -> bool {
-	if !rl.IsTextureValid(assets.screens.game)      do return false
-	if !rl.IsTextureValid(assets.screens.highscore) do return false
-	if !rl.IsTextureValid(assets.screens.menu)      do return false
-	if !rl.IsTextureValid(assets.screens.select)    do return false
+	if !texture_has_size(assets.screens.game, WINDOW_WIDTH, WINDOW_HEIGHT)      do return false
+	if !texture_has_size(assets.screens.highscore, WINDOW_WIDTH, WINDOW_HEIGHT) do return false
+	if !texture_has_size(assets.screens.menu, WINDOW_WIDTH, WINDOW_HEIGHT)      do return false
+	if !texture_has_size(assets.screens.select, MENU_SELECTION_WIDTH, MENU_SELECTION_HEIGHT) do return false
 
 	for sound in assets.sounds.bomb {
 		if !rl.IsSoundValid(sound) do return false
@@ -86,18 +86,27 @@ assets_are_valid :: proc(assets: ^Assets) -> bool {
 	if !rl.IsSoundValid(assets.sounds.squish)  do return false
 	if !rl.IsSoundValid(assets.sounds.ticking) do return false
 
-	if !rl.IsTextureValid(assets.sprites.bomb)     do return false
-	if !rl.IsTextureValid(assets.sprites.enemy)    do return false
-	if !rl.IsTextureValid(assets.sprites.objects)  do return false
-	if !rl.IsTextureValid(assets.sprites.player)   do return false
-	if !rl.IsTextureValid(assets.sprites.tools)    do return false
-	if !rl.IsTextureValid(assets.sprites.treasure) do return false
+	if !vertical_sheet_is_valid(assets.sprites.bomb, BOMB_SPRITE_COUNT) do return false
+	if !vertical_sheet_is_valid(assets.sprites.enemy, ENEMY_SPRITE_COUNT) do return false
+	if !vertical_sheet_is_valid(assets.sprites.objects, ITEM_SPRITE_COUNT) do return false
+	if !vertical_sheet_is_valid(assets.sprites.player, PLAYER_SPRITE_COUNT) do return false
+	if !vertical_sheet_is_valid(assets.sprites.tools, TOOLS_SPRITE_COUNT) do return false
+	if !vertical_sheet_is_valid(assets.sprites.treasure, TREASURE_SPRITE_COUNT) do return false
 
 	for tile in assets.tiles {
-		if !rl.IsTextureValid(tile) do return false
+		if !vertical_sheet_is_valid(tile, TERRAIN_SPRITE_COUNT) do return false
 	}
 
 	return true
+}
+
+texture_has_size :: proc(texture: rl.Texture, width, height: int) -> bool {
+	return rl.IsTextureValid(texture) &&
+	       texture.width == i32(width) && texture.height == i32(height)
+}
+
+vertical_sheet_is_valid :: proc(texture: rl.Texture, sprite_count: int) -> bool {
+	return texture_has_size(texture, MAP_TILE_SIZE, sprite_count * MAP_TILE_SIZE)
 }
 
 unload_assets :: proc(assets: ^Assets) {
