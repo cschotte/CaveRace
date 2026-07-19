@@ -33,9 +33,6 @@ simultaneous_last_enemy_and_player_death_resolves_as_win_test :: proc(t: ^testin
 	testing.expect(t, !gameplay.level_completion_enabled)
 	testing.expect_value(t, gameplay.enemy_count, 0)
 	testing.expect(t, !gameplay.explosions[0].active)
-	_, completed := frame.completed_run.?
-	testing.expect(t, !completed)
-
 	score_after_win := gameplay.player.score
 	update_gameplay(&gameplay, {}, 1.0)
 	testing.expect_value(t, gameplay.player.score, score_after_win)
@@ -76,9 +73,6 @@ death_removes_one_life_then_confirmed_retry_reloads_with_penalty_test :: proc(t:
 	testing.expect_value(t, gameplay.player.score, 100)
 	testing.expect(t, gameplay.level_completion_enabled)
 	testing.expect_value(t, gameplay.enemy_count, 1)
-	_, completed := death.completed_run.?
-	testing.expect(t, !completed)
-
 	update_gameplay(&gameplay, {}, 1.0)
 	testing.expect_value(t, gameplay.player.lives, 1)
 	testing.expect_value(t, gameplay.player.score, 100)
@@ -116,10 +110,10 @@ retry_penalty_that_reaches_zero_applies_legacy_score_floor_test :: proc(t: ^test
 	testing.expect_value(t, gameplay.state, Gameplay_State.Load_Level)
 }
 
-// Verifies final death creates a completed run and routes it through the
-// high-score screen without retaining duplicate pending state.
+// Verifies final death keeps the score in gameplay until input returns to the
+// main menu.
 @(test)
-final_death_routes_completed_run_to_high_scores_test :: proc(t: ^testing.T) {
+final_death_stays_on_game_over_until_input_returns_to_main_menu_test :: proc(t: ^testing.T) {
 	position := Grid_Position {3, 3}
 	game: Game
 	init_game(&game)
@@ -133,23 +127,16 @@ final_death_routes_completed_run_to_high_scores_test :: proc(t: ^testing.T) {
 	game.gameplay.enemy_count = 1
 	seed_gameplay_random(&game.gameplay, 31)
 
-	result := update_game(&game, {}, GAMEPLAY_TICK_SECONDS)
+	update_game(&game, {}, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, game.gameplay.state, Gameplay_State.Game_Over)
 	testing.expect_value(t, game.gameplay.player.lives, 0)
 	testing.expect_value(t, game.gameplay.player.score, SCORE_BOMB_COST)
-	testing.expect_value(t, game.screen, App_Screen.High_Scores)
+	testing.expect_value(t, game.screen, App_Screen.Playing)
 	testing.expect(t, !game.gameplay.level_completion_enabled)
 	testing.expect_value(t, game.gameplay.enemy_count, 0)
 
-	completed_run, completed := result.gameplay.completed_run.?
-	if testing.expect(t, completed) {
-		testing.expect_value(t, completed_run.score, SCORE_BOMB_COST)
-	}
-	testing.expect_value(t, game.high_scores.mode, High_Score_Mode.Viewing)
-	testing.expect_value(t, game.high_scores.pending_score, u64(0))
-
-	update_game(&game, Game_Input {back = true}, 0)
-	testing.expect_value(t, game.screen, App_Screen.Menu)
+	update_game(&game, Game_Input {any_key_pressed = true}, 0)
+	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
 }
 
 // Confirms Escape abandons active gameplay immediately without applying death
@@ -168,13 +155,11 @@ escape_abandons_run_directly_without_completed_score_test :: proc(t: ^testing.T)
 	game.gameplay.enemies[0] = enemy_at(position)
 	game.gameplay.enemy_count = 1
 
-	result := update_game(&game, Game_Input {back = true}, GAMEPLAY_TICK_SECONDS)
-	testing.expect_value(t, game.screen, App_Screen.Menu)
+	update_game(&game, Game_Input {back = true}, GAMEPLAY_TICK_SECONDS)
+	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
 	testing.expect_value(t, game.gameplay.state, Gameplay_State.Playing)
 	testing.expect_value(t, game.gameplay.player.lives, 1)
 	testing.expect_value(t, game.gameplay.player.energy, ENEMY_CONTACT_DAMAGE)
-	_, completed := result.gameplay.completed_run.?
-	testing.expect(t, !completed)
 }
 
 // Exercises a full ten-level wraparound to ensure each transition reloads clean
@@ -207,7 +192,7 @@ ten_level_cycle_wraps_and_reloads_without_stale_level_state_test :: proc(t: ^tes
 		gameplay.player.bomb_capacity = 4
 		gameplay.player.bomb_power = 8
 
-		win := update_gameplay(&gameplay, {}, 0)
+		update_gameplay(&gameplay, {}, 0)
 		testing.expect_value(t, gameplay.state, Gameplay_State.Won)
 		testing.expect_value(
 			t,
@@ -219,9 +204,6 @@ ten_level_cycle_wraps_and_reloads_without_stale_level_state_test :: proc(t: ^tes
 		testing.expect(t, !gameplay.bombs[0].active)
 		testing.expect(t, !gameplay.explosions[0].active)
 		testing.expect_value(t, gameplay.bomb_occupancy[1][1], u8(0))
-		_, completed := win.completed_run.?
-		testing.expect(t, !completed)
-
 		update_gameplay(&gameplay, Game_Input {confirm = true}, 0)
 		testing.expect_value(t, gameplay.state, Gameplay_State.Load_Level)
 		testing.expect_value(t, gameplay.level_index, (completed_level + 1) % LEVEL_COUNT)

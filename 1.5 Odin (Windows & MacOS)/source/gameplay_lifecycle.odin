@@ -40,24 +40,22 @@ begin_next_level :: proc(gameplay: ^Gameplay) {
 resolve_gameplay_outcome :: proc(
 	gameplay: ^Gameplay,
 	ticks: Gameplay_Tick_Result,
-) -> Maybe(Completed_Run) {
+) {
 	if gameplay.level_completion_enabled && active_enemy_count(gameplay) == 0 {
 		apply_score_event(&gameplay.player, .Level_Won)
 		clear_level_state(gameplay)
 		gameplay.state = .Won
-		return nil
+		return
 	}
 
-	if !ticks.player_died do return nil
+	if !ticks.player_died do return
 	gameplay.player.lives = max(gameplay.player.lives - 1, 0)
 	if gameplay.player.lives > 0 {
 		gameplay.state = .Dead
-		return nil
+		return
 	}
 
 	apply_score_event(&gameplay.player, .Action_Floor)
-	completed_run := Completed_Run {score = gameplay.player.score}
 	clear_level_state(gameplay)
 	gameplay.state = .Game_Over
-	return completed_run
 }

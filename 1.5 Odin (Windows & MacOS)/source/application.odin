@@ -6,11 +6,11 @@ import rl "vendor:raylib"
 // Application owns platform resources and allocated paths for the complete
 // process lifetime managed by run_application.
 Application :: struct {
-	assets:                  Assets,
-	game:                    Game,
-	high_score_storage_path: string,
-	resource_root:           string,
-	audio_ready:             bool,
+	assets:        Assets,
+	game:          Game,
+	resource_root: string,
+	audio_ready:   bool,
+	active_music:  Maybe(Music_Cue),
 }
 
 // run_application owns platform startup, resource lifetimes, and the main
@@ -25,15 +25,7 @@ run_application :: proc(options: Launch_Options) -> bool {
 	app.resource_root = resource_root
 	defer delete(app.resource_root)
 
-	storage_path, storage_path_error := high_score_storage_path()
-	if storage_path_error != nil {
-		fmt.eprintln("Could not resolve the high-score storage path; scores will not persist.")
-	} else {
-		app.high_score_storage_path = storage_path
-		defer delete(app.high_score_storage_path)
-	}
 	init_game(&app.game, options.cheats_enabled)
-	load_high_scores(&app.game.high_scores, app.high_score_storage_path)
 
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
 	if !rl.IsWindowReady() {
@@ -61,14 +53,11 @@ run_application :: proc(options: Launch_Options) -> bool {
 	// Disable the default exit key (ESC) to allow custom handling
 	rl.SetExitKey(.KEY_NULL)
 
-	// Hide the mouse cursor since we are drawing our own
-	rl.HideCursor()
-
 	// Slow mode reduces rendering work only. Gameplay always advances at the
 	// fixed GAMEPLAY_TICK_HZ rate through its accumulator.
 	rl.SetTargetFPS(target_render_fps(options))
 
-	for application_should_continue(&app.game, rl.WindowShouldClose()) {
+	for !rl.WindowShouldClose() {
 		input := poll_game_input()
 		frame_seconds := f64(rl.GetFrameTime())
 		input, frame_seconds = prepare_application_frame(
@@ -79,16 +68,78 @@ run_application :: proc(options: Launch_Options) -> bool {
 		)
 		update_result := update_application(&app, input, frame_seconds)
 		if app.audio_ready {
+			update_game_music(&app)
 			play_frame_audio(&app.assets, &update_result)
 		}
 
 		rl.BeginDrawing()
-			rl.ClearBackground(rl.RAYWHITE)
-			draw_game(&app.game, &app.assets, input.mouse)
+			rl.ClearBackground(rl.BLACK)
+			draw_game(&app.game, &app.assets)
 		rl.EndDrawing()
 	}
 
 	return true
+}
+
+// music_cue_for_game maps the current platform-independent state to one active
+// streamed track. Intro panels use matching tracks, cave music rotates by
+// level, and completing the tenth level receives the victory cue.
+music_cue_for_game :: proc(game: ^Game) -> Music_Cue {
+	switch game.screen {
+	case .Intro:
+		assert(game.front_end.image_index >= INTRO_FIRST_IMAGE)
+		assert(game.front_end.image_index <= INTRO_LAST_IMAGE)
+		return Music_Cue(int(Music_Cue.Intro_Space) + game.front_end.image_index)
+	case .Main_Menu:
+		return .Main_Menu
+	case .Playing:
+		switch game.gameplay.state {
+		case .Won:
+			if game.gameplay.level_index == LEVEL_COUNT - 1 do return .Victory
+			return .Level_Complete
+		case .Game_Over:
+			return .Game_Over
+		case .Load_Level, .Playing, .Dead, .Load_Failed:
+			switch game.gameplay.level_index % 3 {
+			case 0: return .Cave_A
+			case 1: return .Cave_B
+			case 2: return .Cave_C
+			}
+		}
+	}
+	return .Main_Menu
+}
+
+// music_cue_loops distinguishes ambient screen/gameplay songs from finite
+// story and outcome cues.
+music_cue_loops :: proc(cue: Music_Cue) -> bool {
+	switch cue {
+	case .Main_Menu, .Cave_A, .Cave_B, .Cave_C:
+		return true
+	case .Intro_Space, .Intro_Eldora, .Intro_Mining, .Intro_Aliens,
+	     .Intro_Defense, .Intro_Hero, .Intro_Bombs, .Level_Complete,
+	     .Victory, .Game_Over:
+		return false
+	}
+	return false
+}
+
+// update_game_music switches tracks only when the requested cue changes and
+// services the active raylib stream every frame.
+update_game_music :: proc(app: ^Application) {
+	desired := music_cue_for_game(&app.game)
+	if active, ok := app.active_music.?; ok {
+		if active == desired {
+			rl.UpdateMusicStream(app.assets.music[active])
+			return
+		}
+		rl.StopMusicStream(app.assets.music[active])
+	}
+
+	app.assets.music[desired].looping = music_cue_loops(desired)
+	rl.PlayMusicStream(app.assets.music[desired])
+	app.active_music = desired
+	rl.UpdateMusicStream(app.assets.music[desired])
 }
 
 // update_application advances platform-independent game state, then fulfills
@@ -104,20 +155,11 @@ update_application :: proc(
 }
 
 // process_game_requests is the single boundary where pure game-routing output
-// may cause resource loading or persistence using Application-owned paths.
+// may load a level using the Application-owned resource root.
 process_game_requests :: proc(app: ^Application, result: ^Game_Update_Result) {
 	if result.load_level_requested {
 		load_gameplay_level(&app.game.gameplay, app.resource_root)
 	}
-	if result.save_high_scores_requested {
-		persist_high_scores(app.high_score_storage_path, &app.game.high_scores.table)
-	}
-}
-
-// application_should_continue combines the in-game quit request with the
-// native window close signal and is evaluated at the start of every frame.
-application_should_continue :: proc(game: ^Game, window_should_close: bool) -> bool {
-	return !game.quit_requested && !window_should_close
 }
 
 // prepare_application_frame suppresses input and elapsed time while focus is
@@ -134,12 +176,9 @@ prepare_application_frame :: proc(
 	return {}, 0
 }
 
-// play_frame_audio translates gameplay and menu events from the latest update
-// into raylib sound calls after game state has advanced.
+// play_frame_audio translates gameplay events from the latest update into
+// raylib sound calls after game state has advanced.
 play_frame_audio :: proc(assets: ^Assets, result: ^Game_Update_Result) {
-	if result.menu_selection_changed {
-		rl.PlaySound(assets.sounds.menu)
-	}
 	if result.gameplay.ticks.ticking_requested {
 		rl.PlaySound(assets.sounds.ticking)
 	}

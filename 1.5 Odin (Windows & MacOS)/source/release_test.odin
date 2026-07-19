@@ -135,18 +135,12 @@ missing_and_invalid_level_files_do_not_replace_valid_state_test :: proc(t: ^test
 	testing.expect_value(t, gameplay.state, Gameplay_State.Load_Level)
 }
 
-// Confirms native close, focus loss, and focus recovery do not mutate owned game
-// state or replay queued gameplay input.
+// Confirms focus loss and recovery do not mutate owned game state or replay
+// queued gameplay input.
 @(test)
-window_close_and_focus_loss_are_non_destructive_test :: proc(t: ^testing.T) {
+focus_loss_is_non_destructive_test :: proc(t: ^testing.T) {
 	game: Game
 	init_game(&game)
-	testing.expect(t, application_should_continue(&game, false))
-	testing.expect(t, !application_should_continue(&game, true))
-	game.quit_requested = true
-	testing.expect(t, !application_should_continue(&game, false))
-
-	game.quit_requested = false
 	game.gameplay.tick_state.input = {
 		move_right   = true,
 		bomb_pending = true,
@@ -170,35 +164,19 @@ window_close_and_focus_loss_are_non_destructive_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, focused_seconds, f64(0.2))
 }
 
-// Exercises repeated screen routing to ensure Application-owned resource and
-// persistence paths remain valid across Game resets.
+// Exercises repeated title/gameplay routing to ensure the Application-owned
+// resource root remains valid across fresh runs.
 @(test)
-repeated_menu_game_and_score_transitions_keep_application_paths_test :: proc(t: ^testing.T) {
-	app := Application {
-		high_score_storage_path = "scores.test",
-		resource_root           = "resources.test",
-	}
+repeated_main_menu_game_transitions_keep_application_path_test :: proc(t: ^testing.T) {
+	app := Application {resource_root = "resources.test"}
 	init_game(&app.game)
+	show_main_menu(&app.game)
 	for _ in 0 ..< 12 {
-		update_game(
-			&app.game,
-			Game_Input {
-				menu_shortcut = Menu_Item.High_Scores,
-				confirm       = true,
-			},
-			0,
-		)
-		testing.expect_value(t, app.game.screen, App_Screen.High_Scores)
-		update_game(&app.game, Game_Input {back = true}, 0)
-		testing.expect_value(t, app.game.screen, App_Screen.Menu)
-
-		app.game.menu.selected = .Start_Game
-		update_game(&app.game, Game_Input {confirm = true}, 0)
+		update_game(&app.game, Game_Input {any_key_pressed = true}, 0)
 		testing.expect_value(t, app.game.screen, App_Screen.Playing)
 		update_game(&app.game, Game_Input {back = true}, 0)
-		testing.expect_value(t, app.game.screen, App_Screen.Menu)
+		testing.expect_value(t, app.game.screen, App_Screen.Main_Menu)
 		testing.expect_value(t, app.resource_root, "resources.test")
-		testing.expect_value(t, app.high_score_storage_path, "scores.test")
 	}
 }
 
@@ -212,7 +190,8 @@ game_update_requests_level_load_at_application_boundary_test :: proc(t: ^testing
 
 	app := Application {resource_root = resource_root}
 	init_game(&app.game)
-	update_game(&app.game, Game_Input {confirm = true}, 0)
+	update_game(&app.game, Game_Input {back = true}, 0)
+	update_game(&app.game, Game_Input {any_key_pressed = true}, 0)
 
 	result := update_game(&app.game, {}, 0)
 	testing.expect(t, result.load_level_requested)
@@ -222,36 +201,21 @@ game_update_requests_level_load_at_application_boundary_test :: proc(t: ^testing
 	testing.expect_value(t, app.game.gameplay.state, Gameplay_State.Playing)
 }
 
-// Runs a deterministic end-to-end game flow through loading, pickup, win, retry,
-// game over, persisted high score, menu return, and quit.
+// Runs a deterministic end-to-end game flow through the new front end, loading,
+// pickup, win, retry, game over, menu return, and a fresh run.
 @(test)
 deterministic_complete_run_smoke_test :: proc(t: ^testing.T) {
-	temporary_directory, directory_error := os.make_directory_temp(
-		"",
-		"caverace-release-smoke-*",
-		context.allocator,
-	)
-	if !testing.expect(t, directory_error == nil) do return
-	defer {
-		_ = os.remove_all(temporary_directory)
-		delete(temporary_directory)
-	}
-
-	score_path, score_path_error := filepath.join({temporary_directory, "scores.dat"})
-	if !testing.expect(t, score_path_error == nil) do return
-	defer delete(score_path)
 	resource_root, root_ok := resolve_resource_root()
 	if !testing.expect(t, root_ok) do return
 	defer delete(resource_root)
 
-	app := Application {
-		high_score_storage_path = score_path,
-		resource_root           = resource_root,
-	}
+	app := Application {resource_root = resource_root}
 	init_game(&app.game)
-	load_high_scores(&app.game.high_scores, app.high_score_storage_path)
 	game := &app.game
-	update_application(&app, Game_Input {confirm = true}, 0)
+	testing.expect_value(t, game.screen, App_Screen.Intro)
+	update_application(&app, Game_Input {back = true}, 0)
+	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
+	update_application(&app, Game_Input {any_key_pressed = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Playing)
 	update_application(&app, {}, 0)
 	if !testing.expect_value(t, game.gameplay.state, Gameplay_State.Playing) do return
@@ -293,43 +257,12 @@ deterministic_complete_run_smoke_test :: proc(t: ^testing.T) {
 	game.gameplay.enemies[0] = enemy_at(game.gameplay.player.position)
 	game.gameplay.enemy_count = 1
 	update_application(&app, {}, GAMEPLAY_TICK_SECONDS)
-	testing.expect_value(t, game.screen, App_Screen.High_Scores)
-	testing.expect_value(t, game.high_scores.mode, High_Score_Mode.Entering_Name)
+	testing.expect_value(t, game.screen, App_Screen.Playing)
+	testing.expect_value(t, game.gameplay.state, Gameplay_State.Game_Over)
 
-	name_input: Game_Input
-	for character, character_index in "SMOKE TEST" {
-		name_input.text_codepoints[character_index] = character
-		name_input.text_count += 1
-	}
-	update_application(&app, name_input, 0)
-	update_application(&app, Game_Input {confirm = true}, 0)
-	testing.expect_value(t, game.high_scores.mode, High_Score_Mode.Viewing)
-
-	loaded_scores: High_Score_Table
-	testing.expect_value(
-		t,
-		load_high_score_table(score_path, &loaded_scores),
-		High_Score_Load_Status.Loaded,
-	)
-	found_smoke_score := false
-	for entry_index in 0 ..< HIGH_SCORE_ENTRY_COUNT {
-		entry := &loaded_scores.entries[entry_index]
-		if high_score_name_string(&entry.name) == "SMOKE TEST" {
-			found_smoke_score = true
-			break
-		}
-	}
-	testing.expect(t, found_smoke_score)
-
-	update_application(&app, Game_Input {back = true}, 0)
-	testing.expect_value(t, game.screen, App_Screen.Menu)
-	update_game(
-		game,
-		Game_Input {
-			menu_shortcut = Menu_Item.Quit,
-			confirm       = true,
-		},
-		0,
-	)
-	testing.expect(t, game.quit_requested)
+	update_application(&app, Game_Input {any_key_pressed = true}, 0)
+	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
+	update_application(&app, Game_Input {any_key_pressed = true}, 0)
+	testing.expect_value(t, game.screen, App_Screen.Playing)
+	testing.expect_value(t, game.gameplay.player.score, 0)
 }

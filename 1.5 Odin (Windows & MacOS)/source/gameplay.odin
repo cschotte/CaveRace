@@ -24,7 +24,7 @@ update_gameplay :: proc(
 			frame_seconds,
 			cheats_enabled,
 		)
-		result.completed_run = resolve_gameplay_outcome(gameplay, result.ticks)
+		resolve_gameplay_outcome(gameplay, result.ticks)
 
 	case .Dead:
 		if input.confirm {

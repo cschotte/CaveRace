@@ -345,28 +345,13 @@ edge_input_and_tick_limits_test :: proc(t: ^testing.T) {
 	testing.expect(t, MAX_GAMEPLAY_TICKS_PER_FRAME < MOVEMENT_STEPS_PER_TILE)
 }
 
-// Confirms slow rendering does not change gameplay frequency and that high-score
-// text capacity remains bounded independently of frame rate.
+// Confirms slow rendering does not change gameplay frequency.
 @(test)
-render_rate_and_high_score_input_test :: proc(t: ^testing.T) {
+render_rate_policy_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, target_render_fps({}), i32(TARGET_RENDER_FPS))
 	testing.expect_value(
 		t,
 		target_render_fps({slow_mode = true}),
 		i32(SLOW_RENDER_FPS),
-	)
-	high_scores := High_Score_State {table = default_high_score_table()}
-	testing.expect(t, !update_high_scores(&high_scores, {}).back_requested)
-	testing.expect(
-		t,
-		update_high_scores(&high_scores, {space_pressed = true}).back_requested,
-	)
-	testing.expect(
-		t,
-		update_high_scores(&high_scores, {mouse = {left_pressed = true}}).back_requested,
-	)
-	testing.expect(
-		t,
-		update_high_scores(&high_scores, {mouse = {right_pressed = true}}).back_requested,
 	)
 }

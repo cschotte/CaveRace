@@ -107,39 +107,13 @@ feedback_flash_priority_and_timing_test :: proc(t: ^testing.T) {
 visual_transitions_do_not_block_game_input_test :: proc(t: ^testing.T) {
 	game: Game
 	init_game(&game)
-	update_game(&game, Game_Input {confirm = true}, 0)
+	update_game(&game, Game_Input {back = true}, 0)
+	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
+	update_game(&game, Game_Input {any_key_pressed = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Playing)
 	testing.expect_value(t, transition_fade_alpha(game.feedback), f32(1))
 
 	update_game(&game, Game_Input {back = true}, GAMEPLAY_TICK_SECONDS)
-	testing.expect_value(t, game.screen, App_Screen.Menu)
+	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
 	testing.expect_value(t, transition_fade_alpha(game.feedback), f32(1))
-}
-
-// Confirms menu selection uses the intended two-phase legacy alpha transition
-// without blocking further menu updates.
-@(test)
-menu_selection_uses_non_blocking_legacy_alpha_transition_test :: proc(t: ^testing.T) {
-	menu := Menu_State {selected = .Start_Game}
-	changed := update_menu(&menu, Game_Input {menu_next = true}, 0)
-	testing.expect(t, changed.selection_changed)
-	visual_item, alpha := menu_selection_visual(menu)
-	testing.expect_value(t, visual_item, Menu_Item.Start_Game)
-	testing.expect_value(t, alpha, f32(1))
-
-	unchanged := update_menu(&menu, {}, MENU_SELECTION_TRANSITION_SECONDS / 4)
-	testing.expect(t, !unchanged.selection_changed)
-	visual_item, alpha = menu_selection_visual(menu)
-	testing.expect_value(t, visual_item, Menu_Item.Start_Game)
-	testing.expect_value(t, alpha, f32(0.5))
-
-	update_menu(&menu, {}, MENU_SELECTION_TRANSITION_SECONDS / 4)
-	visual_item, alpha = menu_selection_visual(menu)
-	testing.expect_value(t, visual_item, Menu_Item.High_Scores)
-	testing.expect_value(t, alpha, f32(0))
-
-	update_menu(&menu, {}, MENU_SELECTION_TRANSITION_SECONDS / 2)
-	visual_item, alpha = menu_selection_visual(menu)
-	testing.expect_value(t, visual_item, Menu_Item.High_Scores)
-	testing.expect_value(t, alpha, f32(1))
 }

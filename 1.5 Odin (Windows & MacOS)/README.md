@@ -64,14 +64,12 @@ On macOS application bundles, the same directories may instead be placed in
 
 | Key | Current action |
 | --- | --- |
-| Up / Down | Move through the main menu |
-| 1 / 2 / 3 | Select Start Game / High Scores / Quit |
-| Enter | Confirm menu selection, retry, the next level, or a high-score name |
-| Mouse | Select and confirm a main-menu item |
-| Escape | Return to the main menu from game or high scores |
+| Window close button | Quit the game |
+| Escape | Skip the story intro or return to the main menu from gameplay |
+| Any key | Start from the alternating title and controls screens; leave game over |
+| Enter | Retry after death or continue after winning a level |
 | Arrow keys | Move the player during gameplay |
 | Space | Place a bomb during gameplay |
-| Space / either mouse button | Return from the high-score screen |
 | F1 | Clear all enemies and complete the level (`-powerblast` only) |
 | F2 | Restore four lives and eight energy (`-powerblast` only) |
 | F3 | Grant four-bomb capacity (`-powerblast` only) |
@@ -94,9 +92,11 @@ not mutate gameplay state.
 | File | Responsibility |
 | --- | --- |
 | `caverace.odin` | Entry point and launch messages |
-| `application.odin` | Owned paths/assets, window/audio lifetime, I/O requests, and the frame loop |
-| `game.odin` | Platform-independent screen state, routing, and explicit application requests |
-| `render.odin` | Top-level screen, menu, gameplay, high-score, mouse, and feedback drawing |
+| `application.odin` | Owned paths/assets, window/audio lifetime, music routing, I/O requests, and the frame loop |
+| `game.odin` | Platform-independent intro, main-menu, gameplay routing, and explicit application requests |
+| `front_end.odin` | Timed story sequence, shared fade transitions, looping title/controls state, and keyboard start policy |
+| `front_end_test.odin` | Intro sequence, crossfade, five-second menu loop, skip, and start regression tests |
+| `render.odin` | Top-level front-end, gameplay, HUD, and feedback drawing |
 | `gameplay_state.odin` | Fixed gameplay capacities, value types, session state, and initialization |
 | `gameplay.odin` | Playing-session state-machine update and transitions |
 | `gameplay_loading.odin` | Level resource loading and validated active-state construction |
@@ -106,7 +106,7 @@ not mutate gameplay state.
 | `gameplay_test.odin` | Map, level-state, input-priority, and fixed-tick regression tests |
 | `cheats.odin` | Gated legacy F1-F5 gameplay mutations and safe power/score limits |
 | `feedback.odin` | Non-blocking transition fades and gameplay color flashes |
-| `cheats_test.odin` | Cheat gating, feedback timing, and menu-animation tests |
+| `cheats_test.odin` | Cheat gating, feedback timing, and transition tests |
 | `resources.odin` | Packaged, bundle, development, and working-directory resource resolution |
 | `release_test.odin` | Resource failures, platform-loop policy, transition cycling, and full-run smoke tests |
 | `enemy.odin` | Seeded enemy movement, rendering positions, and contact damage |
@@ -122,12 +122,8 @@ not mutate gameplay state.
 | `level_render.odin` | Layered rendering of map tiles and active entities |
 | `player_movement.odin` | Player walkability, tile movement, coordinate conversion, and animation |
 | `player_movement_test.odin` | Player collision, movement, conversion, and animation regression tests |
-| `menu.odin` | Menu state, navigation, hit testing, and selection transitions |
-| `high_score.odin` | High-score table, qualification, name entry, and screen update rules |
-| `high_score_persistence.odin` | Versioned high-score loading, validation, and safe saving at the application boundary |
-| `high_score_test.odin` | Defaults, entry, sorting, corruption, persistence, and routing tests |
-| `input.odin` | Frame-level keyboard, text, and mouse state and input mapping |
-| `assets.odin` | Texture and sound loading, validation, and cleanup |
+| `input.odin` | Frame-level keyboard input mapping |
+| `assets.odin` | Texture, sound-effect, and streamed-music loading, validation, and cleanup |
 | `level.odin` | Original map data layout, loading, and index validation |
 | `options.odin` | Legacy command-line option parsing |
 | `config.odin` | Window, frame-rate, map, theme, and fixed content-schema constants |
@@ -137,22 +133,22 @@ background, items, treasure, enemy spawns, and the player spawn. Mutable
 player, enemy, bomb, and bomb-occupancy state is kept outside the original
 on-disk structure.
 
-High scores are stored independently of the source directory:
-
-- macOS: `~/Library/Application Support/CaveRace/highscores.dat`
-- Windows: `%LOCALAPPDATA%\CaveRace\highscores.dat`
-
-Missing or invalid files fall back to the legacy defaults. A changed table is
-written through a temporary file and then atomically renamed into place.
-
 ## Assets
 
-Game assets are converted to PNG and WAV files under `media/`. They include
-four full-screen images, six sprite sheets, five tile themes, eight sound
-effects, and ten original `.bin` levels. The application searches beside the
-executable first, then macOS bundle resources, the repository development
-layout, and finally the current working directory. Screen dimensions and the
-minimum sprite-sheet rows are validated before the application loop starts.
+Game assets are stored as PNG, WAV, and OGG files under `media/`. The active build
+loads nine front-end images, one gameplay screen, six sprite sheets, five tile
+themes, seven sound effects, fourteen streamed music tracks, and ten original
+`.bin` levels. Intro images `intro/0.png` through `intro/6.png` play once, each
+for the duration of its matching intro track. `screens/menu.png` and
+`screens/controls.png` then alternate every five seconds over looping menu
+music. Gameplay rotates the three cave tracks by level; level complete, final
+level victory, and game over use their matching cues. Every front-end image
+change uses a half-second fade through black.
+
+The application searches beside the executable first, then macOS bundle
+resources, the repository development layout, and finally the current working
+directory. Screen dimensions and the minimum sprite-sheet rows are validated
+before the application loop starts.
 
 Missing visual assets cause a clean startup failure. If audio initialization
 fails, the game continues silently. Missing, truncated, or invalid level files

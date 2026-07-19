@@ -238,18 +238,11 @@ Gameplay :: struct {
 	level_completion_enabled: bool,
 }
 
-// Completed_Run carries the final score across the one-time transition from
-// gameplay to high-score qualification.
-Completed_Run :: struct {
-	score: int,
-}
-
-// Gameplay_Frame_Result returns screen-routing requests, fixed-tick events, and
-// an optional completed run from update_gameplay.
+// Gameplay_Frame_Result returns screen-routing requests and fixed-tick events
+// from update_gameplay.
 Gameplay_Frame_Result :: struct {
 	back_requested: bool,
 	ticks:          Gameplay_Tick_Result,
-	completed_run:  Maybe(Completed_Run),
 }
 
 // init_gameplay creates a fresh run with default player resources and a new

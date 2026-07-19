@@ -3,27 +3,47 @@ package caverace
 import "core:strings"
 import rl "vendor:raylib"
 
-// Screen_Assets groups full-screen backgrounds and the menu selection overlay
-// that share the application asset lifetime.
+// Screen_Assets owns the gameplay background and all nine front-end images for
+// the complete application asset lifetime.
 Screen_Assets :: struct {
-	game:       rl.Texture,
-	highscore:  rl.Texture,
-	menu:       rl.Texture,
-	select:     rl.Texture,
+	game:      rl.Texture,
+	front_end: [FRONT_END_IMAGE_COUNT]rl.Texture,
 }
 
+// Music_Cue names every track used by the active intro, menu, and gameplay
+// flow. The complete-intro mix and retired screen tracks remain source assets,
+// but are intentionally not loaded by the game.
+Music_Cue :: enum {
+	Intro_Space,
+	Intro_Eldora,
+	Intro_Mining,
+	Intro_Aliens,
+	Intro_Defense,
+	Intro_Hero,
+	Intro_Bombs,
+	Main_Menu,
+	Cave_A,
+	Cave_B,
+	Cave_C,
+	Level_Complete,
+	Victory,
+	Game_Over,
+}
+
+#assert(len(Music_Cue) == 14)
+#assert(int(Music_Cue.Intro_Bombs) - int(Music_Cue.Intro_Space) + 1 == INTRO_LAST_IMAGE - INTRO_FIRST_IMAGE + 1)
+
 // Sound_Assets owns all raylib sound handles used when frame events request
-// menu, bomb, pickup, enemy, or ticking audio.
+// bomb, pickup, enemy, or ticking audio.
 Sound_Assets :: struct {
 	bomb:    [BOMB_SOUND_COUNT]rl.Sound,
 	item:    rl.Sound,
-	menu:    rl.Sound,
 	squish:  rl.Sound,
 	ticking: rl.Sound,
 }
 
 // Sprite_Assets groups the vertical sprite sheets consumed by level, actor,
-// explosion, pointer, and HUD rendering.
+// explosion, and HUD rendering.
 Sprite_Assets :: struct {
 	bomb:     rl.Texture,
 	enemy:    rl.Texture,
@@ -38,6 +58,7 @@ Sprite_Assets :: struct {
 Assets :: struct {
 	screens: Screen_Assets,
 	sounds:  Sound_Assets,
+	music:   [Music_Cue]rl.Music,
 	sprites: Sprite_Assets,
 	tiles:   [Tile_Theme]rl.Texture,
 }
@@ -66,14 +87,32 @@ load_resource_sound :: proc(root, relative_path: string) -> rl.Sound {
 	return rl.LoadSound(path_cstring)
 }
 
+// load_resource_music resolves a streamed OGG track without decoding the
+// complete song into memory during startup.
+load_resource_music :: proc(root, relative_path: string) -> rl.Music {
+	path, ok := resource_path(root, {RESOURCE_MEDIA_DIRECTORY, relative_path})
+	if !ok do return {}
+	defer delete(path)
+	path_cstring, cstring_error := strings.clone_to_cstring(path)
+	if cstring_error != nil do return {}
+	defer delete(path_cstring)
+	return rl.LoadMusicStream(path_cstring)
+}
+
 // load_assets fills the application-owned asset bundle and validates every
 // required handle before the main loop is allowed to start.
 load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true) -> bool {
 	assets^ = {}
-	assets.screens.game      = load_resource_texture(resource_root, "screens/game.png")
-	assets.screens.highscore = load_resource_texture(resource_root, "screens/highscore.png")
-	assets.screens.menu      = load_resource_texture(resource_root, "screens/menu.png")
-	assets.screens.select    = load_resource_texture(resource_root, "screens/select.png")
+	assets.screens.game         = load_resource_texture(resource_root, "screens/game.png")
+	assets.screens.front_end[0] = load_resource_texture(resource_root, "intro/0.png")
+	assets.screens.front_end[1] = load_resource_texture(resource_root, "intro/1.png")
+	assets.screens.front_end[2] = load_resource_texture(resource_root, "intro/2.png")
+	assets.screens.front_end[3] = load_resource_texture(resource_root, "intro/3.png")
+	assets.screens.front_end[4] = load_resource_texture(resource_root, "intro/4.png")
+	assets.screens.front_end[5] = load_resource_texture(resource_root, "intro/5.png")
+	assets.screens.front_end[6] = load_resource_texture(resource_root, "intro/6.png")
+	assets.screens.front_end[7] = load_resource_texture(resource_root, "screens/menu.png")
+	assets.screens.front_end[8] = load_resource_texture(resource_root, "screens/controls.png")
 
 	if load_audio {
 		assets.sounds.bomb[0] = load_resource_sound(resource_root, "sounds/bomb01.wav")
@@ -81,9 +120,23 @@ load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true) 
 		assets.sounds.bomb[2] = load_resource_sound(resource_root, "sounds/bomb03.wav")
 		assets.sounds.bomb[3] = load_resource_sound(resource_root, "sounds/bomb04.wav")
 		assets.sounds.item    = load_resource_sound(resource_root, "sounds/item.wav")
-		assets.sounds.menu    = load_resource_sound(resource_root, "sounds/menu.wav")
 		assets.sounds.squish  = load_resource_sound(resource_root, "sounds/squish.wav")
 		assets.sounds.ticking = load_resource_sound(resource_root, "sounds/ticking.wav")
+
+		assets.music[.Intro_Space]   = load_resource_music(resource_root, "music/01_intro_space.ogg")
+		assets.music[.Intro_Eldora]  = load_resource_music(resource_root, "music/02_intro_eldora.ogg")
+		assets.music[.Intro_Mining]  = load_resource_music(resource_root, "music/03_intro_mining.ogg")
+		assets.music[.Intro_Aliens]  = load_resource_music(resource_root, "music/04_intro_aliens.ogg")
+		assets.music[.Intro_Defense] = load_resource_music(resource_root, "music/05_intro_defense.ogg")
+		assets.music[.Intro_Hero]    = load_resource_music(resource_root, "music/06_intro_hero.ogg")
+		assets.music[.Intro_Bombs]   = load_resource_music(resource_root, "music/07_intro_bombs.ogg")
+		assets.music[.Main_Menu]     = load_resource_music(resource_root, "music/08_main_menu.ogg")
+		assets.music[.Cave_A]        = load_resource_music(resource_root, "music/09_gameplay_cave_a.ogg")
+		assets.music[.Cave_B]        = load_resource_music(resource_root, "music/10_gameplay_cave_b.ogg")
+		assets.music[.Cave_C]        = load_resource_music(resource_root, "music/11_gameplay_cave_c.ogg")
+		assets.music[.Level_Complete] = load_resource_music(resource_root, "music/12_level_complete.ogg")
+		assets.music[.Victory]        = load_resource_music(resource_root, "music/13_victory.ogg")
+		assets.music[.Game_Over]      = load_resource_music(resource_root, "music/14_game_over.ogg")
 	}
 
 	assets.sprites.bomb     = load_resource_texture(resource_root, "sprites/bomb.png")
@@ -106,18 +159,20 @@ load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true) 
 // packages fail early instead of producing invalid texture accesses later.
 assets_are_valid :: proc(assets: ^Assets, require_audio := true) -> bool {
 	if !texture_has_size(assets.screens.game, WINDOW_WIDTH, WINDOW_HEIGHT)      do return false
-	if !texture_has_size(assets.screens.highscore, WINDOW_WIDTH, WINDOW_HEIGHT) do return false
-	if !texture_has_size(assets.screens.menu, WINDOW_WIDTH, WINDOW_HEIGHT)      do return false
-	if !texture_has_size(assets.screens.select, MENU_SELECTION_WIDTH, MENU_SELECTION_HEIGHT) do return false
+	for texture in assets.screens.front_end {
+		if !texture_has_size(texture, WINDOW_WIDTH, WINDOW_HEIGHT) do return false
+	}
 
 	if require_audio {
 		for sound in assets.sounds.bomb {
 			if !rl.IsSoundValid(sound) do return false
 		}
 		if !rl.IsSoundValid(assets.sounds.item)    do return false
-		if !rl.IsSoundValid(assets.sounds.menu)    do return false
 		if !rl.IsSoundValid(assets.sounds.squish)  do return false
 		if !rl.IsSoundValid(assets.sounds.ticking) do return false
+		for music in assets.music {
+			if !rl.IsMusicValid(music) do return false
+		}
 	}
 
 	if !vertical_sheet_is_valid(assets.sprites.bomb, BOMB_SPRITE_COUNT) do return false
@@ -162,17 +217,19 @@ vertical_sheet_dimensions_are_valid :: proc(width, height, sprite_count: int) ->
 // shutdown or failed startup, then clears the handles to make cleanup idempotent.
 unload_assets :: proc(assets: ^Assets) {
 	unload_texture(assets.screens.game)
-	unload_texture(assets.screens.highscore)
-	unload_texture(assets.screens.menu)
-	unload_texture(assets.screens.select)
+	for texture in assets.screens.front_end {
+		unload_texture(texture)
+	}
 
 	for sound in assets.sounds.bomb {
 		unload_sound(sound)
 	}
 	unload_sound(assets.sounds.item)
-	unload_sound(assets.sounds.menu)
 	unload_sound(assets.sounds.squish)
 	unload_sound(assets.sounds.ticking)
+	for music in assets.music {
+		unload_music(music)
+	}
 
 	unload_texture(assets.sprites.bomb)
 	unload_texture(assets.sprites.enemy)
@@ -200,4 +257,9 @@ unload_texture :: proc(texture: rl.Texture) {
 // audio is unavailable or startup stops after a partial load.
 unload_sound :: proc(sound: rl.Sound) {
 	if rl.IsSoundValid(sound) do rl.UnloadSound(sound)
+}
+
+// unload_music safely releases one optional streaming track.
+unload_music :: proc(music: rl.Music) {
+	if rl.IsMusicValid(music) do rl.UnloadMusicStream(music)
 }
