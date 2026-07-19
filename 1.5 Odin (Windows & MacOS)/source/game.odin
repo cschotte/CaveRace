@@ -13,6 +13,8 @@ Game :: struct {
 	high_scores:           High_Score_State,
 	feedback:              Game_Feedback,
 	options:               Launch_Options,
+	// Borrowed from Application for the complete Game lifetime.
+	resource_root:         string,
 	pending_completed_run: Maybe(Completed_Run),
 	quit_requested:        bool,
 }
@@ -22,18 +24,24 @@ Game_Update_Result :: struct {
 	gameplay:               Gameplay_Frame_Result,
 }
 
-init_game :: proc(game: ^Game, options: Launch_Options, high_score_path: string = "") {
+init_game :: proc(
+	game: ^Game,
+	options: Launch_Options,
+	high_score_path: string = "",
+	resource_root: string = "",
+) {
 	game^ = Game {
-		screen    = .Menu,
-		menu      = {selected = .Start_Game},
-		options   = options,
+		screen        = .Menu,
+		menu          = {selected = .Start_Game},
+		options       = options,
+		resource_root = resource_root,
 	}
-	init_gameplay(&game.gameplay)
+	init_gameplay(&game.gameplay, resource_root)
 	init_high_scores(&game.high_scores, high_score_path)
 }
 
 start_new_game :: proc(game: ^Game) {
-	init_gameplay(&game.gameplay)
+	init_gameplay(&game.gameplay, game.resource_root)
 	game.pending_completed_run = nil
 	game.screen = .Playing
 }

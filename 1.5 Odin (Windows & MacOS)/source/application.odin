@@ -7,10 +7,20 @@ Application :: struct {
 	assets:                  Assets,
 	game:                    Game,
 	high_score_storage_path: string,
+	resource_root:           string,
+	audio_ready:             bool,
 }
 
 run_application :: proc(options: Launch_Options) -> bool {
 	app: Application
+	resource_root, resource_root_ok := resolve_resource_root()
+	if !resource_root_ok {
+		fmt.eprintln("Could not locate the CaveRace media directory beside the executable.")
+		return false
+	}
+	app.resource_root = resource_root
+	defer delete(app.resource_root)
+
 	storage_path, storage_path_error := high_score_storage_path()
 	if storage_path_error != nil {
 		fmt.eprintln("Could not resolve the high-score storage path; scores will not persist.")
@@ -18,7 +28,7 @@ run_application :: proc(options: Launch_Options) -> bool {
 		app.high_score_storage_path = storage_path
 		defer delete(app.high_score_storage_path)
 	}
-	init_game(&app.game, options, app.high_score_storage_path)
+	init_game(&app.game, options, app.high_score_storage_path, app.resource_root)
 
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
 	if !rl.IsWindowReady() {
@@ -28,13 +38,15 @@ run_application :: proc(options: Launch_Options) -> bool {
 	defer rl.CloseWindow()
 
 	rl.InitAudioDevice()
-	if !rl.IsAudioDeviceReady() {
-		fmt.eprintln("Failed to initialize the audio device.")
-		return false
+	app.audio_ready = rl.IsAudioDeviceReady()
+	defer {
+		if app.audio_ready do rl.CloseAudioDevice()
 	}
-	defer rl.CloseAudioDevice()
+	if !app.audio_ready {
+		fmt.eprintln("Could not initialize audio; continuing without sound.")
+	}
 
-	assets_loaded := load_assets(&app.assets)
+	assets_loaded := load_assets(&app.assets, app.resource_root, app.audio_ready)
 	defer unload_assets(&app.assets)
 	if !assets_loaded {
 		fmt.eprintln("Failed to load one or more game assets.")
@@ -51,26 +63,18 @@ run_application :: proc(options: Launch_Options) -> bool {
 	// fixed SIMULATION_HZ rate through its accumulator.
 	rl.SetTargetFPS(target_render_fps(options))
 
-	for !app.game.quit_requested && !rl.WindowShouldClose() {
+	for application_should_continue(&app.game, rl.WindowShouldClose()) {
 		input := poll_game_input()
 		frame_seconds := f64(rl.GetFrameTime())
+		input, frame_seconds = prepare_application_frame(
+			&app.game,
+			input,
+			frame_seconds,
+			rl.IsWindowFocused(),
+		)
 		update_result := update_game(&app.game, input, frame_seconds)
-		if update_result.menu_selection_changed {
-			rl.PlaySound(app.assets.sounds.menu)
-		}
-		if update_result.gameplay.simulation.ticking_requested {
-			rl.PlaySound(app.assets.sounds.ticking)
-		}
-		for sound_index in 0 ..< update_result.gameplay.simulation.explosion_sound_count {
-			bomb_sound := update_result.gameplay.simulation.explosion_sound_indices[sound_index]
-			assert(bomb_sound < BOMB_SOUND_COUNT)
-			rl.PlaySound(app.assets.sounds.bomb[bomb_sound])
-		}
-		for _ in 0 ..< update_result.gameplay.simulation.squish_requests {
-			rl.PlaySound(app.assets.sounds.squish)
-		}
-		for _ in 0 ..< update_result.gameplay.simulation.item_sound_requests {
-			rl.PlaySound(app.assets.sounds.item)
+		if app.audio_ready {
+			play_frame_audio(&app.assets, &update_result)
 		}
 
 		rl.BeginDrawing()
@@ -80,6 +84,42 @@ run_application :: proc(options: Launch_Options) -> bool {
 	}
 
 	return true
+}
+
+application_should_continue :: proc(game: ^Game, window_should_close: bool) -> bool {
+	return !game.quit_requested && !window_should_close
+}
+
+prepare_application_frame :: proc(
+	game: ^Game,
+	input: Game_Input,
+	frame_seconds: f64,
+	window_focused: bool,
+) -> (Game_Input, f64) {
+	if window_focused do return input, frame_seconds
+	// Stop held and queued actions while preserving all simulation ownership.
+	game.gameplay.simulation.input = {}
+	return {}, 0
+}
+
+play_frame_audio :: proc(assets: ^Assets, result: ^Game_Update_Result) {
+	if result.menu_selection_changed {
+		rl.PlaySound(assets.sounds.menu)
+	}
+	if result.gameplay.simulation.ticking_requested {
+		rl.PlaySound(assets.sounds.ticking)
+	}
+	for sound_index in 0 ..< result.gameplay.simulation.explosion_sound_count {
+		bomb_sound := result.gameplay.simulation.explosion_sound_indices[sound_index]
+		assert(bomb_sound < BOMB_SOUND_COUNT)
+		rl.PlaySound(assets.sounds.bomb[bomb_sound])
+	}
+	for _ in 0 ..< result.gameplay.simulation.squish_requests {
+		rl.PlaySound(assets.sounds.squish)
+	}
+	for _ in 0 ..< result.gameplay.simulation.item_sound_requests {
+		rl.PlaySound(assets.sounds.item)
+	}
 }
 
 target_render_fps :: proc(options: Launch_Options) -> i32 {

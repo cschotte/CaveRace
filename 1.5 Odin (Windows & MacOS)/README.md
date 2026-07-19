@@ -10,42 +10,17 @@ paths through the caves, and defend the mines from alien visitors. CaveRace was
 inspired by *Dyna Blaster* (*Bomberman*). More history and original screenshots
 are available on the [CaveRace] website.
 
-## Current status
-
-CaveRace 1.5 is a work in progress. Gameplay is not complete.
-The game screen loads the original map data, validates it, extracts player and
-enemy spawns into fixed runtime state, and renders the resulting level. It has
-a gameplay state machine and a 60 Hz fixed-step action scheduler independent
-from rendering. Player movement uses the original collision rules, 16-step
-tile timing, and directional animation. Enemies use deterministic
-gameplay-owned randomness, the same tile timing and walkability rules, and
-once-per-action contact damage. Players can place capacity-limited bombs with
-legacy action-based fuses, score cost, occupancy blocking, and ticking audio.
-Explosions use clipped, fixed-capacity cardinal crosses shared by rendering and
-effects, with legacy animation, map destruction, deterministic chain reactions,
-enemy scoring, player hits, and audio requests. Items and treasure now follow
-the original caps, retention, scoring, timing, and sound rules. The status bar
-renders live player values and the numeric score. Level wins, retries, score
-penalties, ten-level wrapping, game over, and completed-run routing are also
-implemented. The high-score screen now keeps the legacy eight-entry table,
-supports qualifying name entry, and persists a validated portable file in the
-platform user-data directory. All eight legacy sound effects have one-shot
-gameplay triggers. The `-powerblast` cheats, non-blocking screen fades,
-pickup/damage color flashes, and animated menu selection are also implemented.
-
 ## Requirements
 
 - A current [Odin compiler]
-- Windows or macOS with graphics and audio support
+- Windows or macOS
 
 No separate raylib installation is required: the source imports
 `vendor:raylib` from the Odin distribution.
 
 ## Build and run
 
-Run the following commands from this version's `source` directory. The working
-directory is important because the application loads assets from the relative
-`media` path.
+Run the following commands from this version's `source` directory:
 
 ```sh
 mkdir -p ../build
@@ -68,8 +43,22 @@ odin build . -out:../build/caverace.exe
 ```
 
 The repository also includes VS Code build and LLDB launch configurations. The
-default build task writes the executable to `build/caverace` and launches it
-with this version's `source/` directory as its working directory.
+default build task writes the executable to `build/caverace`. Development
+builds find the adjacent `source/media` and `source/levels` directories even
+when launched from another working directory.
+
+For a standalone directory, place both resource directories beside the
+executable:
+
+```text
+CaveRace/
+├── caverace            # caverace.exe on Windows
+├── media/              # images and sounds
+└── levels/             # level data      
+```
+
+On macOS application bundles, the same directories may instead be placed in
+`CaveRace.app/Contents/Resources/`.
 
 ## Controls
 
@@ -115,6 +104,8 @@ not mutate gameplay state.
 | `cheats.odin` | Gated legacy F1-F5 gameplay mutations and safe power/score limits |
 | `feedback.odin` | Non-blocking transition fades and gameplay color flashes |
 | `feedback_cheat_test.odin` | Cheat gating, feedback timing, and menu-animation tests |
+| `resources.odin` | Packaged, bundle, development, and working-directory resource resolution |
+| `release_hardening_test.odin` | Resource failures, platform-loop policy, transition cycling, and full-run smoke tests |
 | `enemy_simulation.odin` | Seeded enemy movement, rendering positions, and contact damage |
 | `enemy_simulation_test.odin` | Enemy determinism, collision, timing, and damage regression tests |
 | `bomb_simulation.odin` | Bomb placement, capacity, fuse timing, occupancy, and cleanup |
@@ -156,8 +147,15 @@ written through a temporary file and then atomically renamed into place.
 
 Runtime assets are converted to PNG and WAV files under `media/`. They include
 four full-screen images, six sprite sheets, five tile themes, eight sound
-effects, and ten original `.bin` levels. Keep the executable's working
-directory set to `source/` unless `MEDIA_PATH` in `config.odin` is changed.
+effects, and ten original `.bin` levels. The application searches beside the
+executable first, then macOS bundle resources, the repository development
+layout, and finally the current working directory. Screen dimensions and the
+minimum sprite-sheet rows are validated before the application loop starts.
+
+Missing visual assets cause a clean startup failure. If audio initialization
+fails, the game continues silently. Missing, truncated, or invalid level files
+show the recoverable **Load Failed** screen instead of replacing valid runtime
+state.
 
 The original Amiga IFF artwork and additional converted files are preserved in
 the repository's

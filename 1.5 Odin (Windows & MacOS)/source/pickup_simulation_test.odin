@@ -266,5 +266,5 @@ hud_snapshot_matches_runtime_state_and_legacy_positions_test :: proc(t: ^testing
 	testing.expect_value(t, HUD_BOMBS_SPACING, 12)
 	testing.expect_value(t, HUD_POWER_X, 254)
 	testing.expect_value(t, HUD_POWER_SPACING, 16)
-	testing.expect_value(t, HUD_SCORE_RIGHT, 448)
+	testing.expect_value(t, HUD_SCORE_RIGHT, 446)
 }

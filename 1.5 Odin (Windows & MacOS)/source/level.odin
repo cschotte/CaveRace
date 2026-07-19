@@ -34,17 +34,17 @@ Level_Data_Error :: enum {
 
 LEVEL_COUNT :: 10
 
-level_paths := [LEVEL_COUNT]string {
-	"levels/01.bin",
-	"levels/02.bin",
-	"levels/03.bin",
-	"levels/04.bin",
-	"levels/05.bin",
-	"levels/06.bin",
-	"levels/07.bin",
-	"levels/08.bin",
-	"levels/09.bin",
-	"levels/10.bin",
+level_filenames := [LEVEL_COUNT]string {
+	"01.bin",
+	"02.bin",
+	"03.bin",
+	"04.bin",
+	"05.bin",
+	"06.bin",
+	"07.bin",
+	"08.bin",
+	"09.bin",
+	"10.bin",
 }
 
 validate_level_data :: proc(data: ^Map_Data) -> Level_Data_Error {
@@ -70,13 +70,25 @@ validate_level_data :: proc(data: ^Map_Data) -> Level_Data_Error {
 	return .None
 }
 
-load_level :: proc(level: ^Level, level_index: int) -> bool {
+load_level :: proc(level: ^Level, level_index: int, resource_root: string = "") -> bool {
 	if level_index < 0 || level_index >= LEVEL_COUNT {
 		fmt.eprintln("Invalid level index:", level_index)
 		return false
 	}
 
-	path := level_paths[level_index]
+	path, path_ok := resource_path(
+		resource_root,
+		{RESOURCE_LEVEL_DIRECTORY, level_filenames[level_index]},
+	)
+	if !path_ok {
+		fmt.eprintln("Failed to construct the level path for index:", level_index)
+		return false
+	}
+	defer delete(path)
+	return load_level_from_path(level, path)
+}
+
+load_level_from_path :: proc(level: ^Level, path: string) -> bool {
 	file, open_error := os.open(path)
 	if open_error != nil {
 		fmt.eprintln("Failed to open level:", path, open_error)

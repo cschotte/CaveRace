@@ -29,6 +29,8 @@ Gameplay :: struct {
 	simulation:          Gameplay_Simulation_State,
 	random_state:        rand.Xoshiro256_Random_State,
 	runtime_initialized: bool,
+	// Borrowed from Game for the complete gameplay lifetime.
+	resource_root:       string,
 }
 
 Completed_Run :: struct {
@@ -41,10 +43,11 @@ Gameplay_Frame_Result :: struct {
 	completed_run:  Maybe(Completed_Run),
 }
 
-init_gameplay :: proc(gameplay: ^Gameplay) {
+init_gameplay :: proc(gameplay: ^Gameplay, resource_root: string = "") {
 	gameplay^ = Gameplay {
-		state  = .Load_Level,
-		player = new_player_state(),
+		state         = .Load_Level,
+		player        = new_player_state(),
+		resource_root = resource_root,
 	}
 	seed_gameplay_random(gameplay, rand.uint64())
 }
@@ -70,7 +73,7 @@ update_gameplay :: proc(
 
 	switch gameplay.state {
 	case .Load_Level:
-		if load_level(&gameplay.level, gameplay.level_index) {
+		if load_level(&gameplay.level, gameplay.level_index, gameplay.resource_root) {
 			if runtime_error := initialize_level_runtime(gameplay); runtime_error == .None {
 				gameplay.theme = Tile_Theme(gameplay_random_max(gameplay, len(Tile_Theme)))
 				change_gameplay_state(gameplay, .Playing)
