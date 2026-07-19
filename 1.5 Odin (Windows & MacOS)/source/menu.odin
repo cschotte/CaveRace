@@ -9,7 +9,10 @@ Menu_Item :: enum {
 }
 
 Menu_State :: struct {
-	selected: Menu_Item,
+	selected:             Menu_Item,
+	previous_selected:    Menu_Item,
+	transition_elapsed:   f64,
+	transition_active:    bool,
 }
 
 Menu_Update_Result :: struct {
@@ -23,9 +26,15 @@ MENU_SELECTION_Y         :: 220 // in pixels
 MENU_SELECTION_WIDTH     :: 400 // in pixels
 MENU_SELECTION_HEIGHT    :: 40  // in pixels
 MENU_SELECTION_STEP      :: 45  // in pixels
+MENU_SELECTION_TRANSITION_SECONDS :: 0.50
 
-update_menu :: proc(menu: ^Menu_State, input: Game_Input) -> Menu_Update_Result {
+update_menu :: proc(
+	menu: ^Menu_State,
+	input: Game_Input,
+	frame_seconds: f64,
+) -> Menu_Update_Result {
 	result: Menu_Update_Result
+	advance_menu_transition(menu, frame_seconds)
 	previous_selection := menu.selected
 
 	if selected, ok := input.menu_shortcut.?; ok {
@@ -46,7 +55,36 @@ update_menu :: proc(menu: ^Menu_State, input: Game_Input) -> Menu_Update_Result 
 
 	if input.confirm do result.confirmed = menu.selected
 	result.selection_changed = menu.selected != previous_selection
+	if result.selection_changed {
+		menu.previous_selected = previous_selection
+		menu.transition_elapsed = 0
+		menu.transition_active = true
+	}
 	return result
+}
+
+advance_menu_transition :: proc(menu: ^Menu_State, frame_seconds: f64) {
+	if !menu.transition_active do return
+	menu.transition_elapsed += clamp(frame_seconds, 0, MAX_FRAME_DELTA_SECONDS)
+	if menu.transition_elapsed >= MENU_SELECTION_TRANSITION_SECONDS {
+		menu.transition_elapsed = MENU_SELECTION_TRANSITION_SECONDS
+		menu.transition_active = false
+	}
+}
+
+menu_selection_visual :: proc(
+	menu: Menu_State,
+) -> (item: Menu_Item, alpha: f32) {
+	if !menu.transition_active do return menu.selected, 1
+	progress := clamp(
+		menu.transition_elapsed / MENU_SELECTION_TRANSITION_SECONDS,
+		0,
+		1,
+	)
+	if progress < 0.5 {
+		return menu.previous_selected, f32(1 - progress * 2)
+	}
+	return menu.selected, f32((progress - 0.5) * 2)
 }
 
 menu_item_at_mouse :: proc(mouse: Mouse_State) -> Maybe(Menu_Item) {
@@ -74,11 +112,12 @@ move_menu_selection :: proc(menu: ^Menu_State, direction: int) {
 draw_menu :: proc(menu: Menu_State, background, selection: rl.Texture) {
 	rl.DrawTexture(background, 0, 0, rl.WHITE)
 
-	menu_selection_y := MENU_SELECTION_Y + i32(menu.selected) * MENU_SELECTION_STEP
+	visual_item, visual_alpha := menu_selection_visual(menu)
+	menu_selection_y := MENU_SELECTION_Y + i32(visual_item) * MENU_SELECTION_STEP
 	rl.DrawTexture(
 		selection,
 		MENU_SELECTION_X,
 		menu_selection_y,
-		rl.WHITE,
+		rl.Fade(rl.WHITE, visual_alpha),
 	)
 }

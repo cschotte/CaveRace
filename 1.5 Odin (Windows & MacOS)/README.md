@@ -29,8 +29,9 @@ renders live player values and the numeric score. Level wins, retries, score
 penalties, ten-level wrapping, game over, and completed-run routing are also
 implemented. The high-score screen now keeps the legacy eight-entry table,
 supports qualifying name entry, and persists a validated portable file in the
-platform user-data directory. The original cheat effects still need to be
-implemented.
+platform user-data directory. All eight legacy sound effects have one-shot
+gameplay triggers. The `-powerblast` cheats, non-blocking screen fades,
+pickup/damage color flashes, and animated menu selection are also implemented.
 
 ## Requirements
 
@@ -82,6 +83,11 @@ with this version's `source/` directory as its working directory.
 | Arrow keys | Move the player during gameplay |
 | Space | Place a bomb during gameplay |
 | Space / either mouse button | Return from the high-score screen |
+| F1 | Clear all enemies and complete the level (`-powerblast` only) |
+| F2 | Restore four lives and eight energy (`-powerblast` only) |
+| F3 | Grant four-bomb capacity (`-powerblast` only) |
+| F4 | Increase bomb power up to the safe limit of 10 (`-powerblast` only) |
+| F5 | Double the score (`-powerblast` only) |
 
 The application recognizes the original `-powerblast` and `-slow` arguments:
 
@@ -91,8 +97,8 @@ The application recognizes the original `-powerblast` and `-slow` arguments:
 ```
 
 `-slow` limits rendering to 30 FPS while gameplay simulation remains at 60 Hz.
-`-powerblast` and F1-F5 input are recognized, but the cheat effects are not
-implemented yet.
+`-powerblast` enables F1-F5 during gameplay. Without the option, those keys do
+not mutate gameplay state.
 
 ## Source guide
 
@@ -106,6 +112,9 @@ implemented yet.
 | `gameplay_lifecycle_test.odin` | Outcome precedence, retry, routing, and ten-level-cycle tests |
 | `gameplay_runtime.odin` | Gameplay rules, fixed runtime entities, input scheduling, and spawn extraction |
 | `gameplay_test.odin` | Map, runtime-state, input-priority, and fixed-timing regression tests |
+| `cheats.odin` | Gated legacy F1-F5 gameplay mutations and safe power/score limits |
+| `feedback.odin` | Non-blocking transition fades and gameplay color flashes |
+| `feedback_cheat_test.odin` | Cheat gating, feedback timing, and menu-animation tests |
 | `enemy_simulation.odin` | Seeded enemy movement, rendering positions, and contact damage |
 | `enemy_simulation_test.odin` | Enemy determinism, collision, timing, and damage regression tests |
 | `bomb_simulation.odin` | Bomb placement, capacity, fuse timing, occupancy, and cleanup |

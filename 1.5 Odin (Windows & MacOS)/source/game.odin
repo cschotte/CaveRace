@@ -11,6 +11,7 @@ Game :: struct {
 	menu:                  Menu_State,
 	gameplay:              Gameplay,
 	high_scores:           High_Score_State,
+	feedback:              Game_Feedback,
 	options:               Launch_Options,
 	pending_completed_run: Maybe(Completed_Run),
 	quit_requested:        bool,
@@ -39,10 +40,13 @@ start_new_game :: proc(game: ^Game) {
 
 update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_Update_Result {
 	result: Game_Update_Result
+	advance_game_feedback(&game.feedback, frame_seconds)
+	previous_screen := game.screen
+	previous_gameplay_state := game.gameplay.state
 
 	switch game.screen {
 	case .Menu:
-		menu_result := update_menu(&game.menu, input)
+		menu_result := update_menu(&game.menu, input, frame_seconds)
 		result.menu_selection_changed = menu_result.selection_changed
 
 		if selected, ok := menu_result.confirmed.?; ok {
@@ -58,7 +62,12 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			}
 		}
 	case .Playing:
-		result.gameplay = update_gameplay(&game.gameplay, input, frame_seconds)
+		result.gameplay = update_gameplay(
+			&game.gameplay,
+			input,
+			frame_seconds,
+			game.options.cheats_enabled,
+		)
 		if result.gameplay.back_requested {
 			game.pending_completed_run = nil
 			game.screen = .Menu
@@ -76,6 +85,14 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 		}
 	}
 
+	request_simulation_feedback(&game.feedback, &result.gameplay.simulation)
+	screen_changed := game.screen != previous_screen
+	gameplay_state_changed := previous_screen == .Playing && game.screen == .Playing &&
+		game.gameplay.state != previous_gameplay_state
+	if screen_changed || gameplay_state_changed {
+		start_transition_fade(&game.feedback)
+	}
+
 	return result
 }
 
@@ -90,4 +107,5 @@ draw_game :: proc(game: ^Game, assets: ^Assets, mouse: Mouse_State) {
 	}
 
 	draw_mouse(mouse, assets.sprites.tools)
+	draw_game_feedback(&game.feedback)
 }

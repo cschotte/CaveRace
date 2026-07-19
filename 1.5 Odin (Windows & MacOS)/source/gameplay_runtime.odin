@@ -254,6 +254,7 @@ select_gameplay_action :: proc(input: ^Gameplay_Input_Buffer) -> Gameplay_Action
 advance_gameplay_simulation :: proc(
 	gameplay: ^Gameplay,
 	frame_seconds: f64,
+	cheats_enabled := false,
 ) -> Gameplay_Simulation_Result {
 	result: Gameplay_Simulation_Result
 	simulation := &gameplay.simulation
@@ -273,8 +274,11 @@ advance_gameplay_simulation :: proc(
 		for cheat_index in 0 ..< len(Cheat_Key) {
 			cheat := Cheat_Key(cheat_index)
 			if simulation.input.cheat_pending[cheat] {
-				result.cheat_pressed[cheat] = true
 				simulation.input.cheat_pending[cheat] = false
+				if cheats_enabled {
+					result.cheat_pressed[cheat] = true
+					apply_gameplay_cheat(gameplay, cheat)
+				}
 			}
 		}
 

@@ -308,7 +308,7 @@ edge_input_and_simulation_limits_test :: proc(t: ^testing.T) {
 	testing.expect(t, gameplay.simulation.input.cheat_pending[.F3])
 	testing.expect(t, !before_step.cheat_pressed[.F3])
 
-	after_step := advance_gameplay_simulation(&gameplay, SIMULATION_STEP_SECONDS)
+	after_step := advance_gameplay_simulation(&gameplay, SIMULATION_STEP_SECONDS, true)
 	testing.expect(t, after_step.cheat_pressed[.F3])
 	testing.expect(t, !gameplay.simulation.input.cheat_pending[.F3])
 

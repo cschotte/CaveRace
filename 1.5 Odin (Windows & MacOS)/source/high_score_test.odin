@@ -25,8 +25,8 @@ legacy_high_score_defaults_test :: proc(t: ^testing.T) {
 		"HARRO LOCK",
 		"PAUL VAN CROONENBURG",
 		"PAUL BOSSELAAR",
+		"MARIJN SCHOTTE",
 		"CLEMENS SCHOTTE",
-		"HARRO LOCK",
 		"PAUL VAN CROONENBURG",
 		"PAUL BOSSELAAR",
 	}

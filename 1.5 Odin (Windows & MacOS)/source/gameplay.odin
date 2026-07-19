@@ -60,6 +60,7 @@ update_gameplay :: proc(
 	gameplay: ^Gameplay,
 	input: Game_Input,
 	frame_seconds: f64,
+	cheats_enabled := false,
 ) -> Gameplay_Frame_Result {
 	result: Gameplay_Frame_Result
 	if input.back {
@@ -83,7 +84,11 @@ update_gameplay :: proc(
 
 	case .Playing:
 		buffer_gameplay_input(&gameplay.simulation, input)
-		result.simulation = advance_gameplay_simulation(gameplay, frame_seconds)
+		result.simulation = advance_gameplay_simulation(
+			gameplay,
+			frame_seconds,
+			cheats_enabled,
+		)
 		result.completed_run = resolve_gameplay_outcome(gameplay, result.simulation)
 
 	case .Dead:
