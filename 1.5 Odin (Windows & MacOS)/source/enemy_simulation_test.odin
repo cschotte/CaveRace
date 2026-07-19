@@ -240,6 +240,7 @@ contact_damage_occurs_once_per_action_test :: proc(t: ^testing.T) {
 zero_energy_transitions_to_dead_test :: proc(t: ^testing.T) {
 	position := Grid_Position {5, 5}
 	gameplay := open_gameplay_at(position)
+	gameplay.player.lives = 2
 	gameplay.player.energy = ENEMY_CONTACT_DAMAGE
 	gameplay.enemies[0] = enemy_at(position)
 	gameplay.enemy_count = 1
@@ -250,5 +251,6 @@ zero_energy_transitions_to_dead_test :: proc(t: ^testing.T) {
 	testing.expect(t, frame.simulation.player_damaged)
 	testing.expect(t, frame.simulation.player_died)
 	testing.expect_value(t, gameplay.player.energy, 0)
+	testing.expect_value(t, gameplay.player.lives, 1)
 	testing.expect_value(t, gameplay.state, Gameplay_State.Dead)
 }

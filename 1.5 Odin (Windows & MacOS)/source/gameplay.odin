@@ -11,27 +11,34 @@ Gameplay_State :: enum {
 	Playing,
 	Dead,
 	Won,
+	Game_Over,
 	Load_Failed,
 }
 
 Gameplay :: struct {
-	state:          Gameplay_State,
-	level:          Level,
-	level_index:    int,
-	theme:          Tile_Theme,
-	player:         Player_State,
-	enemies:        [MAX_ENEMIES]Enemy_State,
-	enemy_count:    int,
-	bombs:          [MAX_BOMBS]Bomb_State,
-	explosions:     [MAX_BOMBS]Explosion_State,
-	bomb_occupancy: Map_Grid,
-	simulation:     Gameplay_Simulation_State,
-	random_state:   rand.Xoshiro256_Random_State,
+	state:               Gameplay_State,
+	level:               Level,
+	level_index:         int,
+	theme:               Tile_Theme,
+	player:              Player_State,
+	enemies:             [MAX_ENEMIES]Enemy_State,
+	enemy_count:         int,
+	bombs:               [MAX_BOMBS]Bomb_State,
+	explosions:          [MAX_BOMBS]Explosion_State,
+	bomb_occupancy:      Map_Grid,
+	simulation:          Gameplay_Simulation_State,
+	random_state:        rand.Xoshiro256_Random_State,
+	runtime_initialized: bool,
+}
+
+Completed_Run :: struct {
+	score: int,
 }
 
 Gameplay_Frame_Result :: struct {
 	back_requested: bool,
 	simulation:     Gameplay_Simulation_Result,
+	completed_run:  Maybe(Completed_Run),
 }
 
 init_gameplay :: proc(gameplay: ^Gameplay) {
@@ -77,21 +84,19 @@ update_gameplay :: proc(
 	case .Playing:
 		buffer_gameplay_input(&gameplay.simulation, input)
 		result.simulation = advance_gameplay_simulation(gameplay, frame_seconds)
-		// Level completion and retry/game-over transitions are introduced by the
-		// next milestone; the fixed simulation owns active gameplay state.
+		result.completed_run = resolve_gameplay_outcome(gameplay, result.simulation)
 
 	case .Dead:
 		if input.confirm {
-			reset_player_for_level_start(&gameplay.player)
-			change_gameplay_state(gameplay, .Load_Level)
+			begin_level_retry(gameplay)
 		}
 
 	case .Won:
 		if input.confirm {
-			reset_player_for_level_start(&gameplay.player)
-			gameplay.level_index = (gameplay.level_index + 1) % LEVEL_COUNT
-			change_gameplay_state(gameplay, .Load_Level)
+			begin_next_level(gameplay)
 		}
+
+	case .Game_Over:
 
 	case .Load_Failed:
 		if input.confirm do change_gameplay_state(gameplay, .Load_Level)
@@ -105,7 +110,7 @@ draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {
 
 	// Draw the level, if applicable.
 	switch gameplay.state {
-	case .Playing, .Dead, .Won:
+	case .Playing, .Dead, .Won, .Game_Over:
 		draw_level_tiles(&gameplay.level, assets.tiles[gameplay.theme], &assets.sprites)
 		draw_level_entities(gameplay, &assets.sprites)
 		draw_gameplay_hud(gameplay, assets.sprites.tools)
@@ -120,6 +125,8 @@ draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {
 		draw_gameplay_message("You died - press Enter to retry")
 	case .Won:
 		draw_gameplay_message("Level complete - press Enter to continue")
+	case .Game_Over:
+		draw_gameplay_message("Game over")
 	case .Load_Failed:
 		draw_gameplay_message("Could not load level - Enter to retry, Esc for menu")
 	case .Playing:

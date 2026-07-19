@@ -7,11 +7,12 @@ App_Screen :: enum {
 }
 
 Game :: struct {
-	screen:         App_Screen,
-	menu:           Menu_State,
-	gameplay:       Gameplay,
-	options:        Launch_Options,
-	quit_requested: bool,
+	screen:                App_Screen,
+	menu:                  Menu_State,
+	gameplay:              Gameplay,
+	options:               Launch_Options,
+	pending_completed_run: Maybe(Completed_Run),
+	quit_requested:        bool,
 }
 
 Game_Update_Result :: struct {
@@ -30,6 +31,7 @@ init_game :: proc(game: ^Game, options: Launch_Options) {
 
 start_new_game :: proc(game: ^Game) {
 	init_gameplay(&game.gameplay)
+	game.pending_completed_run = nil
 	game.screen = .Playing
 }
 
@@ -46,6 +48,7 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			case .Start_Game:
 				start_new_game(game)
 			case .High_Scores:
+				game.pending_completed_run = nil
 				game.screen = .High_Scores
 			case .Quit:
 				game.quit_requested = true
@@ -53,10 +56,19 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 		}
 	case .Playing:
 		result.gameplay = update_gameplay(&game.gameplay, input, frame_seconds)
-		if result.gameplay.back_requested do game.screen = .Menu
+		if result.gameplay.back_requested {
+			game.pending_completed_run = nil
+			game.screen = .Menu
+		} else if completed_run, ok := result.gameplay.completed_run.?; ok {
+			game.pending_completed_run = completed_run
+			game.screen = .High_Scores
+		}
 	case .High_Scores:
 		back_requested := update_high_scores(input)
-		if back_requested do game.screen = .Menu
+		if back_requested {
+			game.pending_completed_run = nil
+			game.screen = .Menu
+		}
 	}
 
 	return result

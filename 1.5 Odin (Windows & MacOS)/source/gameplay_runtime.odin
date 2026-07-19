@@ -303,7 +303,6 @@ advance_gameplay_simulation :: proc(
 		if player_was_alive && gameplay.player.energy == 0 {
 			result.player_died = true
 			advance_explosion_ages(gameplay)
-			change_gameplay_state(gameplay, .Dead)
 			break
 		}
 
@@ -375,5 +374,6 @@ initialize_level_runtime :: proc(gameplay: ^Gameplay) -> Level_Runtime_Error {
 	gameplay.explosions = {}
 	gameplay.bomb_occupancy = {}
 	gameplay.simulation = {}
+	gameplay.runtime_initialized = true
 	return .None
 }

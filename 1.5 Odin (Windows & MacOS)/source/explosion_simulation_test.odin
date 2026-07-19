@@ -157,6 +157,7 @@ overlapping_explosions_destroy_each_enemy_and_score_once_test :: proc(t: ^testin
 @(test)
 explosion_hit_sets_player_energy_to_zero_and_transitions_dead_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({5, 6})
+	gameplay.player.lives = 2
 	gameplay.player.energy = PLAYER_START_ENERGY
 	gameplay.bombs[0] = {active = true, position = {5, 5}, fuse_actions = 2, power = 1}
 	gameplay.bomb_occupancy[5][5] = BOMB_TICKING_SPRITE
@@ -168,6 +169,7 @@ explosion_hit_sets_player_energy_to_zero_and_transitions_dead_test :: proc(t: ^t
 	testing.expect(t, frame.simulation.player_damaged)
 	testing.expect(t, frame.simulation.player_died)
 	testing.expect_value(t, gameplay.player.energy, 0)
+	testing.expect_value(t, gameplay.player.lives, 1)
 	testing.expect_value(t, gameplay.state, Gameplay_State.Dead)
 	testing.expect(t, gameplay.explosions[0].active)
 	testing.expect_value(t, gameplay.explosions[0].age_step, 1)

@@ -13,6 +13,14 @@ gameplay_random_max :: proc(gameplay: ^Gameplay, upper_bound: int) -> int {
 	return rand.int_max(upper_bound, generator)
 }
 
+active_enemy_count :: proc(gameplay: ^Gameplay) -> int {
+	count := 0
+	for enemy_index in 0 ..< gameplay.enemy_count {
+		if gameplay.enemies[enemy_index].active do count += 1
+	}
+	return count
+}
+
 enemy_direction_from_roll :: proc(roll: int) -> Direction {
 	switch roll {
 	case 0: return .Down

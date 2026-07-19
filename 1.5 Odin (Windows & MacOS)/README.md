@@ -25,9 +25,10 @@ Explosions use clipped, fixed-capacity cardinal crosses shared by rendering and
 effects, with legacy animation, map destruction, deterministic chain reactions,
 enemy scoring, player hits, and audio requests. Items and treasure now follow
 the original caps, retention, scoring, timing, and sound rules. The status bar
-renders live player values and the numeric score. High-score storage, complete
-death/level progression, and the original cheat effects still need to be
-implemented.
+renders live player values and the numeric score. Level wins, retries, score
+penalties, ten-level wrapping, game over, and completed-run routing are also
+implemented. High-score storage/name entry and the original cheat effects still
+need to be implemented.
 
 ## Requirements
 
@@ -73,7 +74,7 @@ with this version's `source/` directory as its working directory.
 | --- | --- |
 | Up / Down | Move through the main menu |
 | 1 / 2 / 3 | Select Start Game / High Scores / Quit |
-| Enter | Confirm the selected menu item |
+| Enter | Confirm menu selection, retry, or the next level |
 | Mouse | Select and confirm a main-menu item |
 | Escape | Return to the main menu from game or high scores |
 | Arrow keys | Move the player during gameplay |
@@ -99,6 +100,8 @@ implemented yet.
 | `application.odin` | Window, audio, render loop, and application lifetime |
 | `game.odin` | Application screen state and update/draw dispatch |
 | `gameplay.odin` | Playing-session state, transitions, and simulation update |
+| `gameplay_lifecycle.odin` | Win, retry, game-over, level-wrap, and runtime cleanup rules |
+| `gameplay_lifecycle_test.odin` | Outcome precedence, retry, routing, and ten-level-cycle tests |
 | `gameplay_runtime.odin` | Gameplay rules, fixed runtime entities, input scheduling, and spawn extraction |
 | `gameplay_test.odin` | Map, runtime-state, input-priority, and fixed-timing regression tests |
 | `enemy_simulation.odin` | Seeded enemy movement, rendering positions, and contact damage |

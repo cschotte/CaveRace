@@ -1,8 +1,7 @@
 package caverace
 
-// Score_Event keeps every legacy score mutation in one small rule set. Later
-// lifecycle milestones can apply Level_Won and Death_Retry without duplicating
-// thresholds or arithmetic.
+// Score_Event keeps every legacy score mutation in one small rule set so
+// simulation and lifecycle code do not duplicate thresholds or arithmetic.
 Score_Event :: enum {
 	Bomb_Placed,
 	Item_Collected,
