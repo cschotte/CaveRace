@@ -25,6 +25,7 @@ Gameplay :: struct {
 	bombs:          [MAX_BOMBS]Bomb_State,
 	bomb_occupancy: Map_Grid,
 	simulation:     Gameplay_Simulation_State,
+	random_state:   rand.Xoshiro256_Random_State,
 }
 
 Gameplay_Frame_Result :: struct {
@@ -37,6 +38,7 @@ init_gameplay :: proc(gameplay: ^Gameplay) {
 		state  = .Load_Level,
 		player = new_player_state(),
 	}
+	seed_gameplay_random(gameplay, rand.uint64())
 }
 
 change_gameplay_state :: proc(gameplay: ^Gameplay, next_state: Gameplay_State) {
@@ -61,7 +63,7 @@ update_gameplay :: proc(
 	case .Load_Level:
 		if load_level(&gameplay.level, gameplay.level_index) {
 			if runtime_error := initialize_level_runtime(gameplay); runtime_error == .None {
-				gameplay.theme = Tile_Theme(rand.int_max(len(Tile_Theme)))
+				gameplay.theme = Tile_Theme(gameplay_random_max(gameplay, len(Tile_Theme)))
 				change_gameplay_state(gameplay, .Playing)
 			} else {
 				fmt.eprintln("Failed to initialize level runtime:", runtime_error)

@@ -90,6 +90,8 @@ all_levels_load_and_extract_spawns_test :: proc(t: ^testing.T) {
 		testing.expect_value(t, runtime_error, Level_Runtime_Error.None)
 		testing.expect_value(t, expected_player_count, 1)
 		testing.expect_value(t, gameplay.player.position, expected_player)
+		testing.expect_value(t, gameplay.player.move_from, expected_player)
+		testing.expect_value(t, gameplay.player.move_to, expected_player)
 		testing.expect(t, is_in_map(gameplay.player.position))
 		testing.expect_value(t, gameplay.enemy_count, expected_enemy_count)
 		testing.expect(t, gameplay.enemy_count <= MAX_ENEMIES)
@@ -98,6 +100,8 @@ all_levels_load_and_extract_spawns_test :: proc(t: ^testing.T) {
 			enemy := gameplay.enemies[enemy_index]
 			testing.expect(t, enemy.active)
 			testing.expect(t, is_in_map(enemy.position))
+			testing.expect_value(t, enemy.move_from, enemy.position)
+			testing.expect_value(t, enemy.move_to, enemy.position)
 			testing.expect_value(
 				t,
 				enemy.kind,

@@ -93,9 +93,10 @@ Gameplay_Input_Buffer :: struct {
 }
 
 Gameplay_Simulation_State :: struct {
-	accumulator_seconds: f64,
-	action_step:         int,
-	input:               Gameplay_Input_Buffer,
+	accumulator_seconds:   f64,
+	action_step:           int,
+	contact_damage_applied: bool,
+	input:                 Gameplay_Input_Buffer,
 }
 
 Gameplay_Simulation_Result :: struct {
@@ -103,6 +104,8 @@ Gameplay_Simulation_Result :: struct {
 	action_decisions:    int,
 	last_action:         Gameplay_Action,
 	bomb_action_started: bool,
+	player_damaged:      bool,
+	player_died:         bool,
 	cheat_pressed:       [Cheat_Key]bool,
 }
 
@@ -120,10 +123,13 @@ Player_State :: struct {
 }
 
 Enemy_State :: struct {
-	active:    bool,
-	kind:      u8,
-	position:  Grid_Position,
-	direction: Direction,
+	active:        bool,
+	kind:          u8,
+	position:      Grid_Position,
+	move_from:     Grid_Position,
+	move_to:       Grid_Position,
+	movement_step: int,
+	direction:     Direction,
 }
 
 Bomb_State :: struct {
@@ -228,17 +234,31 @@ advance_gameplay_simulation :: proc(
 		}
 
 		if simulation.action_step == 0 {
+			simulation.contact_damage_applied = false
 			result.last_action = select_gameplay_action(&simulation.input)
 			result.action_decisions += 1
+			begin_enemy_actions(gameplay)
 			begin_player_action(gameplay, result.last_action)
 			if result.last_action == .Place_Bomb {
 				result.bomb_action_started = true
 			}
 		}
+
+		if !simulation.contact_damage_applied && player_touches_enemy(gameplay) {
+			simulation.contact_damage_applied = true
+			result.player_damaged = apply_enemy_contact_damage(&gameplay.player)
+			if gameplay.player.energy == 0 {
+				result.player_died = true
+				change_gameplay_state(gameplay, .Dead)
+				break
+			}
+		}
+
 		advance_player_action_step(
 			&gameplay.player,
 			simulation.action_step + 1,
 		)
+		advance_enemy_action_steps(gameplay, simulation.action_step + 1)
 
 		simulation.action_step =
 			(simulation.action_step + 1) % MOVEMENT_STEPS_PER_TILE
@@ -267,9 +287,11 @@ initialize_level_runtime :: proc(gameplay: ^Gameplay) -> Level_Runtime_Error {
 			if kind := gameplay.level.data.enemy[grid_x][grid_y]; kind != 0 {
 				if enemy_count >= MAX_ENEMIES do return .Too_Many_Enemies
 				enemies[enemy_count] = Enemy_State {
-					active   = true,
-					kind     = kind,
-					position = {grid_x, grid_y},
+					active    = true,
+					kind      = kind,
+					position  = {grid_x, grid_y},
+					move_from = {grid_x, grid_y},
+					move_to   = {grid_x, grid_y},
 				}
 				enemy_count += 1
 			}

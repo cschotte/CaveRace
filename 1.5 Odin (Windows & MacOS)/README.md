@@ -17,9 +17,10 @@ The game screen loads the original map data, validates it, extracts player and
 enemy spawns into fixed runtime state, and renders the resulting level. It has
 a gameplay state machine and a 60 Hz fixed-step action scheduler independent
 from rendering. Player movement uses the original collision rules, 16-step
-tile timing, and directional animation. Bombs, enemy movement, collisions,
-scoring, high-score storage, and the original cheat effects still need to be
-implemented.
+tile timing, and directional animation. Enemies use deterministic
+gameplay-owned randomness, the same tile timing and walkability rules, and
+once-per-action contact damage. Bombs, explosions, scoring, high-score
+storage, and the original cheat effects still need to be implemented.
 
 ## Requirements
 
@@ -92,6 +93,8 @@ implemented yet.
 | `gameplay.odin` | Playing-session state, transitions, and simulation update |
 | `gameplay_runtime.odin` | Gameplay rules, fixed runtime entities, input scheduling, and spawn extraction |
 | `gameplay_test.odin` | Map, runtime-state, input-priority, and fixed-timing regression tests |
+| `enemy_simulation.odin` | Seeded enemy movement, rendering positions, and contact damage |
+| `enemy_simulation_test.odin` | Enemy determinism, collision, timing, and damage regression tests |
 | `level_render.odin` | Layered rendering of map tiles and runtime entities |
 | `player_movement.odin` | Player walkability, tile movement, coordinate conversion, and animation |
 | `player_movement_test.odin` | Player collision, movement, conversion, and animation regression tests |

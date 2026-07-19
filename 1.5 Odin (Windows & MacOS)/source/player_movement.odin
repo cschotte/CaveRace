@@ -77,13 +77,24 @@ advance_player_action_step :: proc(player: ^Player_State, completed_steps: int) 
 	}
 }
 
-player_screen_position :: proc(player: ^Player_State) -> (x, y: i32) {
-	x, y = grid_position_to_screen(player.move_from)
-	delta_x := player.move_to.x - player.move_from.x
-	delta_y := player.move_to.y - player.move_from.y
-	x += i32(delta_x * player.movement_step * MOVEMENT_PIXELS_PER_STEP)
-	y += i32(delta_y * player.movement_step * MOVEMENT_PIXELS_PER_STEP)
+movement_screen_position :: proc(
+	move_from, move_to: Grid_Position,
+	movement_step: int,
+) -> (x, y: i32) {
+	x, y = grid_position_to_screen(move_from)
+	delta_x := move_to.x - move_from.x
+	delta_y := move_to.y - move_from.y
+	x += i32(delta_x * movement_step * MOVEMENT_PIXELS_PER_STEP)
+	y += i32(delta_y * movement_step * MOVEMENT_PIXELS_PER_STEP)
 	return
+}
+
+player_screen_position :: proc(player: ^Player_State) -> (x, y: i32) {
+	return movement_screen_position(
+		player.move_from,
+		player.move_to,
+		player.movement_step,
+	)
 }
 
 player_sprite_index :: proc(player: ^Player_State) -> u8 {
