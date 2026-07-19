@@ -104,6 +104,9 @@ Gameplay_Simulation_Result :: struct {
 	action_decisions:    int,
 	last_action:         Gameplay_Action,
 	bomb_action_started: bool,
+	bomb_placed:         bool,
+	bombs_expired:       int,
+	ticking_requested:   bool,
 	player_damaged:      bool,
 	player_died:         bool,
 	cheat_pressed:       [Cheat_Key]bool,
@@ -241,7 +244,10 @@ advance_gameplay_simulation :: proc(
 			begin_player_action(gameplay, result.last_action)
 			if result.last_action == .Place_Bomb {
 				result.bomb_action_started = true
+				result.bomb_placed = try_place_bomb(gameplay)
+				result.ticking_requested = result.bomb_placed
 			}
+			result.bombs_expired += advance_bomb_fuses(gameplay)
 		}
 
 		if !simulation.contact_damage_applied && player_touches_enemy(gameplay) {

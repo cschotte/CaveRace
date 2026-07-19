@@ -50,6 +50,9 @@ run_application :: proc(options: Launch_Options) -> bool {
 		if update_result.menu_selection_changed {
 			rl.PlaySound(app.assets.sounds.menu)
 		}
+		if update_result.gameplay.simulation.ticking_requested {
+			rl.PlaySound(app.assets.sounds.ticking)
+		}
 
 		rl.BeginDrawing()
 			rl.ClearBackground(rl.RAYWHITE)

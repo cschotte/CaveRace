@@ -19,8 +19,10 @@ a gameplay state machine and a 60 Hz fixed-step action scheduler independent
 from rendering. Player movement uses the original collision rules, 16-step
 tile timing, and directional animation. Enemies use deterministic
 gameplay-owned randomness, the same tile timing and walkability rules, and
-once-per-action contact damage. Bombs, explosions, scoring, high-score
-storage, and the original cheat effects still need to be implemented.
+once-per-action contact damage. Players can place capacity-limited bombs with
+legacy action-based fuses, score cost, occupancy blocking, and ticking audio.
+Explosions, pickups, the HUD, high-score storage, and the original cheat
+effects still need to be implemented.
 
 ## Requirements
 
@@ -70,6 +72,7 @@ with this version's `source/` directory as its working directory.
 | Mouse | Select and confirm a main-menu item |
 | Escape | Return to the main menu from game or high scores |
 | Arrow keys | Move the player during gameplay |
+| Space | Place a bomb during gameplay |
 | Space / either mouse button | Return from the high-score screen |
 
 The application recognizes the original `-powerblast` and `-slow` arguments:
@@ -95,6 +98,8 @@ implemented yet.
 | `gameplay_test.odin` | Map, runtime-state, input-priority, and fixed-timing regression tests |
 | `enemy_simulation.odin` | Seeded enemy movement, rendering positions, and contact damage |
 | `enemy_simulation_test.odin` | Enemy determinism, collision, timing, and damage regression tests |
+| `bomb_simulation.odin` | Bomb placement, capacity, fuse timing, occupancy, and cleanup |
+| `bomb_simulation_test.odin` | Bomb placement, capacity, blocking, timing, and cleanup regression tests |
 | `level_render.odin` | Layered rendering of map tiles and runtime entities |
 | `player_movement.odin` | Player walkability, tile movement, coordinate conversion, and animation |
 | `player_movement_test.odin` | Player collision, movement, conversion, and animation regression tests |
