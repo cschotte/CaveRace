@@ -43,7 +43,7 @@ resource_root_finds_packaged_and_development_layouts_test :: proc(t: ^testing.T)
 	if !testing.expect(t, os.make_directory_all(build) == nil) do return
 	if !testing.expect(t, os.make_directory_all(source_media) == nil) do return
 	if !testing.expect(t, os.make_directory_all(working) == nil) do return
-	source_marker, source_marker_error := filepath.join({source_media, "game.png"})
+	source_marker, source_marker_error := filepath.join({source_media, "game_border.png"})
 	if !testing.expect(t, source_marker_error == nil) do return
 	defer delete(source_marker)
 	if !testing.expect(t, os.write_entire_file(source_marker, "") == nil) do return
@@ -60,7 +60,7 @@ resource_root_finds_packaged_and_development_layouts_test :: proc(t: ^testing.T)
 	if !testing.expect(t, packaged_media_error == nil) do return
 	defer delete(packaged_media)
 	if !testing.expect(t, os.make_directory_all(packaged_media) == nil) do return
-	packaged_marker, packaged_marker_error := filepath.join({packaged_media, "game.png"})
+	packaged_marker, packaged_marker_error := filepath.join({packaged_media, "game_border.png"})
 	if !testing.expect(t, packaged_marker_error == nil) do return
 	defer delete(packaged_marker)
 	if !testing.expect(t, os.write_entire_file(packaged_marker, "") == nil) do return

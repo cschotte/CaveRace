@@ -162,10 +162,10 @@ escape_abandons_run_directly_without_completed_score_test :: proc(t: ^testing.T)
 	testing.expect_value(t, game.gameplay.player.energy, ENEMY_CONTACT_DAMAGE)
 }
 
-// Exercises a full ten-level wraparound to ensure each transition reloads clean
-// level state while preserving run-wide score progression.
+// Exercises all ten levels to ensure each transition reloads clean level state,
+// preserves run-wide score, and ends permanently in Game_Won after level 10.
 @(test)
-ten_level_cycle_wraps_and_reloads_without_stale_level_state_test :: proc(t: ^testing.T) {
+ten_level_run_ends_in_game_won_without_wrapping_test :: proc(t: ^testing.T) {
 	gameplay: Gameplay
 	init_gameplay(&gameplay)
 	seed_gameplay_random(&gameplay, 37)
@@ -193,7 +193,9 @@ ten_level_cycle_wraps_and_reloads_without_stale_level_state_test :: proc(t: ^tes
 		gameplay.player.bomb_power = 8
 
 		update_gameplay(&gameplay, {}, 0)
-		testing.expect_value(t, gameplay.state, Gameplay_State.Won)
+		expected_state := Gameplay_State.Won
+		if completed_level == LEVEL_COUNT - 1 do expected_state = .Game_Won
+		testing.expect_value(t, gameplay.state, expected_state)
 		testing.expect_value(
 			t,
 			gameplay.player.score,
@@ -204,19 +206,33 @@ ten_level_cycle_wraps_and_reloads_without_stale_level_state_test :: proc(t: ^tes
 		testing.expect(t, !gameplay.bombs[0].active)
 		testing.expect(t, !gameplay.explosions[0].active)
 		testing.expect_value(t, gameplay.bomb_occupancy[1][1], u8(0))
-		update_gameplay(&gameplay, Game_Input {confirm = true}, 0)
-		testing.expect_value(t, gameplay.state, Gameplay_State.Load_Level)
-		testing.expect_value(t, gameplay.level_index, (completed_level + 1) % LEVEL_COUNT)
-		testing.expect_value(t, gameplay.player.energy, PLAYER_START_ENERGY)
-		testing.expect_value(t, gameplay.player.bomb_capacity, PLAYER_START_BOMB_CAPACITY)
-		testing.expect_value(t, gameplay.player.bomb_power, PLAYER_START_BOMB_POWER)
+		if completed_level < LEVEL_COUNT - 1 {
+			update_gameplay(&gameplay, Game_Input {confirm = true}, 0)
+			testing.expect_value(t, gameplay.state, Gameplay_State.Load_Level)
+			testing.expect_value(t, gameplay.level_index, completed_level + 1)
+			testing.expect_value(t, gameplay.player.energy, PLAYER_START_ENERGY)
+			testing.expect_value(t, gameplay.player.bomb_capacity, PLAYER_START_BOMB_CAPACITY)
+			testing.expect_value(t, gameplay.player.bomb_power, PLAYER_START_BOMB_POWER)
+		}
 	}
 
-	testing.expect_value(t, gameplay.level_index, 0)
-	load_gameplay_level(&gameplay, "")
-	testing.expect_value(t, gameplay.state, Gameplay_State.Playing)
-	testing.expect(t, gameplay.level_completion_enabled)
-	testing.expect(t, gameplay.enemy_count > 0)
+	testing.expect_value(t, gameplay.level_index, LEVEL_COUNT - 1)
+	testing.expect_value(t, gameplay.state, Gameplay_State.Game_Won)
+	update_gameplay(&gameplay, Game_Input {confirm = true}, 0)
+	testing.expect_value(t, gameplay.level_index, LEVEL_COUNT - 1)
+	testing.expect_value(t, gameplay.state, Gameplay_State.Game_Won)
 	for bomb_state in gameplay.bombs do testing.expect(t, !bomb_state.active)
 	for explosion in gameplay.explosions do testing.expect(t, !explosion.active)
+}
+
+@(test)
+game_won_screen_returns_to_main_menu_on_any_key_test :: proc(t: ^testing.T) {
+	game: Game
+	init_game(&game)
+	game.screen = .Playing
+	game.gameplay.state = .Game_Won
+	game.gameplay.level_index = LEVEL_COUNT - 1
+
+	update_game(&game, Game_Input {any_key_pressed = true}, 0)
+	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
 }

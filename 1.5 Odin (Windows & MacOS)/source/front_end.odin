@@ -10,13 +10,21 @@ FRONT_END_TRANSITION_SECONDS :: 0.5
 
 // Each story panel remains visible for the length of its matching music track.
 INTRO_IMAGE_SECONDS :: [INTRO_LAST_IMAGE - INTRO_FIRST_IMAGE + 1]f64 {
-	41.5262083333333,
 	40.4742916666667,
 	31.4547083333333,
 	39.962375,
 	36.1744583333333,
 	32.3661666666667,
 	30.8662916666667,
+	9.18716666666667,
+}
+
+// skip_intro_image advances immediately to the next story panel. Skipping the
+// last panel reports completion so Game can enter the main menu.
+skip_intro_image :: proc(front_end: ^Front_End_State) -> bool {
+	if front_end.image_index >= INTRO_LAST_IMAGE do return true
+	begin_front_end_transition(front_end, front_end.image_index + 1)
+	return false
 }
 
 intro_image_seconds :: proc(image_index: int) -> f64 {

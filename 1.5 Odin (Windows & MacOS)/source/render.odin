@@ -23,17 +23,26 @@ draw_front_end :: proc(front_end: Front_End_State, screens: ^Screen_Assets) {
 	rl.DrawTexture(screens.front_end[image_index], 0, 0, rl.Fade(rl.WHITE, alpha))
 }
 
-// draw_gameplay renders the active level when available and overlays the
-// lifecycle message appropriate to the current gameplay state.
+// draw_gameplay renders terminal screens directly; otherwise it draws the
+// active level when available and overlays its lifecycle message.
 draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {
+	if gameplay.state == .Game_Over {
+		rl.DrawTexture(assets.screens.game_over, 0, 0, rl.WHITE)
+		return
+	}
+	if gameplay.state == .Game_Won {
+		rl.DrawTexture(assets.screens.you_won, 0, 0, rl.WHITE)
+		return
+	}
+
 	rl.DrawTexture(assets.screens.game, 0, 0, rl.WHITE)
 
 	switch gameplay.state {
-	case .Playing, .Dead, .Won, .Game_Over:
+	case .Playing, .Dead, .Won:
 		draw_level_tiles(&gameplay.level, assets.tiles[gameplay.theme], &assets.sprites)
 		draw_level_entities(gameplay, &assets.sprites)
 		draw_gameplay_hud(gameplay, assets.sprites.tools)
-	case .Load_Level, .Load_Failed:
+	case .Load_Level, .Game_Won, .Game_Over, .Load_Failed:
 	}
 
 	switch gameplay.state {
@@ -43,8 +52,7 @@ draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {
 		draw_gameplay_message("You died - press Enter to retry")
 	case .Won:
 		draw_gameplay_message("Level complete - press Enter to continue")
-	case .Game_Over:
-		draw_gameplay_message("Game over - press any key")
+	case .Game_Won, .Game_Over:
 	case .Load_Failed:
 		draw_gameplay_message("Could not load level - Enter to retry, Esc for menu")
 	case .Playing:

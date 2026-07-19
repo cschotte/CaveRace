@@ -60,7 +60,11 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 
 	switch game.screen {
 	case .Intro:
-		if input.back || advance_intro(&game.front_end, frame_seconds) {
+		if input.back {
+			show_main_menu(game)
+		} else if input.space_pressed {
+			if skip_intro_image(&game.front_end) do show_main_menu(game)
+		} else if advance_intro(&game.front_end, frame_seconds) {
 			show_main_menu(game)
 		}
 	case .Main_Menu:
@@ -78,7 +82,9 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 		}
 		if result.gameplay.back_requested {
 			show_main_menu(game)
-		} else if previous_gameplay_state == .Game_Over && main_menu_start_requested(input) {
+		} else if (previous_gameplay_state == .Game_Over ||
+		           previous_gameplay_state == .Game_Won) &&
+		          main_menu_start_requested(input) {
 			show_main_menu(game)
 		}
 	}

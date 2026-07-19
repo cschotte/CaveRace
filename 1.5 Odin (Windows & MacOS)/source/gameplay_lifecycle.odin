@@ -24,11 +24,12 @@ begin_level_retry :: proc(gameplay: ^Gameplay) {
 	gameplay.state = .Load_Level
 }
 
-// begin_next_level advances with wraparound, restores per-level player values,
-// and schedules loading after the win screen is confirmed.
+// begin_next_level advances to the next available level, restores per-level
+// player values, and schedules loading after the level-complete screen.
 begin_next_level :: proc(gameplay: ^Gameplay) {
 	assert(gameplay.state == .Won)
-	gameplay.level_index = (gameplay.level_index + 1) % LEVEL_COUNT
+	assert(gameplay.level_index < LEVEL_COUNT - 1)
+	gameplay.level_index += 1
 	reset_player_for_level_start(&gameplay.player)
 	clear_level_state(gameplay)
 	gameplay.state = .Load_Level
@@ -44,7 +45,11 @@ resolve_gameplay_outcome :: proc(
 	if gameplay.level_completion_enabled && active_enemy_count(gameplay) == 0 {
 		apply_score_event(&gameplay.player, .Level_Won)
 		clear_level_state(gameplay)
-		gameplay.state = .Won
+		if gameplay.level_index == LEVEL_COUNT - 1 {
+			gameplay.state = .Game_Won
+		} else {
+			gameplay.state = .Won
+		}
 		return
 	}
 

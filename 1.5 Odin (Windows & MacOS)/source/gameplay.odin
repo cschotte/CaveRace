@@ -36,7 +36,7 @@ update_gameplay :: proc(
 			begin_next_level(gameplay)
 		}
 
-	case .Game_Over:
+	case .Game_Won, .Game_Over:
 
 	case .Load_Failed:
 		if input.confirm do gameplay.state = .Load_Level

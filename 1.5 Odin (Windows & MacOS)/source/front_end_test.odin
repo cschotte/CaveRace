@@ -86,6 +86,22 @@ escape_skips_intro_and_any_main_menu_input_starts_game_test :: proc(t: ^testing.
 }
 
 @(test)
+space_skips_one_intro_panel_and_last_panel_enters_menu_test :: proc(t: ^testing.T) {
+	game: Game
+	init_game(&game)
+
+	for expected_image in INTRO_FIRST_IMAGE + 1 ..= INTRO_LAST_IMAGE {
+		update_game(&game, Game_Input {space_pressed = true}, 0)
+		testing.expect_value(t, game.screen, App_Screen.Intro)
+		testing.expect_value(t, game.front_end.image_index, expected_image)
+	}
+
+	update_game(&game, Game_Input {space_pressed = true}, 0)
+	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
+	testing.expect_value(t, game.front_end.image_index, MAIN_MENU_FIRST_IMAGE)
+}
+
+@(test)
 completed_intro_routes_to_main_menu_test :: proc(t: ^testing.T) {
 	game: Game
 	init_game(&game)
@@ -102,9 +118,9 @@ completed_intro_routes_to_main_menu_test :: proc(t: ^testing.T) {
 music_cues_follow_intro_menu_level_and_outcome_state_test :: proc(t: ^testing.T) {
 	game: Game
 	init_game(&game)
-	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Intro_Space)
+	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Intro_Eldora)
 	game.front_end.image_index = INTRO_LAST_IMAGE
-	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Intro_Bombs)
+	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Intro_Protect)
 
 	show_main_menu(&game)
 	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Main_Menu)
@@ -120,13 +136,14 @@ music_cues_follow_intro_menu_level_and_outcome_state_test :: proc(t: ^testing.T)
 	game.gameplay.state = .Won
 	game.gameplay.level_index = LEVEL_COUNT - 2
 	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Level_Complete)
+	game.gameplay.state = .Game_Won
 	game.gameplay.level_index = LEVEL_COUNT - 1
-	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Victory)
+	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.You_Won)
 	game.gameplay.state = .Game_Over
 	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Game_Over)
 
 	testing.expect(t, music_cue_loops(.Main_Menu))
 	testing.expect(t, music_cue_loops(.Cave_A))
-	testing.expect(t, !music_cue_loops(.Intro_Space))
+	testing.expect(t, !music_cue_loops(.Intro_Eldora))
 	testing.expect(t, !music_cue_loops(.Level_Complete))
 }

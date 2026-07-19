@@ -215,6 +215,7 @@ Gameplay_State :: enum {
 	Playing,
 	Dead,
 	Won,
+	Game_Won,
 	Game_Over,
 	Load_Failed,
 }

@@ -65,11 +65,11 @@ On macOS application bundles, the same directories may instead be placed in
 | Key | Current action |
 | --- | --- |
 | Window close button | Quit the game |
-| Escape | Skip the story intro or return to the main menu from gameplay |
-| Any key | Start from the alternating title and controls screens; leave game over |
-| Enter | Retry after death or continue after winning a level |
+| Escape | Skip the complete story intro or return to the main menu from gameplay |
+| Space | Skip the current story panel; place a bomb during gameplay |
+| Any key | Start from the title/controls screens; leave game over or the final victory screen |
+| Enter | Retry after death or continue after completing levels 1–9 |
 | Arrow keys | Move the player during gameplay |
-| Space | Place a bomb during gameplay |
 | F1 | Clear all enemies and complete the level (`-powerblast` only) |
 | F2 | Restore four lives and eight energy (`-powerblast` only) |
 | F3 | Grant four-bomb capacity (`-powerblast` only) |
@@ -100,8 +100,8 @@ not mutate gameplay state.
 | `gameplay_state.odin` | Fixed gameplay capacities, value types, session state, and initialization |
 | `gameplay.odin` | Playing-session state-machine update and transitions |
 | `gameplay_loading.odin` | Level resource loading and validated active-state construction |
-| `gameplay_lifecycle.odin` | Win, retry, game-over, level-wrap, and active-level cleanup rules |
-| `gameplay_lifecycle_test.odin` | Outcome precedence, retry, routing, and ten-level-cycle tests |
+| `gameplay_lifecycle.odin` | Level completion, final victory, retry, game-over, and active-level cleanup rules |
+| `gameplay_lifecycle_test.odin` | Outcome precedence, retry, routing, and ten-level victory tests |
 | `gameplay_ticks.odin` | Fixed-tick input queueing and gameplay update orchestration |
 | `gameplay_test.odin` | Map, level-state, input-priority, and fixed-tick regression tests |
 | `cheats.odin` | Gated legacy F1-F5 gameplay mutations and safe power/score limits |
@@ -135,14 +135,19 @@ on-disk structure.
 
 ## Assets
 
-Game assets are stored as PNG, WAV, and OGG files under `media/`. The active build
-loads nine front-end images, one gameplay screen, six sprite sheets, five tile
+Game assets are stored as PNG, WAV, and OGG files under `media/`. The active
+build loads seven intro images, five screen images, six sprite sheets, five tile
 themes, seven sound effects, fourteen streamed music tracks, and ten original
-`.bin` levels. Intro images `intro/0.png` through `intro/6.png` play once, each
-for the duration of its matching intro track. `screens/menu.png` and
-`screens/controls.png` then alternate every five seconds over looping menu
-music. Gameplay rotates the three cave tracks by level; level complete, final
-level victory, and game over use their matching cues. Every front-end image
+`.bin` levels. Each numbered file in `media/intro/` has an identically named
+track in `media/music/` and remains visible for that track's duration. Space
+skips one story panel and Escape skips the complete intro.
+
+`screens/menu.png` and `screens/controls.png` alternate every five seconds over
+looping menu music. `screens/game_border.png` frames gameplay, while
+`screens/game_over.png` and `screens/you_won.png` provide the two terminal
+screens. Gameplay rotates the three cave tracks by level; level complete, final
+victory, and game over use their matching cues. Completing level 10 enters the
+final victory state and never wraps back to level 1. Every front-end image
 change uses a half-second fade through black.
 
 The application searches beside the executable first, then macOS bundle

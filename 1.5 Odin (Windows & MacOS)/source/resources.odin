@@ -27,7 +27,7 @@ resource_path :: proc(
 resource_root_is_usable :: proc(root: string) -> bool {
 	marker_path, ok := resource_path(
 		root,
-		{RESOURCE_MEDIA_DIRECTORY, "screens", "game.png"},
+		{RESOURCE_MEDIA_DIRECTORY, "screens", "game_border.png"},
 		context.temp_allocator,
 	)
 	return ok && os.is_file(marker_path)

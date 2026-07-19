@@ -89,14 +89,15 @@ music_cue_for_game :: proc(game: ^Game) -> Music_Cue {
 	case .Intro:
 		assert(game.front_end.image_index >= INTRO_FIRST_IMAGE)
 		assert(game.front_end.image_index <= INTRO_LAST_IMAGE)
-		return Music_Cue(int(Music_Cue.Intro_Space) + game.front_end.image_index)
+		return Music_Cue(int(Music_Cue.Intro_Eldora) + game.front_end.image_index)
 	case .Main_Menu:
 		return .Main_Menu
 	case .Playing:
 		switch game.gameplay.state {
 		case .Won:
-			if game.gameplay.level_index == LEVEL_COUNT - 1 do return .Victory
 			return .Level_Complete
+		case .Game_Won:
+			return .You_Won
 		case .Game_Over:
 			return .Game_Over
 		case .Load_Level, .Playing, .Dead, .Load_Failed:
@@ -116,9 +117,9 @@ music_cue_loops :: proc(cue: Music_Cue) -> bool {
 	switch cue {
 	case .Main_Menu, .Cave_A, .Cave_B, .Cave_C:
 		return true
-	case .Intro_Space, .Intro_Eldora, .Intro_Mining, .Intro_Aliens,
-	     .Intro_Defense, .Intro_Hero, .Intro_Bombs, .Level_Complete,
-	     .Victory, .Game_Over:
+	case .Intro_Eldora, .Intro_Mining, .Intro_Aliens, .Intro_Defense,
+	     .Intro_Hero, .Intro_Bombs, .Intro_Protect, .Level_Complete,
+	     .You_Won, .Game_Over:
 		return false
 	}
 	return false
