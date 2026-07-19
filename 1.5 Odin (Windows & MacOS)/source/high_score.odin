@@ -41,15 +41,13 @@ High_Score_Mode :: enum {
 	Entering_Name,
 }
 
-// High_Score_State owns the current table and entry workflow while borrowing the
-// application-owned persistence path for the Game lifetime.
+// High_Score_State owns only the current table and entry workflow. Persistence
+// paths remain with Application and never enter screen/domain state.
 High_Score_State :: struct {
 	table:         High_Score_Table,
 	mode:          High_Score_Mode,
 	input_name:    High_Score_Name,
 	pending_score: u64,
-	// Borrowed from Application and valid for the complete Game lifetime.
-	storage_path:  string,
 }
 
 // High_Score_Update_Result reports screen dismissal and whether a confirmed name

@@ -3,15 +3,6 @@ package caverace
 import "core:strings"
 import rl "vendor:raylib"
 
-// Tile_Theme indexes the fixed terrain texture array selected per loaded level.
-Tile_Theme :: enum {
-	Desert,
-	Forest,
-	Lava,
-	Oil,
-	Winter,
-}
-
 // Screen_Assets groups full-screen backgrounds and the menu selection overlay
 // that share the application asset lifetime.
 Screen_Assets :: struct {

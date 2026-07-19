@@ -94,8 +94,8 @@ not mutate gameplay state.
 | File | Responsibility |
 | --- | --- |
 | `caverace.odin` | Entry point and launch messages |
-| `application.odin` | Window, audio, render loop, and application lifetime |
-| `game.odin` | Application screen state, routing, and update dispatch |
+| `application.odin` | Owned paths/assets, window/audio lifetime, I/O requests, and the frame loop |
+| `game.odin` | Platform-independent screen state, routing, and explicit application requests |
 | `render.odin` | Top-level screen, menu, gameplay, high-score, mouse, and feedback drawing |
 | `gameplay_state.odin` | Fixed gameplay capacities, value types, session state, and initialization |
 | `gameplay.odin` | Playing-session state-machine update and transitions |
@@ -124,13 +124,13 @@ not mutate gameplay state.
 | `player_movement_test.odin` | Player collision, movement, conversion, and animation regression tests |
 | `menu.odin` | Menu state, navigation, hit testing, and selection transitions |
 | `high_score.odin` | High-score table, qualification, name entry, and screen update rules |
-| `high_score_persistence.odin` | Versioned high-score loading, validation, and safe saving |
+| `high_score_persistence.odin` | Versioned high-score loading, validation, and safe saving at the application boundary |
 | `high_score_test.odin` | Defaults, entry, sorting, corruption, persistence, and routing tests |
 | `input.odin` | Frame-level keyboard, text, and mouse state and input mapping |
 | `assets.odin` | Texture and sound loading, validation, and cleanup |
 | `level.odin` | Original map data layout, loading, and index validation |
 | `options.odin` | Legacy command-line option parsing |
-| `config.odin` | Window, frame-rate, map, and media constants |
+| `config.odin` | Window, frame-rate, map, theme, and fixed content-schema constants |
 
 The map is 19×11 cells. A stored level consists of five byte grids for the
 background, items, treasure, enemy spawns, and the player spawn. Mutable

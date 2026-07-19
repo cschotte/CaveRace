@@ -1,5 +1,15 @@
 package caverace
 
+// Cheat_Key is domain input shared by platform polling, queued gameplay input,
+// and fixed-tick results. Platform key codes are mapped separately in input.odin.
+Cheat_Key :: enum {
+	F1,
+	F2,
+	F3,
+	F4,
+	F5,
+}
+
 // apply_gameplay_cheat preserves the 1.2 powerblast effects while keeping
 // their mutations in one deterministic gameplay procedure. Bomb power is
 // capped because explosion storage is deliberately fixed to that safe limit.

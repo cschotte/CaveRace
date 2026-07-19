@@ -159,10 +159,18 @@ high_score_storage_path :: proc(allocator := context.allocator) -> (string, os.E
 	return path, nil
 }
 
-// init_high_scores borrows the application-owned storage path and loads either
-// the persisted table or legacy defaults during Game initialization.
-init_high_scores :: proc(state: ^High_Score_State, storage_path: string) {
-	state^ = High_Score_State {storage_path = storage_path}
+// init_high_scores establishes a valid platform-independent default table.
+// Application may replace it from storage after it initializes Game.
+init_high_scores :: proc(state: ^High_Score_State) {
+	state^ = High_Score_State {table = default_high_score_table()}
+}
+
+// load_high_scores resets transient entry state and loads persisted data using
+// an Application-owned path, falling back to the legacy defaults on failure.
+load_high_scores :: proc(state: ^High_Score_State, storage_path: string) {
+	state.mode = .Viewing
+	state.input_name = {}
+	state.pending_score = 0
 	status := load_high_score_table(storage_path, &state.table)
 	switch status {
 	case .Defaults_Corrupt:
@@ -173,11 +181,11 @@ init_high_scores :: proc(state: ^High_Score_State, storage_path: string) {
 	}
 }
 
-// persist_high_scores saves the current table after a confirmed insertion and
-// reports recoverable I/O failure without interrupting the game.
-persist_high_scores :: proc(state: ^High_Score_State) {
-	if state.storage_path == "" do return
-	if !save_high_score_table_safe(state.storage_path, &state.table) {
-		fmt.eprintln("Could not save high scores:", state.storage_path)
+// persist_high_scores saves a table after a confirmed insertion and reports a
+// recoverable I/O failure without interrupting the game.
+persist_high_scores :: proc(storage_path: string, table: ^High_Score_Table) {
+	if storage_path == "" do return
+	if !save_high_score_table_safe(storage_path, table) {
+		fmt.eprintln("Could not save high scores:", storage_path)
 	}
 }

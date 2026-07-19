@@ -60,14 +60,14 @@ advance_game_feedback :: proc(feedback: ^Game_Feedback, frame_seconds: f64) {
 
 // transition_fade_alpha converts remaining transition time to the normalized
 // alpha consumed by the top-level renderer.
-transition_fade_alpha :: proc(feedback: ^Game_Feedback) -> f32 {
+transition_fade_alpha :: proc(feedback: Game_Feedback) -> f32 {
 	if feedback.transition_remaining <= 0 do return 0
 	return f32(clamp(feedback.transition_remaining / TRANSITION_FADE_SECONDS, 0, 1))
 }
 
 // feedback_flash_alpha computes the decaying overlay alpha for damage and
 // pickup flashes during rendering.
-feedback_flash_alpha :: proc(feedback: ^Game_Feedback) -> f32 {
+feedback_flash_alpha :: proc(feedback: Game_Feedback) -> f32 {
 	if feedback.flash_remaining <= 0 do return 0
 	progress := feedback.flash_remaining / FEEDBACK_FLASH_SECONDS
 	return f32(clamp(progress * FEEDBACK_FLASH_ALPHA, 0, FEEDBACK_FLASH_ALPHA))

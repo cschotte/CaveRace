@@ -18,7 +18,7 @@ draw_game :: proc(game: ^Game, assets: ^Assets, mouse: Mouse_State) {
 	}
 
 	draw_mouse(mouse, assets.sprites.tools)
-	draw_game_feedback(&game.feedback)
+	draw_game_feedback(game.feedback)
 }
 
 // draw_menu renders the static menu background and current animated selection
@@ -159,7 +159,7 @@ feedback_flash_color :: proc(flash: Feedback_Flash) -> rl.Color {
 
 // draw_game_feedback overlays transition and gameplay flashes after all screen
 // content, using alphas computed by the non-rendering feedback logic.
-draw_game_feedback :: proc(feedback: ^Game_Feedback) {
+draw_game_feedback :: proc(feedback: Game_Feedback) {
 	if fade_alpha := transition_fade_alpha(feedback); fade_alpha > 0 {
 		rl.DrawRectangle(
 			0,

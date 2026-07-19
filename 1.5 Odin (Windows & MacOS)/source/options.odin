@@ -4,7 +4,7 @@ import "core:fmt"
 import "core:os"
 
 // Launch_Options stores the two legacy compatibility switches parsed once and
-// then borrowed by application and gameplay update policy.
+// then mapped by Application to render and gameplay policy.
 Launch_Options :: struct {
 	cheats_enabled: bool,
 	slow_mode:      bool,

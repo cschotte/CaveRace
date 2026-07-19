@@ -8,43 +8,37 @@ App_Screen :: enum {
 	High_Scores,
 }
 
-// Game owns all screen-level state and borrows the application resource root
-// needed to start and reload gameplay sessions.
+// Game owns all screen-level state. Filesystem paths and platform resources are
+// owned by Application and are deliberately absent from this domain state.
 Game :: struct {
-	screen:                App_Screen,
-	menu:                  Menu_State,
-	gameplay:              Gameplay,
-	high_scores:           High_Score_State,
-	feedback:              Game_Feedback,
-	options:               Launch_Options,
-	// Borrowed from Application for the complete Game lifetime.
-	resource_root:         string,
-	quit_requested:        bool,
+	screen:          App_Screen,
+	menu:            Menu_State,
+	gameplay:        Gameplay,
+	high_scores:     High_Score_State,
+	feedback:        Game_Feedback,
+	cheats_enabled:  bool,
+	quit_requested:  bool,
 }
 
-// Game_Update_Result carries transient menu and gameplay events from one update
-// frame to platform audio and feedback handling.
+// Game_Update_Result carries transient effects and explicit I/O requests to the
+// application boundary. The game update itself never touches the filesystem.
 Game_Update_Result :: struct {
-	menu_selection_changed: bool,
-	gameplay:               Gameplay_Frame_Result,
+	menu_selection_changed:     bool,
+	gameplay:                   Gameplay_Frame_Result,
+	load_level_requested:       bool,
+	save_high_scores_requested: bool,
 }
 
-// init_game establishes screen, gameplay, and high-score state while borrowing
-// application-owned resource paths for the complete game lifetime.
-init_game :: proc(
-	game: ^Game,
-	options: Launch_Options,
-	high_score_path: string = "",
-	resource_root: string = "",
-) {
+// init_game establishes platform-independent screen, gameplay, and high-score
+// state. Application supplies only the gameplay policy it parsed at launch.
+init_game :: proc(game: ^Game, cheats_enabled := false) {
 	game^ = Game {
-		screen        = .Menu,
-		menu          = {selected = .Start_Game},
-		options       = options,
-		resource_root = resource_root,
+		screen         = .Menu,
+		menu           = {selected = .Start_Game},
+		cheats_enabled = cheats_enabled,
 	}
 	init_gameplay(&game.gameplay)
-	init_high_scores(&game.high_scores, high_score_path)
+	init_high_scores(&game.high_scores)
 }
 
 // start_new_game resets all run progress and enters the Playing screen when the
@@ -54,8 +48,8 @@ start_new_game :: proc(game: ^Game) {
 	game.screen = .Playing
 }
 
-// update_game routes one frame to the active screen, performs screen and
-// lifecycle transitions, and returns transient audio/feedback events.
+// update_game routes one frame to the active screen, performs state transitions,
+// and returns transient effects plus any work for the application boundary.
 update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_Update_Result {
 	result: Game_Update_Result
 	advance_game_feedback(&game.feedback, frame_seconds)
@@ -83,10 +77,10 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			&game.gameplay,
 			input,
 			frame_seconds,
-			game.options.cheats_enabled,
+			game.cheats_enabled,
 		)
 		if !result.gameplay.back_requested && previous_gameplay_state == .Load_Level {
-			load_gameplay_level(&game.gameplay, game.resource_root)
+			result.load_level_requested = true
 		}
 		if result.gameplay.back_requested {
 			game.screen = .Menu
@@ -96,7 +90,7 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 		}
 	case .High_Scores:
 		high_score_result := update_high_scores(&game.high_scores, input)
-		if high_score_result.table_changed do persist_high_scores(&game.high_scores)
+		result.save_high_scores_requested = high_score_result.table_changed
 		if high_score_result.back_requested {
 			game.screen = .Menu
 		}

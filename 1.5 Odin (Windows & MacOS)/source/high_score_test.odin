@@ -236,8 +236,9 @@ game_over_name_submission_persists_only_after_confirmation_test :: proc(t: ^test
 	if !testing.expect(t, path_error == nil) do return
 	defer delete(path)
 
-	game: Game
-	init_game(&game, {}, path)
+	app := Application {high_score_storage_path = path}
+	init_game(&app.game)
+	game := &app.game
 	completed_run: Maybe(Completed_Run) = Completed_Run {score = 14000}
 	open_high_scores(&game.high_scores, completed_run)
 	game.screen = .High_Scores
@@ -247,11 +248,15 @@ game_over_name_submission_persists_only_after_confirmation_test :: proc(t: ^test
 		text_input.text_codepoints[character_index] = character
 		text_input.text_count += 1
 	}
-	update_game(&game, text_input, 0)
+	update_application(&app, text_input, 0)
 	_, stat_error := os.stat(path, context.temp_allocator)
 	testing.expect(t, stat_error == os.General_Error.Not_Exist)
 
-	update_game(&game, Game_Input {confirm = true}, 0)
+	confirm_result := update_game(game, Game_Input {confirm = true}, 0)
+	testing.expect(t, confirm_result.save_high_scores_requested)
+	_, stat_error = os.stat(path, context.temp_allocator)
+	testing.expect(t, stat_error == os.General_Error.Not_Exist)
+	process_game_requests(&app, &confirm_result)
 	testing.expect_value(t, game.high_scores.mode, High_Score_Mode.Viewing)
 	testing.expect_value(t, game.high_scores.table.entries[0].score, u64(14000))
 	testing.expect_value(

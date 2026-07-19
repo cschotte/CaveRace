@@ -48,7 +48,7 @@ cheats_require_powerblast_and_run_on_fixed_tick_test :: proc(t: ^testing.T) {
 	input.cheat_pressed[.F1] = true
 
 	disabled: Game
-	init_game(&disabled, Launch_Options {cheats_enabled = false})
+	init_game(&disabled, false)
 	disabled.screen = .Playing
 	disabled.gameplay = open_gameplay_at({1, 1})
 	disabled.gameplay.level_completion_enabled = true
@@ -60,7 +60,7 @@ cheats_require_powerblast_and_run_on_fixed_tick_test :: proc(t: ^testing.T) {
 	testing.expect(t, !disabled_result.gameplay.ticks.cheat_pressed[.F1])
 
 	enabled: Game
-	init_game(&enabled, Launch_Options {cheats_enabled = true})
+	init_game(&enabled, true)
 	enabled.screen = .Playing
 	enabled.gameplay = open_gameplay_at({1, 1})
 	enabled.gameplay.level_completion_enabled = true
@@ -83,7 +83,7 @@ feedback_flash_priority_and_timing_test :: proc(t: ^testing.T) {
 	}
 	request_gameplay_feedback(&feedback, &result)
 	testing.expect_value(t, feedback.flash, Feedback_Flash.Treasure)
-	testing.expect(t, feedback_flash_alpha(&feedback) > 0)
+	testing.expect(t, feedback_flash_alpha(feedback) > 0)
 
 	result.player_damaged = true
 	request_gameplay_feedback(&feedback, &result)
@@ -91,14 +91,14 @@ feedback_flash_priority_and_timing_test :: proc(t: ^testing.T) {
 
 	advance_game_feedback(&feedback, FEEDBACK_FLASH_SECONDS)
 	testing.expect_value(t, feedback.flash, Feedback_Flash.None)
-	testing.expect_value(t, feedback_flash_alpha(&feedback), f32(0))
+	testing.expect_value(t, feedback_flash_alpha(feedback), f32(0))
 
 	start_transition_fade(&feedback)
-	testing.expect_value(t, transition_fade_alpha(&feedback), f32(1))
+	testing.expect_value(t, transition_fade_alpha(feedback), f32(1))
 	advance_game_feedback(&feedback, TRANSITION_FADE_SECONDS / 2)
-	testing.expect_value(t, transition_fade_alpha(&feedback), f32(0.5))
+	testing.expect_value(t, transition_fade_alpha(feedback), f32(0.5))
 	advance_game_feedback(&feedback, TRANSITION_FADE_SECONDS / 2)
-	testing.expect_value(t, transition_fade_alpha(&feedback), f32(0))
+	testing.expect_value(t, transition_fade_alpha(feedback), f32(0))
 }
 
 // Verifies that screen fades remain visual-only and never suppress immediate
@@ -106,14 +106,14 @@ feedback_flash_priority_and_timing_test :: proc(t: ^testing.T) {
 @(test)
 visual_transitions_do_not_block_game_input_test :: proc(t: ^testing.T) {
 	game: Game
-	init_game(&game, {})
+	init_game(&game)
 	update_game(&game, Game_Input {confirm = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Playing)
-	testing.expect_value(t, transition_fade_alpha(&game.feedback), f32(1))
+	testing.expect_value(t, transition_fade_alpha(game.feedback), f32(1))
 
 	update_game(&game, Game_Input {back = true}, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, game.screen, App_Screen.Menu)
-	testing.expect_value(t, transition_fade_alpha(&game.feedback), f32(1))
+	testing.expect_value(t, transition_fade_alpha(game.feedback), f32(1))
 }
 
 // Confirms menu selection uses the intended two-phase legacy alpha transition

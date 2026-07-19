@@ -3,8 +3,8 @@ package caverace
 import "core:fmt"
 import rl "vendor:raylib"
 
-// Application owns platform resources and borrowed-path backing storage for the
-// complete process lifetime managed by run_application.
+// Application owns platform resources and allocated paths for the complete
+// process lifetime managed by run_application.
 Application :: struct {
 	assets:                  Assets,
 	game:                    Game,
@@ -32,7 +32,8 @@ run_application :: proc(options: Launch_Options) -> bool {
 		app.high_score_storage_path = storage_path
 		defer delete(app.high_score_storage_path)
 	}
-	init_game(&app.game, options, app.high_score_storage_path, app.resource_root)
+	init_game(&app.game, options.cheats_enabled)
+	load_high_scores(&app.game.high_scores, app.high_score_storage_path)
 
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
 	if !rl.IsWindowReady() {
@@ -76,7 +77,7 @@ run_application :: proc(options: Launch_Options) -> bool {
 			frame_seconds,
 			rl.IsWindowFocused(),
 		)
-		update_result := update_game(&app.game, input, frame_seconds)
+		update_result := update_application(&app, input, frame_seconds)
 		if app.audio_ready {
 			play_frame_audio(&app.assets, &update_result)
 		}
@@ -88,6 +89,29 @@ run_application :: proc(options: Launch_Options) -> bool {
 	}
 
 	return true
+}
+
+// update_application advances platform-independent game state, then fulfills
+// any resulting I/O requests before the current frame is presented.
+update_application :: proc(
+	app: ^Application,
+	input: Game_Input,
+	frame_seconds: f64,
+) -> Game_Update_Result {
+	result := update_game(&app.game, input, frame_seconds)
+	process_game_requests(app, &result)
+	return result
+}
+
+// process_game_requests is the single boundary where pure game-routing output
+// may cause resource loading or persistence using Application-owned paths.
+process_game_requests :: proc(app: ^Application, result: ^Game_Update_Result) {
+	if result.load_level_requested {
+		load_gameplay_level(&app.game.gameplay, app.resource_root)
+	}
+	if result.save_high_scores_requested {
+		persist_high_scores(app.high_score_storage_path, &app.game.high_scores.table)
+	}
 }
 
 // application_should_continue combines the in-game quit request with the

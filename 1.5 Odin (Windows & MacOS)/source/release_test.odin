@@ -140,7 +140,7 @@ missing_and_invalid_level_files_do_not_replace_valid_state_test :: proc(t: ^test
 @(test)
 window_close_and_focus_loss_are_non_destructive_test :: proc(t: ^testing.T) {
 	game: Game
-	init_game(&game, {})
+	init_game(&game)
 	testing.expect(t, application_should_continue(&game, false))
 	testing.expect(t, !application_should_continue(&game, true))
 	game.quit_requested = true
@@ -170,33 +170,56 @@ window_close_and_focus_loss_are_non_destructive_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, focused_seconds, f64(0.2))
 }
 
-// Exercises repeated menu, gameplay, and score-screen routing to ensure borrowed
-// resource and persistence paths remain valid across resets.
+// Exercises repeated screen routing to ensure Application-owned resource and
+// persistence paths remain valid across Game resets.
 @(test)
-repeated_menu_game_and_score_transitions_keep_borrowed_state_test :: proc(t: ^testing.T) {
-	game: Game
-	init_game(&game, {}, "scores.test", "resources.test")
+repeated_menu_game_and_score_transitions_keep_application_paths_test :: proc(t: ^testing.T) {
+	app := Application {
+		high_score_storage_path = "scores.test",
+		resource_root           = "resources.test",
+	}
+	init_game(&app.game)
 	for _ in 0 ..< 12 {
 		update_game(
-			&game,
+			&app.game,
 			Game_Input {
 				menu_shortcut = Menu_Item.High_Scores,
 				confirm       = true,
 			},
 			0,
 		)
-		testing.expect_value(t, game.screen, App_Screen.High_Scores)
-		update_game(&game, Game_Input {back = true}, 0)
-		testing.expect_value(t, game.screen, App_Screen.Menu)
+		testing.expect_value(t, app.game.screen, App_Screen.High_Scores)
+		update_game(&app.game, Game_Input {back = true}, 0)
+		testing.expect_value(t, app.game.screen, App_Screen.Menu)
 
-		game.menu.selected = .Start_Game
-		update_game(&game, Game_Input {confirm = true}, 0)
-		testing.expect_value(t, game.screen, App_Screen.Playing)
-		update_game(&game, Game_Input {back = true}, 0)
-		testing.expect_value(t, game.screen, App_Screen.Menu)
-		testing.expect_value(t, game.resource_root, "resources.test")
-		testing.expect_value(t, game.high_scores.storage_path, "scores.test")
+		app.game.menu.selected = .Start_Game
+		update_game(&app.game, Game_Input {confirm = true}, 0)
+		testing.expect_value(t, app.game.screen, App_Screen.Playing)
+		update_game(&app.game, Game_Input {back = true}, 0)
+		testing.expect_value(t, app.game.screen, App_Screen.Menu)
+		testing.expect_value(t, app.resource_root, "resources.test")
+		testing.expect_value(t, app.high_score_storage_path, "scores.test")
 	}
+}
+
+// Verifies Game reports level I/O as an explicit request and only Application,
+// which owns the resource root, performs the load.
+@(test)
+game_update_requests_level_load_at_application_boundary_test :: proc(t: ^testing.T) {
+	resource_root, root_ok := resolve_resource_root()
+	if !testing.expect(t, root_ok) do return
+	defer delete(resource_root)
+
+	app := Application {resource_root = resource_root}
+	init_game(&app.game)
+	update_game(&app.game, Game_Input {confirm = true}, 0)
+
+	result := update_game(&app.game, {}, 0)
+	testing.expect(t, result.load_level_requested)
+	testing.expect_value(t, app.game.gameplay.state, Gameplay_State.Load_Level)
+
+	process_game_requests(&app, &result)
+	testing.expect_value(t, app.game.gameplay.state, Gameplay_State.Playing)
 }
 
 // Runs a deterministic end-to-end game flow through loading, pickup, win, retry,
@@ -221,28 +244,33 @@ deterministic_complete_run_smoke_test :: proc(t: ^testing.T) {
 	if !testing.expect(t, root_ok) do return
 	defer delete(resource_root)
 
-	game: Game
-	init_game(&game, {}, score_path, resource_root)
-	update_game(&game, Game_Input {confirm = true}, 0)
+	app := Application {
+		high_score_storage_path = score_path,
+		resource_root           = resource_root,
+	}
+	init_game(&app.game)
+	load_high_scores(&app.game.high_scores, app.high_score_storage_path)
+	game := &app.game
+	update_application(&app, Game_Input {confirm = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Playing)
-	update_game(&game, {}, 0)
+	update_application(&app, {}, 0)
 	if !testing.expect_value(t, game.gameplay.state, Gameplay_State.Playing) do return
 
 	position := game.gameplay.player.position
 	game.gameplay.level.data.item[position.x][position.y] = 0
 	game.gameplay.level.data.treasure[position.x][position.y] = 1
 	game.gameplay.tick_state.action_step = MOVEMENT_STEPS_PER_TILE - 1
-	pickup_frame := update_game(&game, {}, GAMEPLAY_TICK_SECONDS)
+	pickup_frame := update_application(&app, {}, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, pickup_frame.gameplay.ticks.treasures_collected, 1)
 	testing.expect(t, game.gameplay.player.score >= SCORE_TREASURE_PICKUP)
 
 	for enemy_index in 0 ..< game.gameplay.enemy_count {
 		game.gameplay.enemies[enemy_index].active = false
 	}
-	update_game(&game, {}, 0)
+	update_application(&app, {}, 0)
 	testing.expect_value(t, game.gameplay.state, Gameplay_State.Won)
-	update_game(&game, Game_Input {confirm = true}, 0)
-	update_game(&game, {}, 0)
+	update_application(&app, Game_Input {confirm = true}, 0)
+	update_application(&app, {}, 0)
 	testing.expect_value(t, game.gameplay.state, Gameplay_State.Playing)
 	testing.expect_value(t, game.gameplay.level_index, 1)
 
@@ -251,11 +279,11 @@ deterministic_complete_run_smoke_test :: proc(t: ^testing.T) {
 	game.gameplay.enemies = {}
 	game.gameplay.enemies[0] = enemy_at(game.gameplay.player.position)
 	game.gameplay.enemy_count = 1
-	update_game(&game, {}, GAMEPLAY_TICK_SECONDS)
+	update_application(&app, {}, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, game.gameplay.state, Gameplay_State.Dead)
 	testing.expect_value(t, game.gameplay.player.lives, 1)
-	update_game(&game, Game_Input {confirm = true}, 0)
-	update_game(&game, {}, 0)
+	update_application(&app, Game_Input {confirm = true}, 0)
+	update_application(&app, {}, 0)
 	testing.expect_value(t, game.gameplay.state, Gameplay_State.Playing)
 
 	game.gameplay.player.score = 5000
@@ -264,7 +292,7 @@ deterministic_complete_run_smoke_test :: proc(t: ^testing.T) {
 	game.gameplay.enemies = {}
 	game.gameplay.enemies[0] = enemy_at(game.gameplay.player.position)
 	game.gameplay.enemy_count = 1
-	update_game(&game, {}, GAMEPLAY_TICK_SECONDS)
+	update_application(&app, {}, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, game.screen, App_Screen.High_Scores)
 	testing.expect_value(t, game.high_scores.mode, High_Score_Mode.Entering_Name)
 
@@ -273,8 +301,8 @@ deterministic_complete_run_smoke_test :: proc(t: ^testing.T) {
 		name_input.text_codepoints[character_index] = character
 		name_input.text_count += 1
 	}
-	update_game(&game, name_input, 0)
-	update_game(&game, Game_Input {confirm = true}, 0)
+	update_application(&app, name_input, 0)
+	update_application(&app, Game_Input {confirm = true}, 0)
 	testing.expect_value(t, game.high_scores.mode, High_Score_Mode.Viewing)
 
 	loaded_scores: High_Score_Table
@@ -293,10 +321,10 @@ deterministic_complete_run_smoke_test :: proc(t: ^testing.T) {
 	}
 	testing.expect(t, found_smoke_score)
 
-	update_game(&game, Game_Input {back = true}, 0)
+	update_application(&app, Game_Input {back = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Menu)
 	update_game(
-		&game,
+		game,
 		Game_Input {
 			menu_shortcut = Menu_Item.Quit,
 			confirm       = true,

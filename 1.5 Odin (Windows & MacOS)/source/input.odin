@@ -4,16 +4,6 @@ import rl "vendor:raylib"
 
 MAX_TEXT_CODEPOINTS_PER_FRAME :: 16
 
-// Cheat_Key provides a compact typed index for the five legacy powerblast keys
-// across platform input, queued gameplay input, and tick results.
-Cheat_Key :: enum {
-	F1,
-	F2,
-	F3,
-	F4,
-	F5,
-}
-
 // Mouse_State is the frame snapshot shared by menu hit testing, high-score
 // dismissal, and custom pointer rendering.
 Mouse_State :: struct {

@@ -122,7 +122,7 @@ retry_penalty_that_reaches_zero_applies_legacy_score_floor_test :: proc(t: ^test
 final_death_routes_completed_run_to_high_scores_test :: proc(t: ^testing.T) {
 	position := Grid_Position {3, 3}
 	game: Game
-	init_game(&game, {})
+	init_game(&game)
 	game.screen = .Playing
 	game.gameplay = open_gameplay_at(position)
 	game.gameplay.level_completion_enabled = true
@@ -158,7 +158,7 @@ final_death_routes_completed_run_to_high_scores_test :: proc(t: ^testing.T) {
 escape_abandons_run_directly_without_completed_score_test :: proc(t: ^testing.T) {
 	position := Grid_Position {2, 2}
 	game: Game
-	init_game(&game, {})
+	init_game(&game)
 	game.screen = .Playing
 	game.gameplay = open_gameplay_at(position)
 	game.gameplay.level_completion_enabled = true

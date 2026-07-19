@@ -36,7 +36,7 @@ Level_Data_Error :: enum {
 
 LEVEL_COUNT :: 10
 
-level_filenames := [LEVEL_COUNT]string {
+LEVEL_FILENAMES :: [LEVEL_COUNT]string {
 	"01.bin",
 	"02.bin",
 	"03.bin",
@@ -81,6 +81,7 @@ load_level :: proc(level: ^Level, level_index: int, resource_root: string = "") 
 		fmt.eprintln("Invalid level index:", level_index)
 		return false
 	}
+	level_filenames := LEVEL_FILENAMES
 
 	path, path_ok := resource_path(
 		resource_root,
