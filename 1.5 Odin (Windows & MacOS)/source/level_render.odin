@@ -34,10 +34,9 @@ draw_level_entities :: proc(gameplay: ^Gameplay, sprites: ^Sprite_Assets) {
 	player_sprite := player_sprite_index(&gameplay.player)
 	draw_vertical_sprite(sprites.player, player_sprite, player_screen_x, player_screen_y)
 
-	for enemy_index in 0 ..< gameplay.enemy_count {
-		enemy := &gameplay.enemies[enemy_index]
+	for &enemy in enemy_slots(gameplay) {
 		if !enemy.active do continue
-		enemy_screen_x, enemy_screen_y := enemy_screen_position(enemy)
+		enemy_screen_x, enemy_screen_y := enemy_screen_position(&enemy)
 		draw_vertical_sprite(sprites.enemy, enemy.kind, enemy_screen_x, enemy_screen_y)
 	}
 

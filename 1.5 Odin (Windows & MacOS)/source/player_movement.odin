@@ -1,5 +1,13 @@
 package caverace
 
+// Subtile_Position is a simulation-space coordinate measured in fixed movement
+// steps. It lets collision code remain independent of render offsets and pixel
+// scale while retaining exact integer movement.
+Subtile_Position :: struct {
+	x: int,
+	y: int,
+}
+
 // direction_delta maps a cardinal direction to its grid offset whenever player
 // or enemy movement selects a target cell.
 direction_delta :: proc(direction: Direction) -> Grid_Position {
@@ -26,8 +34,8 @@ action_direction :: proc(action: Gameplay_Action) -> Direction {
 	return .None
 }
 
-// screen_to_grid_position maps an interpolated pixel origin back to a valid map
-// cell for explosion collision checks.
+// screen_to_grid_position maps a rendered pixel origin back to a valid map cell
+// for presentation-layer coordinate conversion.
 screen_to_grid_position :: proc(screen_x, screen_y: i32) -> (
 	position: Grid_Position,
 	ok: bool,
@@ -39,6 +47,36 @@ screen_to_grid_position :: proc(screen_x, screen_y: i32) -> (
 	position = {
 		relative_x / MAP_TILE_SIZE,
 		relative_y / MAP_TILE_SIZE,
+	}
+	return position, is_in_map(position)
+}
+
+// movement_subtile_position interpolates an actor in simulation units. One map
+// cell is exactly MOVEMENT_STEPS_PER_TILE units on each axis.
+movement_subtile_position :: proc(
+	move_from, move_to: Grid_Position,
+	movement_step: int,
+) -> Subtile_Position {
+	delta_x := move_to.x - move_from.x
+	delta_y := move_to.y - move_from.y
+	return {
+		move_from.x * MOVEMENT_STEPS_PER_TILE + delta_x * movement_step,
+		move_from.y * MOVEMENT_STEPS_PER_TILE + delta_y * movement_step,
+	}
+}
+
+// movement_grid_position maps an interpolated simulation position to the map
+// cell used by explosion effects. Integer division preserves the legacy edge
+// behavior for actors moving left or up.
+movement_grid_position :: proc(
+	move_from, move_to: Grid_Position,
+	movement_step: int,
+) -> (position: Grid_Position, ok: bool) {
+	subtile := movement_subtile_position(move_from, move_to, movement_step)
+	if subtile.x < 0 || subtile.y < 0 do return {}, false
+	position = {
+		subtile.x / MOVEMENT_STEPS_PER_TILE,
+		subtile.y / MOVEMENT_STEPS_PER_TILE,
 	}
 	return position, is_in_map(position)
 }
@@ -91,22 +129,29 @@ advance_player_action_step :: proc(player: ^Player_State, completed_steps: int) 
 	}
 }
 
-// movement_screen_position interpolates between two grid cells for actor
-// rendering and pixel-precise collision checks during movement.
+// movement_screen_position converts simulation-space interpolation into the
+// pixel coordinate used only for actor rendering.
 movement_screen_position :: proc(
 	move_from, move_to: Grid_Position,
 	movement_step: int,
 ) -> (x, y: i32) {
-	x, y = grid_position_to_screen(move_from)
-	delta_x := move_to.x - move_from.x
-	delta_y := move_to.y - move_from.y
-	x += i32(delta_x * movement_step * MOVEMENT_PIXELS_PER_STEP)
-	y += i32(delta_y * movement_step * MOVEMENT_PIXELS_PER_STEP)
-	return
+	subtile := movement_subtile_position(move_from, move_to, movement_step)
+	return i32(MAP_OFFSET_X + subtile.x * MOVEMENT_PIXELS_PER_STEP),
+	       i32(MAP_OFFSET_Y + subtile.y * MOVEMENT_PIXELS_PER_STEP)
+}
+
+// player_subtile_position exposes the player's interpolated simulation
+// coordinate for collision checks without involving the renderer.
+player_subtile_position :: proc(player: ^Player_State) -> Subtile_Position {
+	return movement_subtile_position(
+		player.move_from,
+		player.move_to,
+		player.movement_step,
+	)
 }
 
 // player_screen_position exposes the player's current interpolated position to
-// rendering and enemy/explosion collision rules.
+// rendering.
 player_screen_position :: proc(player: ^Player_State) -> (x, y: i32) {
 	return movement_screen_position(
 		player.move_from,

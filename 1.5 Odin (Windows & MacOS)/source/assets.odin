@@ -34,6 +34,44 @@ Music_Cue :: enum {
 #assert(len(Music_Cue) == 14)
 #assert(int(Music_Cue.Intro_Protect) - int(Music_Cue.Intro_Eldora) + 1 == INTRO_LAST_IMAGE - INTRO_FIRST_IMAGE + 1)
 
+// Resource manifests keep array indices and enum values as the single mapping
+// between domain-facing asset slots and packaged filenames.
+FRONT_END_TEXTURE_PATHS :: [FRONT_END_IMAGE_COUNT]string {
+	"intro/01_intro_eldora.png",
+	"intro/02_intro_mining.png",
+	"intro/03_intro_aliens.png",
+	"intro/04_intro_defense.png",
+	"intro/05_intro_hero.png",
+	"intro/06_intro_bombs.png",
+	"intro/07_intro_protect.png",
+	"screens/menu.png",
+	"screens/controls.png",
+}
+
+BOMB_SOUND_PATHS :: [BOMB_SOUND_COUNT]string {
+	"sounds/bomb01.wav",
+	"sounds/bomb02.wav",
+	"sounds/bomb03.wav",
+	"sounds/bomb04.wav",
+}
+
+MUSIC_PATHS :: [Music_Cue]string {
+	.Intro_Eldora   = "music/01_intro_eldora.ogg",
+	.Intro_Mining   = "music/02_intro_mining.ogg",
+	.Intro_Aliens   = "music/03_intro_aliens.ogg",
+	.Intro_Defense  = "music/04_intro_defense.ogg",
+	.Intro_Hero     = "music/05_intro_hero.ogg",
+	.Intro_Bombs    = "music/06_intro_bombs.ogg",
+	.Intro_Protect  = "music/07_intro_protect.ogg",
+	.Main_Menu      = "music/08_main_menu.ogg",
+	.Cave_A         = "music/09_gameplay_a.ogg",
+	.Cave_B         = "music/10_gameplay_b.ogg",
+	.Cave_C         = "music/11_gameplay_c.ogg",
+	.Level_Complete = "music/12_level_complete.ogg",
+	.You_Won        = "music/13_you_won.ogg",
+	.Game_Over      = "music/14_game_over.ogg",
+}
+
 // Sound_Assets owns all raylib sound handles used when frame events request
 // bomb, pickup, enemy, or ticking audio.
 Sound_Assets :: struct {
@@ -101,45 +139,30 @@ load_resource_music :: proc(root, relative_path: string) -> rl.Music {
 }
 
 // load_assets fills the application-owned asset bundle and validates every
-// required handle before the main loop is allowed to start.
+// required handle before the main loop is allowed to start. Failure releases
+// partial resources and leaves the bundle empty.
 load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true) -> bool {
 	assets^ = {}
 	assets.screens.game         = load_resource_texture(resource_root, "screens/game_border.png")
 	assets.screens.game_over    = load_resource_texture(resource_root, "screens/game_over.png")
 	assets.screens.you_won      = load_resource_texture(resource_root, "screens/you_won.png")
-	assets.screens.front_end[0] = load_resource_texture(resource_root, "intro/01_intro_eldora.png")
-	assets.screens.front_end[1] = load_resource_texture(resource_root, "intro/02_intro_mining.png")
-	assets.screens.front_end[2] = load_resource_texture(resource_root, "intro/03_intro_aliens.png")
-	assets.screens.front_end[3] = load_resource_texture(resource_root, "intro/04_intro_defense.png")
-	assets.screens.front_end[4] = load_resource_texture(resource_root, "intro/05_intro_hero.png")
-	assets.screens.front_end[5] = load_resource_texture(resource_root, "intro/06_intro_bombs.png")
-	assets.screens.front_end[6] = load_resource_texture(resource_root, "intro/07_intro_protect.png")
-	assets.screens.front_end[7] = load_resource_texture(resource_root, "screens/menu.png")
-	assets.screens.front_end[8] = load_resource_texture(resource_root, "screens/controls.png")
+	for relative_path, image_index in FRONT_END_TEXTURE_PATHS {
+		assets.screens.front_end[image_index] =
+			load_resource_texture(resource_root, relative_path)
+	}
 
 	if load_audio {
-		assets.sounds.bomb[0] = load_resource_sound(resource_root, "sounds/bomb01.wav")
-		assets.sounds.bomb[1] = load_resource_sound(resource_root, "sounds/bomb02.wav")
-		assets.sounds.bomb[2] = load_resource_sound(resource_root, "sounds/bomb03.wav")
-		assets.sounds.bomb[3] = load_resource_sound(resource_root, "sounds/bomb04.wav")
+		for relative_path, sound_index in BOMB_SOUND_PATHS {
+			assets.sounds.bomb[sound_index] =
+				load_resource_sound(resource_root, relative_path)
+		}
 		assets.sounds.item    = load_resource_sound(resource_root, "sounds/item.wav")
 		assets.sounds.squish  = load_resource_sound(resource_root, "sounds/squish.wav")
 		assets.sounds.ticking = load_resource_sound(resource_root, "sounds/ticking.wav")
 
-		assets.music[.Intro_Eldora]  = load_resource_music(resource_root, "music/01_intro_eldora.ogg")
-		assets.music[.Intro_Mining]  = load_resource_music(resource_root, "music/02_intro_mining.ogg")
-		assets.music[.Intro_Aliens]  = load_resource_music(resource_root, "music/03_intro_aliens.ogg")
-		assets.music[.Intro_Defense] = load_resource_music(resource_root, "music/04_intro_defense.ogg")
-		assets.music[.Intro_Hero]    = load_resource_music(resource_root, "music/05_intro_hero.ogg")
-		assets.music[.Intro_Bombs]   = load_resource_music(resource_root, "music/06_intro_bombs.ogg")
-		assets.music[.Intro_Protect] = load_resource_music(resource_root, "music/07_intro_protect.ogg")
-		assets.music[.Main_Menu]     = load_resource_music(resource_root, "music/08_main_menu.ogg")
-		assets.music[.Cave_A]        = load_resource_music(resource_root, "music/09_gameplay_a.ogg")
-		assets.music[.Cave_B]        = load_resource_music(resource_root, "music/10_gameplay_b.ogg")
-		assets.music[.Cave_C]        = load_resource_music(resource_root, "music/11_gameplay_c.ogg")
-		assets.music[.Level_Complete] = load_resource_music(resource_root, "music/12_level_complete.ogg")
-		assets.music[.You_Won]        = load_resource_music(resource_root, "music/13_you_won.ogg")
-		assets.music[.Game_Over]      = load_resource_music(resource_root, "music/14_game_over.ogg")
+		for relative_path, cue in MUSIC_PATHS {
+			assets.music[cue] = load_resource_music(resource_root, relative_path)
+		}
 	}
 
 	assets.sprites.bomb     = load_resource_texture(resource_root, "sprites/bomb.png")
@@ -155,7 +178,11 @@ load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true) 
 	assets.tiles[.Oil]    = load_resource_texture(resource_root, "tiles/oil.png")
 	assets.tiles[.Winter] = load_resource_texture(resource_root, "tiles/winter.png")
 
-	return assets_are_valid(assets, load_audio)
+	if !assets_are_valid(assets, load_audio) {
+		unload_assets(assets)
+		return false
+	}
+	return true
 }
 
 // assets_are_valid checks dimensions and raylib handles after loading so bad

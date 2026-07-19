@@ -205,8 +205,8 @@ seeded_enemies_stay_walkable_on_all_levels_test :: proc(t: ^testing.T) {
 	}
 }
 
-// Verifies pixel-based contact recognizes actors crossing between adjacent
-// cells before either movement action completes.
+// Verifies sub-tile contact recognizes actors crossing between adjacent cells
+// before either movement action completes.
 @(test)
 crossing_entities_overlap_at_pixel_step_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({1, 1})

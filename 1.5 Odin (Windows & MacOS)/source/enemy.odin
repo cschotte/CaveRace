@@ -2,6 +2,14 @@ package caverace
 
 import "core:math/rand"
 
+// enemy_slots returns the initialized prefix of the fixed enemy storage. The
+// slice borrows Gameplay memory and never allocates; centralizing this boundary
+// keeps every enemy system on the same checked count invariant.
+enemy_slots :: proc(gameplay: ^Gameplay) -> []Enemy_State {
+	assert(gameplay.enemy_count >= 0 && gameplay.enemy_count <= len(gameplay.enemies))
+	return gameplay.enemies[:gameplay.enemy_count]
+}
+
 // seed_gameplay_random initializes the session-owned generator at startup and
 // lets deterministic tests replay enemy choices and sound selection.
 seed_gameplay_random :: proc(gameplay: ^Gameplay, seed: u64) {
@@ -21,8 +29,8 @@ gameplay_random_max :: proc(gameplay: ^Gameplay, upper_bound: int) -> int {
 // and when tests need to inspect the fixed enemy array.
 active_enemy_count :: proc(gameplay: ^Gameplay) -> int {
 	count := 0
-	for enemy_index in 0 ..< gameplay.enemy_count {
-		if gameplay.enemies[enemy_index].active do count += 1
+	for enemy in enemy_slots(gameplay) {
+		if enemy.active do count += 1
 	}
 	return count
 }
@@ -65,19 +73,17 @@ begin_enemy_action :: proc(
 // begin_enemy_actions starts one seeded movement choice for every active enemy
 // whenever gameplay reaches a new action boundary.
 begin_enemy_actions :: proc(gameplay: ^Gameplay) {
-	for enemy_index in 0 ..< gameplay.enemy_count {
-		enemy := &gameplay.enemies[enemy_index]
+	for &enemy in enemy_slots(gameplay) {
 		if !enemy.active do continue
 		roll := gameplay_random_max(gameplay, 4)
-		begin_enemy_action(gameplay, enemy, enemy_direction_from_roll(roll))
+		begin_enemy_action(gameplay, &enemy, enemy_direction_from_roll(roll))
 	}
 }
 
 // advance_enemy_action_steps updates interpolation progress for all active
 // enemies and commits their target cells when the current action finishes.
 advance_enemy_action_steps :: proc(gameplay: ^Gameplay, completed_steps: int) {
-	for enemy_index in 0 ..< gameplay.enemy_count {
-		enemy := &gameplay.enemies[enemy_index]
+	for &enemy in enemy_slots(gameplay) {
 		if !enemy.active do continue
 		enemy.movement_step = clamp(completed_steps, 0, MOVEMENT_STEPS_PER_TILE)
 		if enemy.movement_step == MOVEMENT_STEPS_PER_TILE {
@@ -87,7 +93,7 @@ advance_enemy_action_steps :: proc(gameplay: ^Gameplay, completed_steps: int) {
 }
 
 // enemy_screen_position returns an enemy's interpolated pixel position for
-// collision checks and rendering during an in-progress movement action.
+// rendering during an in-progress movement action.
 enemy_screen_position :: proc(enemy: ^Enemy_State) -> (x, y: i32) {
 	return movement_screen_position(
 		enemy.move_from,
@@ -96,15 +102,23 @@ enemy_screen_position :: proc(enemy: ^Enemy_State) -> (x, y: i32) {
 	)
 }
 
-// player_touches_enemy detects exact pixel overlap during each gameplay tick so
-// crossing actors can deal contact damage before reaching a tile boundary.
+// enemy_subtile_position exposes an enemy's interpolated simulation coordinate
+// for actor contact checks.
+enemy_subtile_position :: proc(enemy: ^Enemy_State) -> Subtile_Position {
+	return movement_subtile_position(
+		enemy.move_from,
+		enemy.move_to,
+		enemy.movement_step,
+	)
+}
+
+// player_touches_enemy detects exact sub-tile overlap during each gameplay tick
+// so crossing actors can deal contact damage before reaching a tile boundary.
 player_touches_enemy :: proc(gameplay: ^Gameplay) -> bool {
-	player_x, player_y := player_screen_position(&gameplay.player)
-	for enemy_index in 0 ..< gameplay.enemy_count {
-		enemy := &gameplay.enemies[enemy_index]
+	player_position := player_subtile_position(&gameplay.player)
+	for &enemy in enemy_slots(gameplay) {
 		if !enemy.active do continue
-		enemy_x, enemy_y := enemy_screen_position(enemy)
-		if player_x == enemy_x && player_y == enemy_y do return true
+		if player_position == enemy_subtile_position(&enemy) do return true
 	}
 	return false
 }

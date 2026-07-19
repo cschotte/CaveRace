@@ -16,8 +16,8 @@ Cheat_Key :: enum {
 apply_gameplay_cheat :: proc(gameplay: ^Gameplay, cheat: Cheat_Key) {
 	switch cheat {
 	case .F1:
-		for enemy_index in 0 ..< gameplay.enemy_count {
-			gameplay.enemies[enemy_index].active = false
+		for &enemy in enemy_slots(gameplay) {
+			enemy.active = false
 		}
 	case .F2:
 		gameplay.player.lives = PLAYER_MAX_LIVES

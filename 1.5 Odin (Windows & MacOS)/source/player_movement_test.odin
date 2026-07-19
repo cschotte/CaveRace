@@ -80,6 +80,50 @@ grid_and_screen_conversion_test :: proc(t: ^testing.T) {
 	testing.expect(t, !ok)
 }
 
+// Protects the separation between simulation-space interpolation and render
+// coordinates for every cardinal direction and intermediate movement step.
+@(test)
+movement_subtile_and_screen_positions_are_equivalent_test :: proc(t: ^testing.T) {
+	origin := Grid_Position {5, 5}
+	directions := [4]Direction {
+		.Down,
+		.Up,
+		.Right,
+		.Left,
+	}
+	for direction in directions {
+		delta := direction_delta(direction)
+		target := Grid_Position {origin.x + delta.x, origin.y + delta.y}
+		for movement_step in 0 ..= MOVEMENT_STEPS_PER_TILE {
+			subtile := movement_subtile_position(origin, target, movement_step)
+			screen_x, screen_y := movement_screen_position(
+				origin,
+				target,
+				movement_step,
+			)
+			testing.expect_value(
+				t,
+				screen_x,
+				i32(MAP_OFFSET_X + subtile.x * MOVEMENT_PIXELS_PER_STEP),
+			)
+			testing.expect_value(
+				t,
+				screen_y,
+				i32(MAP_OFFSET_Y + subtile.y * MOVEMENT_PIXELS_PER_STEP),
+			)
+
+			grid_from_movement, movement_ok := movement_grid_position(
+				origin,
+				target,
+				movement_step,
+			)
+			grid_from_screen, screen_ok := screen_to_grid_position(screen_x, screen_y)
+			testing.expect_value(t, movement_ok, screen_ok)
+			testing.expect_value(t, grid_from_movement, grid_from_screen)
+		}
+	}
+}
+
 // Confirms player movement interpolates over exactly sixteen steps, commits one
 // tile, and starts the next queued direction only at the boundary.
 @(test)

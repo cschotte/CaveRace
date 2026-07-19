@@ -139,11 +139,13 @@ apply_active_explosions_to_entities :: proc(
 	gameplay: ^Gameplay,
 	result: ^Gameplay_Tick_Result,
 ) {
-	for enemy_index in 0 ..< gameplay.enemy_count {
-		enemy := &gameplay.enemies[enemy_index]
+	for &enemy in enemy_slots(gameplay) {
 		if !enemy.active do continue
-		screen_x, screen_y := enemy_screen_position(enemy)
-		position, ok := screen_to_grid_position(screen_x, screen_y)
+		position, ok := movement_grid_position(
+			enemy.move_from,
+			enemy.move_to,
+			enemy.movement_step,
+		)
 		if ok && active_explosion_contains_cell(gameplay, position) {
 			enemy.active = false
 			apply_score_event(&gameplay.player, .Enemy_Destroyed)
@@ -153,8 +155,11 @@ apply_active_explosions_to_entities :: proc(
 	}
 
 	if gameplay.player.energy <= 0 do return
-	player_x, player_y := player_screen_position(&gameplay.player)
-	player_position, ok := screen_to_grid_position(player_x, player_y)
+	player_position, ok := movement_grid_position(
+		gameplay.player.move_from,
+		gameplay.player.move_to,
+		gameplay.player.movement_step,
+	)
 	if ok && active_explosion_contains_cell(gameplay, player_position) {
 		gameplay.player.energy = 0
 		result.player_damaged = true
