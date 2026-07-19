@@ -38,6 +38,18 @@ draw_level_entities :: proc(gameplay: ^Gameplay, sprites: ^Sprite_Assets) {
 		screen_x, screen_y := enemy_screen_position(enemy)
 		draw_vertical_sprite(sprites.enemy, enemy.kind, screen_x, screen_y)
 	}
+
+	// Explosion sprites overlay bombs and actors, matching the legacy draw order.
+	for explosion_index in 0 ..< MAX_BOMBS {
+		explosion := &gameplay.explosions[explosion_index]
+		if !explosion.active do continue
+		for cell_index in 0 ..< explosion.cell_count {
+			cell := explosion.cells[cell_index]
+			screen_x, screen_y := grid_position_to_screen(cell.position)
+			sprite_index := explosion_sprite_index(cell.kind, explosion.age_step)
+			draw_vertical_sprite(sprites.bomb, sprite_index, screen_x, screen_y)
+		}
+	}
 }
 
 // The converted CaveRace sprite sheets contain one 32x32 sprite per row.

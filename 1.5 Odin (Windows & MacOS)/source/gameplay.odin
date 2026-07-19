@@ -23,6 +23,7 @@ Gameplay :: struct {
 	enemies:        [MAX_ENEMIES]Enemy_State,
 	enemy_count:    int,
 	bombs:          [MAX_BOMBS]Bomb_State,
+	explosions:     [MAX_BOMBS]Explosion_State,
 	bomb_occupancy: Map_Grid,
 	simulation:     Gameplay_Simulation_State,
 	random_state:   rand.Xoshiro256_Random_State,
@@ -76,8 +77,8 @@ update_gameplay :: proc(
 	case .Playing:
 		buffer_gameplay_input(&gameplay.simulation, input)
 		result.simulation = advance_gameplay_simulation(gameplay, frame_seconds)
-		// Bomb, enemy, collision, and win-condition updates remain
-		// intentionally unimplemented here.
+		// Pickups, the HUD, and win-condition updates are introduced by later
+		// milestones; the fixed simulation owns all active combat state.
 
 	case .Dead:
 		if input.confirm {

@@ -21,8 +21,10 @@ tile timing, and directional animation. Enemies use deterministic
 gameplay-owned randomness, the same tile timing and walkability rules, and
 once-per-action contact damage. Players can place capacity-limited bombs with
 legacy action-based fuses, score cost, occupancy blocking, and ticking audio.
-Explosions, pickups, the HUD, high-score storage, and the original cheat
-effects still need to be implemented.
+Explosions use clipped, fixed-capacity cardinal crosses shared by rendering and
+effects, with legacy animation, map destruction, deterministic chain reactions,
+enemy scoring, player hits, and audio requests. Pickups, the HUD, high-score
+storage, and the original cheat effects still need to be implemented.
 
 ## Requirements
 
@@ -100,6 +102,8 @@ implemented yet.
 | `enemy_simulation_test.odin` | Enemy determinism, collision, timing, and damage regression tests |
 | `bomb_simulation.odin` | Bomb placement, capacity, fuse timing, occupancy, and cleanup |
 | `bomb_simulation_test.odin` | Bomb placement, capacity, blocking, timing, and cleanup regression tests |
+| `explosion_simulation.odin` | Blast cells, animation, map/entity effects, and deterministic chain reactions |
+| `explosion_simulation_test.odin` | Edge clipping, destruction, chains, overlap, scoring, and player-hit regression tests |
 | `level_render.odin` | Layered rendering of map tiles and runtime entities |
 | `player_movement.odin` | Player walkability, tile movement, coordinate conversion, and animation |
 | `player_movement_test.odin` | Player collision, movement, conversion, and animation regression tests |

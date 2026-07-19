@@ -53,6 +53,14 @@ run_application :: proc(options: Launch_Options) -> bool {
 		if update_result.gameplay.simulation.ticking_requested {
 			rl.PlaySound(app.assets.sounds.ticking)
 		}
+		for sound_index in 0 ..< update_result.gameplay.simulation.explosion_sound_count {
+			bomb_sound := update_result.gameplay.simulation.explosion_sound_indices[sound_index]
+			assert(bomb_sound < BOMB_SOUND_COUNT)
+			rl.PlaySound(app.assets.sounds.bomb[bomb_sound])
+		}
+		for _ in 0 ..< update_result.gameplay.simulation.squish_requests {
+			rl.PlaySound(app.assets.sounds.squish)
+		}
 
 		rl.BeginDrawing()
 			rl.ClearBackground(rl.RAYWHITE)

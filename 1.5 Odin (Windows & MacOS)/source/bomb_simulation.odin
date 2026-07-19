@@ -50,6 +50,7 @@ clear_bomb_slot :: proc(gameplay: ^Gameplay, bomb_index: int) {
 		gameplay.bomb_occupancy[bomb.position.x][bomb.position.y] = 0
 	}
 	bomb^ = {}
+	gameplay.explosions[bomb_index] = {}
 }
 
 // Fuses use legacy action time, not render frames. Placement occurs before

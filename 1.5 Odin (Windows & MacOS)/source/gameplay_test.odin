@@ -189,6 +189,10 @@ spawn_extraction_clears_stale_runtime_state_test :: proc(t: ^testing.T) {
 		fuse_actions = 3,
 		power        = 2,
 	}
+	gameplay.explosions[0] = Explosion_State {
+		active   = true,
+		age_step = 7,
+	}
 	gameplay.bomb_occupancy[1][1] = 1
 	gameplay.simulation = Gameplay_Simulation_State {
 		accumulator_seconds = 0.1,
@@ -205,6 +209,7 @@ spawn_extraction_clears_stale_runtime_state_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, gameplay.player.lives, PLAYER_START_LIVES)
 	testing.expect_value(t, gameplay.player.energy, PLAYER_START_ENERGY)
 	testing.expect(t, !gameplay.bombs[0].active)
+	testing.expect(t, !gameplay.explosions[0].active)
 	testing.expect_value(t, gameplay.bomb_occupancy[1][1], u8(0))
 	testing.expect_value(t, gameplay.simulation, Gameplay_Simulation_State {})
 	for enemy_index in gameplay.enemy_count ..< MAX_ENEMIES {

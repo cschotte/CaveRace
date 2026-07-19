@@ -17,6 +17,16 @@ PLAYER_MAX_BOMB_POWER      :: 10
 
 ENEMY_CONTACT_DAMAGE :: 2
 BOMB_FUSE_ACTIONS    :: 12
+BOMB_SOUND_COUNT     :: 4
+
+MAX_EXPLOSION_CELLS :: 1 + 4 * PLAYER_MAX_BOMB_POWER
+EXPLOSION_STEPS     :: MOVEMENT_STEPS_PER_TILE
+
+INDESTRUCTIBLE_ITEM_FIRST :: 9
+
+EXPLOSION_SET_1_FIRST_SPRITE :: 2
+EXPLOSION_SET_2_FIRST_SPRITE :: 7
+EXPLOSION_SET_3_FIRST_SPRITE :: 12
 
 WALKABLE_TERRAIN_LIMIT :: 25
 PASSABLE_ITEM_LIMIT     :: 4
@@ -60,6 +70,8 @@ PLAYER_DIRECTION_FRAME_COUNT :: 4
 #assert(PLAYER_IDLE_SPRITE < PLAYER_SPRITE_COUNT)
 #assert(PLAYER_RIGHT_FIRST_SPRITE + PLAYER_DIRECTION_FRAME_COUNT == PLAYER_SPRITE_COUNT)
 #assert(BOMB_TICKING_SPRITE < BOMB_SPRITE_COUNT)
+#assert(EXPLOSION_SET_3_FIRST_SPRITE + 4 < BOMB_SPRITE_COUNT)
+#assert(MAX_EXPLOSION_CELLS == 41)
 
 Grid_Position :: struct {
 	x: int,
@@ -100,16 +112,21 @@ Gameplay_Simulation_State :: struct {
 }
 
 Gameplay_Simulation_Result :: struct {
-	steps_run:           int,
-	action_decisions:    int,
-	last_action:         Gameplay_Action,
-	bomb_action_started: bool,
-	bomb_placed:         bool,
-	bombs_expired:       int,
-	ticking_requested:   bool,
-	player_damaged:      bool,
-	player_died:         bool,
-	cheat_pressed:       [Cheat_Key]bool,
+	steps_run:              int,
+	action_decisions:       int,
+	last_action:            Gameplay_Action,
+	bomb_action_started:    bool,
+	bomb_placed:            bool,
+	bombs_expired:          int,
+	ticking_requested:      bool,
+	player_damaged:         bool,
+	player_died:            bool,
+	explosions_started:     int,
+	explosion_sound_indices: [MAX_BOMBS]u8,
+	explosion_sound_count:   int,
+	enemies_destroyed:      int,
+	squish_requests:        int,
+	cheat_pressed:          [Cheat_Key]bool,
 }
 
 Player_State :: struct {
@@ -140,6 +157,28 @@ Bomb_State :: struct {
 	position:     Grid_Position,
 	fuse_actions: int,
 	power:        int,
+}
+
+Explosion_Cell_Kind :: enum u8 {
+	Center,
+	Down,
+	Left,
+	Up,
+	Right,
+}
+
+Explosion_Cell :: struct {
+	position: Grid_Position,
+	kind:     Explosion_Cell_Kind,
+}
+
+// One fixed explosion record belongs to each fixed bomb slot. Cells are
+// computed once at detonation and then shared by effects and rendering.
+Explosion_State :: struct {
+	active:     bool,
+	age_step:   int,
+	cells:      [MAX_EXPLOSION_CELLS]Explosion_Cell,
+	cell_count: int,
 }
 
 Level_Runtime_Error :: enum {
@@ -248,16 +287,21 @@ advance_gameplay_simulation :: proc(
 				result.ticking_requested = result.bomb_placed
 			}
 			result.bombs_expired += advance_bomb_fuses(gameplay)
+			start_ready_explosions(gameplay, &result)
 		}
 
+		player_was_alive := gameplay.player.energy > 0
 		if !simulation.contact_damage_applied && player_touches_enemy(gameplay) {
 			simulation.contact_damage_applied = true
 			result.player_damaged = apply_enemy_contact_damage(&gameplay.player)
-			if gameplay.player.energy == 0 {
-				result.player_died = true
-				change_gameplay_state(gameplay, .Dead)
-				break
-			}
+		}
+
+		apply_active_explosions_to_entities(gameplay, &result)
+		if player_was_alive && gameplay.player.energy == 0 {
+			result.player_died = true
+			advance_explosion_ages(gameplay)
+			change_gameplay_state(gameplay, .Dead)
+			break
 		}
 
 		advance_player_action_step(
@@ -265,6 +309,7 @@ advance_gameplay_simulation :: proc(
 			simulation.action_step + 1,
 		)
 		advance_enemy_action_steps(gameplay, simulation.action_step + 1)
+		advance_explosion_ages(gameplay)
 
 		simulation.action_step =
 			(simulation.action_step + 1) % MOVEMENT_STEPS_PER_TILE
@@ -314,6 +359,7 @@ initialize_level_runtime :: proc(gameplay: ^Gameplay) -> Level_Runtime_Error {
 	gameplay.enemies = enemies
 	gameplay.enemy_count = enemy_count
 	gameplay.bombs = {}
+	gameplay.explosions = {}
 	gameplay.bomb_occupancy = {}
 	gameplay.simulation = {}
 	return .None

@@ -18,7 +18,7 @@ Screen_Assets :: struct {
 }
 
 Sound_Assets :: struct {
-	bomb:    [4]rl.Sound,
+	bomb:    [BOMB_SOUND_COUNT]rl.Sound,
 	item:    rl.Sound,
 	menu:    rl.Sound,
 	squish:  rl.Sound,
