@@ -325,8 +325,18 @@ render_rate_and_high_score_input_test :: proc(t: ^testing.T) {
 		target_render_fps({slow_mode = true}),
 		i32(SLOW_RENDER_FPS),
 	)
-	testing.expect(t, !update_high_scores({}))
-	testing.expect(t, update_high_scores({space_pressed = true}))
-	testing.expect(t, update_high_scores({mouse = {left_pressed = true}}))
-	testing.expect(t, update_high_scores({mouse = {right_pressed = true}}))
+	high_scores := High_Score_State {table = default_high_score_table()}
+	testing.expect(t, !update_high_scores(&high_scores, {}).back_requested)
+	testing.expect(
+		t,
+		update_high_scores(&high_scores, {space_pressed = true}).back_requested,
+	)
+	testing.expect(
+		t,
+		update_high_scores(&high_scores, {mouse = {left_pressed = true}}).back_requested,
+	)
+	testing.expect(
+		t,
+		update_high_scores(&high_scores, {mouse = {right_pressed = true}}).back_requested,
+	)
 }

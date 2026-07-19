@@ -10,6 +10,7 @@ Game :: struct {
 	screen:                App_Screen,
 	menu:                  Menu_State,
 	gameplay:              Gameplay,
+	high_scores:           High_Score_State,
 	options:               Launch_Options,
 	pending_completed_run: Maybe(Completed_Run),
 	quit_requested:        bool,
@@ -20,13 +21,14 @@ Game_Update_Result :: struct {
 	gameplay:               Gameplay_Frame_Result,
 }
 
-init_game :: proc(game: ^Game, options: Launch_Options) {
+init_game :: proc(game: ^Game, options: Launch_Options, high_score_path: string = "") {
 	game^ = Game {
 		screen    = .Menu,
 		menu      = {selected = .Start_Game},
 		options   = options,
 	}
 	init_gameplay(&game.gameplay)
+	init_high_scores(&game.high_scores, high_score_path)
 }
 
 start_new_game :: proc(game: ^Game) {
@@ -49,6 +51,7 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 				start_new_game(game)
 			case .High_Scores:
 				game.pending_completed_run = nil
+				open_high_scores(&game.high_scores, nil)
 				game.screen = .High_Scores
 			case .Quit:
 				game.quit_requested = true
@@ -61,11 +64,13 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			game.screen = .Menu
 		} else if completed_run, ok := result.gameplay.completed_run.?; ok {
 			game.pending_completed_run = completed_run
+			open_high_scores(&game.high_scores, completed_run)
 			game.screen = .High_Scores
 		}
 	case .High_Scores:
-		back_requested := update_high_scores(input)
-		if back_requested {
+		high_score_result := update_high_scores(&game.high_scores, input)
+		if high_score_result.table_changed do persist_high_scores(&game.high_scores)
+		if high_score_result.back_requested {
 			game.pending_completed_run = nil
 			game.screen = .Menu
 		}
@@ -81,7 +86,7 @@ draw_game :: proc(game: ^Game, assets: ^Assets, mouse: Mouse_State) {
 	case .Playing:
 		draw_gameplay(&game.gameplay, assets)
 	case .High_Scores:
-		draw_high_scores(assets.screens.highscore)
+		draw_high_scores(&game.high_scores, assets.screens.highscore)
 	}
 
 	draw_mouse(mouse, assets.sprites.tools)

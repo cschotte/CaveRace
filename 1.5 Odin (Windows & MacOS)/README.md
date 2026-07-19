@@ -27,8 +27,10 @@ enemy scoring, player hits, and audio requests. Items and treasure now follow
 the original caps, retention, scoring, timing, and sound rules. The status bar
 renders live player values and the numeric score. Level wins, retries, score
 penalties, ten-level wrapping, game over, and completed-run routing are also
-implemented. High-score storage/name entry and the original cheat effects still
-need to be implemented.
+implemented. The high-score screen now keeps the legacy eight-entry table,
+supports qualifying name entry, and persists a validated portable file in the
+platform user-data directory. The original cheat effects still need to be
+implemented.
 
 ## Requirements
 
@@ -74,7 +76,7 @@ with this version's `source/` directory as its working directory.
 | --- | --- |
 | Up / Down | Move through the main menu |
 | 1 / 2 / 3 | Select Start Game / High Scores / Quit |
-| Enter | Confirm menu selection, retry, or the next level |
+| Enter | Confirm menu selection, retry, the next level, or a high-score name |
 | Mouse | Select and confirm a main-menu item |
 | Escape | Return to the main menu from game or high scores |
 | Arrow keys | Move the player during gameplay |
@@ -118,7 +120,9 @@ implemented yet.
 | `player_movement.odin` | Player walkability, tile movement, coordinate conversion, and animation |
 | `player_movement_test.odin` | Player collision, movement, conversion, and animation regression tests |
 | `menu.odin` | Menu state, navigation, and rendering |
-| `high_score.odin` | High-score screen update and rendering |
+| `high_score.odin` | High-score table, qualification, name entry, and rendering |
+| `high_score_persistence.odin` | Versioned high-score loading, validation, and safe saving |
+| `high_score_test.odin` | Defaults, entry, sorting, corruption, persistence, and routing tests |
 | `input.odin` | Frame-level keyboard, text, and mouse input mapping |
 | `mouse.odin` | Shared custom mouse state and rendering |
 | `assets.odin` | Texture and sound loading, validation, and cleanup |
@@ -130,6 +134,14 @@ The map is 19×11 cells. A stored level consists of five byte grids for the
 background, items, treasure, enemy spawns, and the player spawn. Mutable
 player, enemy, bomb, and bomb-occupancy state is kept outside the original
 on-disk structure.
+
+High scores are stored independently of the source directory:
+
+- macOS: `~/Library/Application Support/CaveRace/highscores.dat`
+- Windows: `%LOCALAPPDATA%\CaveRace\highscores.dat`
+
+Missing or invalid files fall back to the legacy defaults. A changed table is
+written through a temporary file and then atomically renamed into place.
 
 ## Assets
 

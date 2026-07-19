@@ -4,13 +4,21 @@ import "core:fmt"
 import rl "vendor:raylib"
 
 Application :: struct {
-	assets: Assets,
-	game:   Game,
+	assets:                  Assets,
+	game:                    Game,
+	high_score_storage_path: string,
 }
 
 run_application :: proc(options: Launch_Options) -> bool {
 	app: Application
-	init_game(&app.game, options)
+	storage_path, storage_path_error := high_score_storage_path()
+	if storage_path_error != nil {
+		fmt.eprintln("Could not resolve the high-score storage path; scores will not persist.")
+	} else {
+		app.high_score_storage_path = storage_path
+		defer delete(app.high_score_storage_path)
+	}
+	init_game(&app.game, options, app.high_score_storage_path)
 
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
 	if !rl.IsWindowReady() {
