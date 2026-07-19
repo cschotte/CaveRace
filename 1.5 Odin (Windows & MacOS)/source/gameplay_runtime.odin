@@ -126,6 +126,9 @@ Gameplay_Simulation_Result :: struct {
 	explosion_sound_count:   int,
 	enemies_destroyed:      int,
 	squish_requests:        int,
+	items_collected:        int,
+	treasures_collected:    int,
+	item_sound_requests:    int,
 	cheat_pressed:          [Cheat_Key]bool,
 }
 
@@ -310,6 +313,16 @@ advance_gameplay_simulation :: proc(
 		)
 		advance_enemy_action_steps(gameplay, simulation.action_step + 1)
 		advance_explosion_ages(gameplay)
+
+		if simulation.action_step + 1 == MOVEMENT_STEPS_PER_TILE {
+			pickup := collect_player_cell(gameplay)
+			if pickup.item_collected do result.items_collected += 1
+			if pickup.treasure_collected do result.treasures_collected += 1
+			if pickup.item_collected || pickup.treasure_collected {
+				result.item_sound_requests += 1
+			}
+			apply_score_event(&gameplay.player, .Action_Floor)
+		}
 
 		simulation.action_step =
 			(simulation.action_step + 1) % MOVEMENT_STEPS_PER_TILE

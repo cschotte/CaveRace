@@ -23,8 +23,11 @@ once-per-action contact damage. Players can place capacity-limited bombs with
 legacy action-based fuses, score cost, occupancy blocking, and ticking audio.
 Explosions use clipped, fixed-capacity cardinal crosses shared by rendering and
 effects, with legacy animation, map destruction, deterministic chain reactions,
-enemy scoring, player hits, and audio requests. Pickups, the HUD, high-score
-storage, and the original cheat effects still need to be implemented.
+enemy scoring, player hits, and audio requests. Items and treasure now follow
+the original caps, retention, scoring, timing, and sound rules. The status bar
+renders live player values and the numeric score. High-score storage, complete
+death/level progression, and the original cheat effects still need to be
+implemented.
 
 ## Requirements
 
@@ -104,6 +107,10 @@ implemented yet.
 | `bomb_simulation_test.odin` | Bomb placement, capacity, blocking, timing, and cleanup regression tests |
 | `explosion_simulation.odin` | Blast cells, animation, map/entity effects, and deterministic chain reactions |
 | `explosion_simulation_test.odin` | Edge clipping, destruction, chains, overlap, scoring, and player-hit regression tests |
+| `pickup_simulation.odin` | Item and treasure collection, caps, and retention rules |
+| `pickup_simulation_test.odin` | Pickup timing, caps, scoring, audio, and HUD-state regression tests |
+| `scoring.odin` | Central legacy score-event rules |
+| `gameplay_hud.odin` | Runtime status icons and numeric score rendering |
 | `level_render.odin` | Layered rendering of map tiles and runtime entities |
 | `player_movement.odin` | Player walkability, tile movement, coordinate conversion, and animation |
 | `player_movement_test.odin` | Player collision, movement, conversion, and animation regression tests |

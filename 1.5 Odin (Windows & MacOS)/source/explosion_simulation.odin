@@ -131,7 +131,7 @@ apply_active_explosions_to_entities :: proc(
 		position, ok := screen_to_grid_position(screen_x, screen_y)
 		if ok && active_explosion_contains_cell(gameplay, position) {
 			enemy.active = false
-			gameplay.player.score += SCORE_ENEMY_DESTROYED
+			apply_score_event(&gameplay.player, .Enemy_Destroyed)
 			result.enemies_destroyed += 1
 			result.squish_requests += 1
 		}

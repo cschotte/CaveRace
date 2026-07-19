@@ -36,9 +36,7 @@ try_place_bomb :: proc(gameplay: ^Gameplay) -> bool {
 		power        = gameplay.player.bomb_power,
 	}
 	gameplay.bomb_occupancy[position.x][position.y] = BOMB_TICKING_SPRITE
-	if gameplay.player.score >= SCORE_BOMB_COST {
-		gameplay.player.score -= SCORE_BOMB_COST
-	}
+	apply_score_event(&gameplay.player, .Bomb_Placed)
 	return true
 }
 

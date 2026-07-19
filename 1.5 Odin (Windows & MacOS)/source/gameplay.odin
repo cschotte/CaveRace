@@ -77,8 +77,8 @@ update_gameplay :: proc(
 	case .Playing:
 		buffer_gameplay_input(&gameplay.simulation, input)
 		result.simulation = advance_gameplay_simulation(gameplay, frame_seconds)
-		// Pickups, the HUD, and win-condition updates are introduced by later
-		// milestones; the fixed simulation owns all active combat state.
+		// Level completion and retry/game-over transitions are introduced by the
+		// next milestone; the fixed simulation owns active gameplay state.
 
 	case .Dead:
 		if input.confirm {
@@ -108,6 +108,7 @@ draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {
 	case .Playing, .Dead, .Won:
 		draw_level_tiles(&gameplay.level, assets.tiles[gameplay.theme], &assets.sprites)
 		draw_level_entities(gameplay, &assets.sprites)
+		draw_gameplay_hud(gameplay, assets.sprites.tools)
 	case .Load_Level, .Load_Failed:
 	}
 

@@ -61,6 +61,9 @@ run_application :: proc(options: Launch_Options) -> bool {
 		for _ in 0 ..< update_result.gameplay.simulation.squish_requests {
 			rl.PlaySound(app.assets.sounds.squish)
 		}
+		for _ in 0 ..< update_result.gameplay.simulation.item_sound_requests {
+			rl.PlaySound(app.assets.sounds.item)
+		}
 
 		rl.BeginDrawing()
 			rl.ClearBackground(rl.RAYWHITE)
