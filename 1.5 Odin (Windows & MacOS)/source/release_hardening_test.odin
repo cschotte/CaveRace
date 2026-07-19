@@ -120,8 +120,8 @@ missing_and_invalid_level_files_do_not_replace_valid_state_test :: proc(t: ^test
 	testing.expect_value(t, level.data.background[0][0], u8(7))
 
 	gameplay: Gameplay
-	init_gameplay(&gameplay, temporary_directory)
-	update_gameplay(&gameplay, {}, 0)
+	init_gameplay(&gameplay)
+	load_gameplay_level(&gameplay, temporary_directory)
 	testing.expect_value(t, gameplay.state, Gameplay_State.Load_Failed)
 	update_gameplay(&gameplay, Game_Input {confirm = true}, 0)
 	testing.expect_value(t, gameplay.state, Gameplay_State.Load_Level)
@@ -183,7 +183,6 @@ repeated_menu_game_and_score_transitions_keep_borrowed_state_test :: proc(t: ^te
 		update_game(&game, Game_Input {back = true}, 0)
 		testing.expect_value(t, game.screen, App_Screen.Menu)
 		testing.expect_value(t, game.resource_root, "resources.test")
-		testing.expect_value(t, game.gameplay.resource_root, "resources.test")
 		testing.expect_value(t, game.high_scores.storage_path, "scores.test")
 	}
 }

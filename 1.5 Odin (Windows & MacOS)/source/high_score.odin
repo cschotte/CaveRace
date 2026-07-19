@@ -1,8 +1,5 @@
 package caverace
 
-import "core:strconv"
-import rl "vendor:raylib"
-
 HIGH_SCORE_ENTRY_COUNT   :: 8
 HIGH_SCORE_NAME_MAX      :: 20
 HIGH_SCORE_NAME_CAPACITY :: HIGH_SCORE_NAME_MAX + 1
@@ -214,57 +211,4 @@ update_high_scores :: proc(
 		state.pending_score = 0
 	}
 	return result
-}
-
-draw_high_scores :: proc(state: ^High_Score_State, background: rl.Texture) {
-	rl.DrawTexture(background, 0, 0, rl.WHITE)
-	rl.DrawText("NAME", HIGH_SCORE_HEADER_X, HIGH_SCORE_HEADER_Y, HIGH_SCORE_HEADER_SIZE, rl.BLACK)
-	rl.DrawText("SCORE", HIGH_SCORE_SCORE_X, HIGH_SCORE_HEADER_Y, HIGH_SCORE_HEADER_SIZE, rl.BLACK)
-
-	for entry_index in 0 ..< HIGH_SCORE_ENTRY_COUNT {
-		entry := &state.table.entries[entry_index]
-		row_y := HIGH_SCORE_FIRST_ROW_Y + entry_index * HIGH_SCORE_ROW_STEP
-		name_text := cstring(raw_data(entry.name.bytes[:]))
-		rl.DrawText(name_text, HIGH_SCORE_HEADER_X, i32(row_y), HIGH_SCORE_FONT_SIZE, rl.BLACK)
-
-		score_buffer: [32]byte
-		score_text := strconv.write_uint(score_buffer[:len(score_buffer) - 1], entry.score, 10)
-		rl.DrawText(
-			cstring(raw_data(score_text)),
-			HIGH_SCORE_SCORE_X,
-			i32(row_y),
-			HIGH_SCORE_FONT_SIZE,
-			rl.BLACK,
-		)
-	}
-
-	if state.mode == .Entering_Name {
-		input_buffer: [HIGH_SCORE_NAME_CAPACITY + 1]u8
-		copy(input_buffer[:], state.input_name.bytes[:state.input_name.length])
-		input_buffer[state.input_name.length] = '_'
-		rl.DrawText(
-			"NEW HIGH SCORE - NAME:",
-			HIGH_SCORE_HEADER_X,
-			HIGH_SCORE_INPUT_Y,
-			HIGH_SCORE_INPUT_SIZE,
-			rl.BLACK,
-		)
-		rl.DrawText(
-			cstring(raw_data(input_buffer[:])),
-			300,
-			HIGH_SCORE_INPUT_Y,
-			HIGH_SCORE_INPUT_SIZE,
-			rl.BLACK,
-		)
-
-		score_buffer: [32]byte
-		score_text := strconv.write_uint(score_buffer[:len(score_buffer) - 1], state.pending_score, 10)
-		rl.DrawText(
-			cstring(raw_data(score_text)),
-			HIGH_SCORE_INPUT_SCORE_X,
-			HIGH_SCORE_INPUT_Y,
-			HIGH_SCORE_INPUT_SIZE,
-			rl.BLACK,
-		)
-	}
 }

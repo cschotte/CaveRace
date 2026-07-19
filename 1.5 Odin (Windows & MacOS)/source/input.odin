@@ -12,6 +12,14 @@ Cheat_Key :: enum {
 	F5,
 }
 
+Mouse_State :: struct {
+	x:             i32,
+	y:             i32,
+	moved:         bool,
+	left_pressed:  bool,
+	right_pressed: bool,
+}
+
 Game_Input :: struct {
 	menu_shortcut:   Maybe(Menu_Item),
 	menu_next:       bool,

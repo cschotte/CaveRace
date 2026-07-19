@@ -28,15 +28,15 @@ draw_level_entities :: proc(gameplay: ^Gameplay, sprites: ^Sprite_Assets) {
 		draw_vertical_sprite(sprites.bomb, BOMB_TICKING_SPRITE, screen_x, screen_y)
 	}
 
-	screen_x, screen_y := player_screen_position(&gameplay.player)
+	player_screen_x, player_screen_y := player_screen_position(&gameplay.player)
 	player_sprite := player_sprite_index(&gameplay.player)
-	draw_vertical_sprite(sprites.player, player_sprite, screen_x, screen_y)
+	draw_vertical_sprite(sprites.player, player_sprite, player_screen_x, player_screen_y)
 
 	for enemy_index in 0 ..< gameplay.enemy_count {
 		enemy := &gameplay.enemies[enemy_index]
 		if !enemy.active do continue
-		screen_x, screen_y := enemy_screen_position(enemy)
-		draw_vertical_sprite(sprites.enemy, enemy.kind, screen_x, screen_y)
+		enemy_screen_x, enemy_screen_y := enemy_screen_position(enemy)
+		draw_vertical_sprite(sprites.enemy, enemy.kind, enemy_screen_x, enemy_screen_y)
 	}
 
 	// Explosion sprites overlay bombs and actors, matching the legacy draw order.
@@ -45,9 +45,14 @@ draw_level_entities :: proc(gameplay: ^Gameplay, sprites: ^Sprite_Assets) {
 		if !explosion.active do continue
 		for cell_index in 0 ..< explosion.cell_count {
 			cell := explosion.cells[cell_index]
-			screen_x, screen_y := grid_position_to_screen(cell.position)
+			explosion_screen_x, explosion_screen_y := grid_position_to_screen(cell.position)
 			sprite_index := explosion_sprite_index(cell.kind, explosion.age_step)
-			draw_vertical_sprite(sprites.bomb, sprite_index, screen_x, screen_y)
+			draw_vertical_sprite(
+				sprites.bomb,
+				sprite_index,
+				explosion_screen_x,
+				explosion_screen_y,
+			)
 		}
 	}
 }

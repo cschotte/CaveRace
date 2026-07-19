@@ -1,7 +1,5 @@
 package caverace
 
-import rl "vendor:raylib"
-
 Menu_Item :: enum {
 	Start_Game,
 	High_Scores,
@@ -107,17 +105,4 @@ move_menu_selection :: proc(menu: ^Menu_State, direction: int) {
 	current := int(menu.selected)
 	next := (current + direction + MENU_ITEM_COUNT) % MENU_ITEM_COUNT
 	menu.selected = Menu_Item(next)
-}
-
-draw_menu :: proc(menu: Menu_State, background, selection: rl.Texture) {
-	rl.DrawTexture(background, 0, 0, rl.WHITE)
-
-	visual_item, visual_alpha := menu_selection_visual(menu)
-	menu_selection_y := MENU_SELECTION_Y + i32(visual_item) * MENU_SELECTION_STEP
-	rl.DrawTexture(
-		selection,
-		MENU_SELECTION_X,
-		menu_selection_y,
-		rl.Fade(rl.WHITE, visual_alpha),
-	)
 }

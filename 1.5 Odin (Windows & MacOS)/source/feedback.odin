@@ -1,7 +1,5 @@
 package caverace
 
-import rl "vendor:raylib"
-
 TRANSITION_FADE_SECONDS :: 0.40
 FEEDBACK_FLASH_SECONDS  :: 0.14
 FEEDBACK_FLASH_ALPHA    :: 0.28
@@ -59,35 +57,4 @@ feedback_flash_alpha :: proc(feedback: ^Game_Feedback) -> f32 {
 	if feedback.flash_remaining <= 0 do return 0
 	progress := feedback.flash_remaining / FEEDBACK_FLASH_SECONDS
 	return f32(clamp(progress * FEEDBACK_FLASH_ALPHA, 0, FEEDBACK_FLASH_ALPHA))
-}
-
-feedback_flash_color :: proc(flash: Feedback_Flash) -> rl.Color {
-	switch flash {
-	case .Damage:   return rl.RED
-	case .Item:     return rl.GREEN
-	case .Treasure: return rl.BLUE
-	case .None:     return rl.BLANK
-	}
-	return rl.BLANK
-}
-
-draw_game_feedback :: proc(feedback: ^Game_Feedback) {
-	if fade_alpha := transition_fade_alpha(feedback); fade_alpha > 0 {
-		rl.DrawRectangle(
-			0,
-			0,
-			WINDOW_WIDTH,
-			WINDOW_HEIGHT,
-			rl.Fade(rl.BLACK, fade_alpha),
-		)
-	}
-	if flash_alpha := feedback_flash_alpha(feedback); flash_alpha > 0 {
-		rl.DrawRectangle(
-			0,
-			0,
-			WINDOW_WIDTH,
-			WINDOW_HEIGHT,
-			rl.Fade(feedback_flash_color(feedback.flash), flash_alpha),
-		)
-	}
 }

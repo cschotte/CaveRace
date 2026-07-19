@@ -5,7 +5,7 @@ import "core:testing"
 @(test)
 simultaneous_last_enemy_and_player_death_resolves_as_win_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({5, 6})
-	gameplay.runtime_initialized = true
+	gameplay.level_completion_enabled = true
 	gameplay.player.lives = 2
 	gameplay.player.energy = PLAYER_START_ENERGY
 	gameplay.player.bomb_capacity = 3
@@ -28,7 +28,7 @@ simultaneous_last_enemy_and_player_death_resolves_as_win_test :: proc(t: ^testin
 		gameplay.player.score,
 		10 + SCORE_ENEMY_DESTROYED + SCORE_LEVEL_WON,
 	)
-	testing.expect(t, !gameplay.runtime_initialized)
+	testing.expect(t, !gameplay.level_completion_enabled)
 	testing.expect_value(t, gameplay.enemy_count, 0)
 	testing.expect(t, !gameplay.explosions[0].active)
 	_, completed := frame.completed_run.?
@@ -52,7 +52,7 @@ simultaneous_last_enemy_and_player_death_resolves_as_win_test :: proc(t: ^testin
 death_removes_one_life_then_confirmed_retry_reloads_with_penalty_test :: proc(t: ^testing.T) {
 	position := Grid_Position {4, 4}
 	gameplay := open_gameplay_at(position)
-	gameplay.runtime_initialized = true
+	gameplay.level_completion_enabled = true
 	gameplay.player.lives = 2
 	gameplay.player.energy = ENEMY_CONTACT_DAMAGE
 	gameplay.player.bomb_capacity = 4
@@ -70,7 +70,8 @@ death_removes_one_life_then_confirmed_retry_reloads_with_penalty_test :: proc(t:
 	testing.expect_value(t, gameplay.player.lives, 1)
 	testing.expect_value(t, gameplay.player.energy, 0)
 	testing.expect_value(t, gameplay.player.score, 100)
-	testing.expect(t, gameplay.runtime_initialized)
+	testing.expect(t, gameplay.level_completion_enabled)
+	testing.expect_value(t, gameplay.enemy_count, 1)
 	_, completed := death.completed_run.?
 	testing.expect(t, !completed)
 
@@ -85,13 +86,13 @@ death_removes_one_life_then_confirmed_retry_reloads_with_penalty_test :: proc(t:
 	testing.expect_value(t, gameplay.player.bomb_capacity, PLAYER_START_BOMB_CAPACITY)
 	testing.expect_value(t, gameplay.player.bomb_power, PLAYER_START_BOMB_POWER)
 	testing.expect_value(t, gameplay.player.score, 100 - SCORE_DEATH_PENALTY)
-	testing.expect(t, !gameplay.runtime_initialized)
+	testing.expect(t, !gameplay.level_completion_enabled)
 	testing.expect(t, !gameplay.bombs[0].active)
 	testing.expect_value(t, gameplay.bomb_occupancy[1][1], u8(0))
 
-	update_gameplay(&gameplay, {}, 0)
+	load_gameplay_level(&gameplay, "")
 	testing.expect_value(t, gameplay.state, Gameplay_State.Playing)
-	testing.expect(t, gameplay.runtime_initialized)
+	testing.expect(t, gameplay.level_completion_enabled)
 	testing.expect_value(t, gameplay.player.lives, 1)
 	testing.expect_value(t, gameplay.player.score, 100 - SCORE_DEATH_PENALTY)
 	for bomb_state in gameplay.bombs do testing.expect(t, !bomb_state.active)
@@ -116,7 +117,7 @@ final_death_routes_completed_run_to_high_scores_test :: proc(t: ^testing.T) {
 	init_game(&game, {})
 	game.screen = .Playing
 	game.gameplay = open_gameplay_at(position)
-	game.gameplay.runtime_initialized = true
+	game.gameplay.level_completion_enabled = true
 	game.gameplay.player.lives = 1
 	game.gameplay.player.energy = ENEMY_CONTACT_DAMAGE
 	game.gameplay.player.score = 0
@@ -129,21 +130,18 @@ final_death_routes_completed_run_to_high_scores_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, game.gameplay.player.lives, 0)
 	testing.expect_value(t, game.gameplay.player.score, SCORE_BOMB_COST)
 	testing.expect_value(t, game.screen, App_Screen.High_Scores)
-	testing.expect(t, !game.gameplay.runtime_initialized)
+	testing.expect(t, !game.gameplay.level_completion_enabled)
+	testing.expect_value(t, game.gameplay.enemy_count, 0)
 
 	completed_run, completed := result.gameplay.completed_run.?
 	if testing.expect(t, completed) {
 		testing.expect_value(t, completed_run.score, SCORE_BOMB_COST)
 	}
-	pending_run, pending := game.pending_completed_run.?
-	if testing.expect(t, pending) {
-		testing.expect_value(t, pending_run.score, SCORE_BOMB_COST)
-	}
+	testing.expect_value(t, game.high_scores.mode, High_Score_Mode.Viewing)
+	testing.expect_value(t, game.high_scores.pending_score, u64(0))
 
 	update_game(&game, Game_Input {back = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Menu)
-	_, pending = game.pending_completed_run.?
-	testing.expect(t, !pending)
 }
 
 @(test)
@@ -153,7 +151,7 @@ escape_abandons_run_directly_without_completed_score_test :: proc(t: ^testing.T)
 	init_game(&game, {})
 	game.screen = .Playing
 	game.gameplay = open_gameplay_at(position)
-	game.gameplay.runtime_initialized = true
+	game.gameplay.level_completion_enabled = true
 	game.gameplay.player.lives = 1
 	game.gameplay.player.energy = ENEMY_CONTACT_DAMAGE
 	game.gameplay.player.score = 250
@@ -167,8 +165,6 @@ escape_abandons_run_directly_without_completed_score_test :: proc(t: ^testing.T)
 	testing.expect_value(t, game.gameplay.player.energy, ENEMY_CONTACT_DAMAGE)
 	_, completed := result.gameplay.completed_run.?
 	testing.expect(t, !completed)
-	_, pending := game.pending_completed_run.?
-	testing.expect(t, !pending)
 }
 
 @(test)
@@ -178,10 +174,10 @@ ten_level_cycle_wraps_and_reloads_without_stale_runtime_test :: proc(t: ^testing
 	seed_gameplay_random(&gameplay, 37)
 
 	for completed_level in 0 ..< LEVEL_COUNT {
-		update_gameplay(&gameplay, {}, 0)
+		load_gameplay_level(&gameplay, "")
 		testing.expect_value(t, gameplay.state, Gameplay_State.Playing)
 		testing.expect_value(t, gameplay.level_index, completed_level)
-		testing.expect(t, gameplay.runtime_initialized)
+		testing.expect(t, gameplay.level_completion_enabled)
 		testing.expect(t, gameplay.enemy_count > 0)
 
 		for enemy_index in 0 ..< gameplay.enemy_count {
@@ -206,7 +202,7 @@ ten_level_cycle_wraps_and_reloads_without_stale_runtime_test :: proc(t: ^testing
 			gameplay.player.score,
 			(completed_level + 1) * SCORE_LEVEL_WON,
 		)
-		testing.expect(t, !gameplay.runtime_initialized)
+		testing.expect(t, !gameplay.level_completion_enabled)
 		testing.expect_value(t, gameplay.enemy_count, 0)
 		testing.expect(t, !gameplay.bombs[0].active)
 		testing.expect(t, !gameplay.explosions[0].active)
@@ -223,9 +219,9 @@ ten_level_cycle_wraps_and_reloads_without_stale_runtime_test :: proc(t: ^testing
 	}
 
 	testing.expect_value(t, gameplay.level_index, 0)
-	update_gameplay(&gameplay, {}, 0)
+	load_gameplay_level(&gameplay, "")
 	testing.expect_value(t, gameplay.state, Gameplay_State.Playing)
-	testing.expect(t, gameplay.runtime_initialized)
+	testing.expect(t, gameplay.level_completion_enabled)
 	testing.expect(t, gameplay.enemy_count > 0)
 	for bomb_state in gameplay.bombs do testing.expect(t, !bomb_state.active)
 	for explosion in gameplay.explosions do testing.expect(t, !explosion.active)

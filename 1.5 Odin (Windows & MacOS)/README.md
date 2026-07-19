@@ -95,11 +95,14 @@ not mutate gameplay state.
 | --- | --- |
 | `caverace.odin` | Entry point and launch messages |
 | `application.odin` | Window, audio, render loop, and application lifetime |
-| `game.odin` | Application screen state and update/draw dispatch |
-| `gameplay.odin` | Playing-session state, transitions, and simulation update |
+| `game.odin` | Application screen state, routing, and update dispatch |
+| `render.odin` | Top-level screen, menu, gameplay, high-score, mouse, and feedback drawing |
+| `gameplay_state.odin` | Fixed gameplay capacities, value types, session state, and initialization |
+| `gameplay.odin` | Playing-session state-machine update and transitions |
+| `gameplay_loading.odin` | Level resource loading and validated runtime-state construction |
 | `gameplay_lifecycle.odin` | Win, retry, game-over, level-wrap, and runtime cleanup rules |
 | `gameplay_lifecycle_test.odin` | Outcome precedence, retry, routing, and ten-level-cycle tests |
-| `gameplay_runtime.odin` | Gameplay rules, fixed runtime entities, input scheduling, and spawn extraction |
+| `gameplay_runtime.odin` | Fixed-step input buffering and simulation orchestration |
 | `gameplay_test.odin` | Map, runtime-state, input-priority, and fixed-timing regression tests |
 | `cheats.odin` | Gated legacy F1-F5 gameplay mutations and safe power/score limits |
 | `feedback.odin` | Non-blocking transition fades and gameplay color flashes |
@@ -119,12 +122,11 @@ not mutate gameplay state.
 | `level_render.odin` | Layered rendering of map tiles and runtime entities |
 | `player_movement.odin` | Player walkability, tile movement, coordinate conversion, and animation |
 | `player_movement_test.odin` | Player collision, movement, conversion, and animation regression tests |
-| `menu.odin` | Menu state, navigation, and rendering |
-| `high_score.odin` | High-score table, qualification, name entry, and rendering |
+| `menu.odin` | Menu state, navigation, hit testing, and selection transitions |
+| `high_score.odin` | High-score table, qualification, name entry, and screen update rules |
 | `high_score_persistence.odin` | Versioned high-score loading, validation, and safe saving |
 | `high_score_test.odin` | Defaults, entry, sorting, corruption, persistence, and routing tests |
-| `input.odin` | Frame-level keyboard, text, and mouse input mapping |
-| `mouse.odin` | Shared custom mouse state and rendering |
+| `input.odin` | Frame-level keyboard, text, and mouse state and input mapping |
 | `assets.odin` | Texture and sound loading, validation, and cleanup |
 | `level.odin` | Original map data layout, loading, and index validation |
 | `options.odin` | Legacy command-line option parsing |

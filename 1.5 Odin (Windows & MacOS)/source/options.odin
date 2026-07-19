@@ -27,7 +27,7 @@ parse_launch_options :: proc() -> Launch_Options {
 
 print_launch_options :: proc(options: Launch_Options) {
 	if len(os.args) == 1 {
-		fmt.println();
+		fmt.println()
 		fmt.println("Use: -powerblast for cheats, key F1 to F5.")
 		fmt.println("     -slow for slow PCs.")
 	}

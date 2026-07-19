@@ -15,7 +15,6 @@ Game :: struct {
 	options:               Launch_Options,
 	// Borrowed from Application for the complete Game lifetime.
 	resource_root:         string,
-	pending_completed_run: Maybe(Completed_Run),
 	quit_requested:        bool,
 }
 
@@ -36,13 +35,12 @@ init_game :: proc(
 		options       = options,
 		resource_root = resource_root,
 	}
-	init_gameplay(&game.gameplay, resource_root)
+	init_gameplay(&game.gameplay)
 	init_high_scores(&game.high_scores, high_score_path)
 }
 
 start_new_game :: proc(game: ^Game) {
-	init_gameplay(&game.gameplay, game.resource_root)
-	game.pending_completed_run = nil
+	init_gameplay(&game.gameplay)
 	game.screen = .Playing
 }
 
@@ -62,7 +60,6 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			case .Start_Game:
 				start_new_game(game)
 			case .High_Scores:
-				game.pending_completed_run = nil
 				open_high_scores(&game.high_scores, nil)
 				game.screen = .High_Scores
 			case .Quit:
@@ -76,11 +73,12 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			frame_seconds,
 			game.options.cheats_enabled,
 		)
+		if !result.gameplay.back_requested && previous_gameplay_state == .Load_Level {
+			load_gameplay_level(&game.gameplay, game.resource_root)
+		}
 		if result.gameplay.back_requested {
-			game.pending_completed_run = nil
 			game.screen = .Menu
 		} else if completed_run, ok := result.gameplay.completed_run.?; ok {
-			game.pending_completed_run = completed_run
 			open_high_scores(&game.high_scores, completed_run)
 			game.screen = .High_Scores
 		}
@@ -88,7 +86,6 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 		high_score_result := update_high_scores(&game.high_scores, input)
 		if high_score_result.table_changed do persist_high_scores(&game.high_scores)
 		if high_score_result.back_requested {
-			game.pending_completed_run = nil
 			game.screen = .Menu
 		}
 	}
@@ -102,18 +99,4 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 	}
 
 	return result
-}
-
-draw_game :: proc(game: ^Game, assets: ^Assets, mouse: Mouse_State) {
-	switch game.screen {
-	case .Menu:
-		draw_menu(game.menu, assets.screens.menu, assets.screens.select)
-	case .Playing:
-		draw_gameplay(&game.gameplay, assets)
-	case .High_Scores:
-		draw_high_scores(&game.high_scores, assets.screens.highscore)
-	}
-
-	draw_mouse(mouse, assets.sprites.tools)
-	draw_game_feedback(&game.feedback)
 }

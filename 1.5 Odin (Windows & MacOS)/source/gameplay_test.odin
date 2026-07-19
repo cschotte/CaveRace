@@ -40,7 +40,10 @@ gameplay_initial_state_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, gameplay.player.bomb_power, PLAYER_START_BOMB_POWER)
 	testing.expect_value(t, gameplay.player.score, 0)
 	testing.expect_value(t, gameplay.enemy_count, 0)
-	testing.expect(t, !gameplay.runtime_initialized)
+	testing.expect(t, !gameplay.level_completion_enabled)
+
+	update_gameplay(&gameplay, {}, 0)
+	testing.expect_value(t, gameplay.state, Gameplay_State.Load_Level)
 }
 
 @(test)
@@ -89,7 +92,7 @@ all_levels_load_and_extract_spawns_test :: proc(t: ^testing.T) {
 
 		runtime_error := initialize_level_runtime(&gameplay)
 		testing.expect_value(t, runtime_error, Level_Runtime_Error.None)
-		testing.expect(t, gameplay.runtime_initialized)
+		testing.expect(t, gameplay.level_completion_enabled)
 		testing.expect_value(t, expected_player_count, 1)
 		testing.expect_value(t, gameplay.player.position, expected_player)
 		testing.expect_value(t, gameplay.player.move_from, expected_player)

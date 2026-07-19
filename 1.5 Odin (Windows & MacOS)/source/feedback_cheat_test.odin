@@ -47,7 +47,7 @@ cheats_require_powerblast_and_run_on_fixed_step_test :: proc(t: ^testing.T) {
 	init_game(&disabled, Launch_Options {cheats_enabled = false})
 	disabled.screen = .Playing
 	disabled.gameplay = open_gameplay_at({1, 1})
-	disabled.gameplay.runtime_initialized = true
+	disabled.gameplay.level_completion_enabled = true
 	disabled.gameplay.enemies[0] = enemy_at({4, 4})
 	disabled.gameplay.enemy_count = 1
 	disabled_result := update_game(&disabled, input, SIMULATION_STEP_SECONDS)
@@ -59,7 +59,7 @@ cheats_require_powerblast_and_run_on_fixed_step_test :: proc(t: ^testing.T) {
 	init_game(&enabled, Launch_Options {cheats_enabled = true})
 	enabled.screen = .Playing
 	enabled.gameplay = open_gameplay_at({1, 1})
-	enabled.gameplay.runtime_initialized = true
+	enabled.gameplay.level_completion_enabled = true
 	enabled.gameplay.enemies[0] = enemy_at({4, 4})
 	enabled.gameplay.enemy_count = 1
 	enabled_result := update_game(&enabled, input, SIMULATION_STEP_SECONDS)

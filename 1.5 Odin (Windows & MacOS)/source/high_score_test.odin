@@ -224,8 +224,8 @@ game_over_name_submission_persists_only_after_confirmation_test :: proc(t: ^test
 
 	game: Game
 	init_game(&game, {}, path)
-	game.pending_completed_run = Completed_Run {score = 14000}
-	open_high_scores(&game.high_scores, game.pending_completed_run)
+	completed_run: Maybe(Completed_Run) = Completed_Run {score = 14000}
+	open_high_scores(&game.high_scores, completed_run)
 	game.screen = .High_Scores
 
 	text_input: Game_Input
