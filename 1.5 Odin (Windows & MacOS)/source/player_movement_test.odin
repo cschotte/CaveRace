@@ -2,6 +2,8 @@ package caverace
 
 import "core:testing"
 
+// open_gameplay_at creates a minimal active gameplay state at one grid cell for
+// movement and collision tests that do not require a loaded level.
 open_gameplay_at :: proc(position: Grid_Position) -> Gameplay {
 	return Gameplay {
 		state = .Playing,
@@ -13,6 +15,7 @@ open_gameplay_at :: proc(position: Grid_Position) -> Gameplay {
 	}
 }
 
+// Exercises shared walkability rules for terrain, items, bombs, and map bounds.
 @(test)
 walkability_rules_test :: proc(t: ^testing.T) {
 	data: Map_Data
@@ -40,6 +43,8 @@ walkability_rules_test :: proc(t: ^testing.T) {
 	testing.expect(t, !is_walkable(&data, &occupancy, {MAP_WIDTH, MAP_HEIGHT - 1}))
 }
 
+// Verifies grid-to-screen and screen-to-grid conversions at valid positions,
+// offsets, and out-of-map coordinates.
 @(test)
 grid_and_screen_conversion_test :: proc(t: ^testing.T) {
 	for grid_y in 0 ..< MAP_HEIGHT {
@@ -75,13 +80,15 @@ grid_and_screen_conversion_test :: proc(t: ^testing.T) {
 	testing.expect(t, !ok)
 }
 
+// Confirms player movement interpolates over exactly sixteen steps, commits one
+// tile, and starts the next queued direction only at the boundary.
 @(test)
 player_moves_one_tile_in_sixteen_steps_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({1, 1})
 	right_input := Game_Input {move_right = true}
 
-	first_frame := update_gameplay(&gameplay, right_input, SIMULATION_STEP_SECONDS)
-	testing.expect_value(t, first_frame.simulation.last_action, Gameplay_Action.Move_Right)
+	first_frame := update_gameplay(&gameplay, right_input, GAMEPLAY_TICK_SECONDS)
+	testing.expect_value(t, first_frame.ticks.last_action, Gameplay_Action.Move_Right)
 	testing.expect_value(t, gameplay.player.position, Grid_Position {1, 1})
 	testing.expect_value(t, gameplay.player.move_to, Grid_Position {2, 1})
 	testing.expect_value(t, gameplay.player.movement_step, 1)
@@ -91,7 +98,7 @@ player_moves_one_tile_in_sixteen_steps_test :: proc(t: ^testing.T) {
 
 	up_input := Game_Input {move_up = true}
 	for _ in 1 ..< MOVEMENT_STEPS_PER_TILE {
-		update_gameplay(&gameplay, up_input, SIMULATION_STEP_SECONDS)
+		update_gameplay(&gameplay, up_input, GAMEPLAY_TICK_SECONDS)
 		testing.expect_value(t, gameplay.player.direction, Direction.Right)
 	}
 
@@ -101,8 +108,8 @@ player_moves_one_tile_in_sixteen_steps_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, x, i32(MAP_OFFSET_X + 2 * MAP_TILE_SIZE))
 	testing.expect_value(t, y, i32(MAP_OFFSET_Y + MAP_TILE_SIZE))
 
-	next_action := update_gameplay(&gameplay, up_input, SIMULATION_STEP_SECONDS)
-	testing.expect_value(t, next_action.simulation.last_action, Gameplay_Action.Move_Up)
+	next_action := update_gameplay(&gameplay, up_input, GAMEPLAY_TICK_SECONDS)
+	testing.expect_value(t, next_action.ticks.last_action, Gameplay_Action.Move_Up)
 	testing.expect_value(t, gameplay.player.direction, Direction.Up)
 	testing.expect_value(t, gameplay.player.position, Grid_Position {2, 1})
 	testing.expect_value(t, gameplay.player.move_to, Grid_Position {2, 0})
@@ -111,6 +118,8 @@ player_moves_one_tile_in_sixteen_steps_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, y, i32(MAP_OFFSET_Y + MAP_TILE_SIZE - MOVEMENT_PIXELS_PER_STEP))
 }
 
+// Verifies blocked actions keep player position and interpolation endpoints on
+// the current cell for their full duration.
 @(test)
 blocked_player_action_stays_in_current_cell_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({1, 1})
@@ -120,7 +129,7 @@ blocked_player_action_stays_in_current_cell_test :: proc(t: ^testing.T) {
 		update_gameplay(
 			&gameplay,
 			Game_Input {move_right = true},
-			SIMULATION_STEP_SECONDS,
+			GAMEPLAY_TICK_SECONDS,
 		)
 	}
 
@@ -132,6 +141,8 @@ blocked_player_action_stays_in_current_cell_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, y, i32(MAP_OFFSET_Y + MAP_TILE_SIZE))
 }
 
+// Protects direction-specific legacy animation speeds, sprite ranges, and idle
+// fallback selection.
 @(test)
 player_directional_animation_test :: proc(t: ^testing.T) {
 	player: Player_State
@@ -170,6 +181,8 @@ player_directional_animation_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, player_sprite_index(&player), u8(16))
 }
 
+// Checks every cardinal transition on every shipped level against the shared
+// walkability predicate and final committed position.
 @(test)
 all_level_cardinal_transitions_respect_walkability_test :: proc(t: ^testing.T) {
 	actions := [4]Gameplay_Action {

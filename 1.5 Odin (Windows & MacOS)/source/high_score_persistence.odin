@@ -22,6 +22,8 @@ HIGH_SCORE_FILENAME   :: "highscores.dat"
 
 #assert(HIGH_SCORE_FILE_SIZE == 248)
 
+// High_Score_Load_Status distinguishes a successful read from each recoverable
+// reason the caller received legacy defaults instead.
 High_Score_Load_Status :: enum {
 	Loaded,
 	Defaults_Missing,
@@ -29,6 +31,8 @@ High_Score_Load_Status :: enum {
 	Defaults_IO_Error,
 }
 
+// encode_high_score_table serializes a validated table into the versioned,
+// checksummed fixed-size format immediately before saving.
 encode_high_score_table :: proc(table: ^High_Score_Table) -> [HIGH_SCORE_FILE_SIZE]u8 {
 	assert(high_score_table_is_valid(table))
 	data: [HIGH_SCORE_FILE_SIZE]u8
@@ -54,6 +58,8 @@ encode_high_score_table :: proc(table: ^High_Score_Table) -> [HIGH_SCORE_FILE_SI
 	return data
 }
 
+// decode_high_score_table validates header, checksum, entries, and ordering
+// before atomically replacing the caller's table during loading.
 decode_high_score_table :: proc(data: []u8, table: ^High_Score_Table) -> bool {
 	if len(data) != HIGH_SCORE_FILE_SIZE do return false
 	magic := HIGH_SCORE_FILE_MAGIC
@@ -85,6 +91,8 @@ decode_high_score_table :: proc(data: []u8, table: ^High_Score_Table) -> bool {
 	return true
 }
 
+// load_high_score_table reads one complete file and selects defaults on missing,
+// corrupt, or unreadable data without leaving partially decoded state.
 load_high_score_table :: proc(path: string, table: ^High_Score_Table) -> High_Score_Load_Status {
 	table^ = default_high_score_table()
 	if path == "" do return .Defaults_Missing
@@ -110,6 +118,8 @@ load_high_score_table :: proc(path: string, table: ^High_Score_Table) -> High_Sc
 	return .Loaded
 }
 
+// save_high_score_table_safe writes through a sibling temporary file and rename
+// so a failed save cannot replace the last valid leaderboard.
 save_high_score_table_safe :: proc(path: string, table: ^High_Score_Table) -> bool {
 	if path == "" || !high_score_table_is_valid(table) do return false
 	directory := filepath.dir(path)
@@ -134,6 +144,8 @@ save_high_score_table_safe :: proc(path: string, table: ^High_Score_Table) -> bo
 	return true
 }
 
+// high_score_storage_path allocates the platform-specific per-user file path
+// once during application startup; Application owns the returned string.
 high_score_storage_path :: proc(allocator := context.allocator) -> (string, os.Error) {
 	user_data, user_data_error := os.user_data_dir(allocator)
 	if user_data_error != nil do return "", user_data_error
@@ -147,6 +159,8 @@ high_score_storage_path :: proc(allocator := context.allocator) -> (string, os.E
 	return path, nil
 }
 
+// init_high_scores borrows the application-owned storage path and loads either
+// the persisted table or legacy defaults during Game initialization.
 init_high_scores :: proc(state: ^High_Score_State, storage_path: string) {
 	state^ = High_Score_State {storage_path = storage_path}
 	status := load_high_score_table(storage_path, &state.table)
@@ -159,6 +173,8 @@ init_high_scores :: proc(state: ^High_Score_State, storage_path: string) {
 	}
 }
 
+// persist_high_scores saves the current table after a confirmed insertion and
+// reports recoverable I/O failure without interrupting the game.
 persist_high_scores :: proc(state: ^High_Score_State) {
 	if state.storage_path == "" do return
 	if !save_high_score_table_safe(state.storage_path, &state.table) {

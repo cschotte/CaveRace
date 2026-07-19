@@ -1,5 +1,7 @@
 package caverace
 
+// direction_delta maps a cardinal direction to its grid offset whenever player
+// or enemy movement selects a target cell.
 direction_delta :: proc(direction: Direction) -> Grid_Position {
 	switch direction {
 	case .Down:  return {0, 1}
@@ -11,6 +13,8 @@ direction_delta :: proc(direction: Direction) -> Grid_Position {
 	return {}
 }
 
+// action_direction converts only movement actions to directions; non-movement
+// actions keep the player idle for the current action interval.
 action_direction :: proc(action: Gameplay_Action) -> Direction {
 	switch action {
 	case .Move_Down:  return .Down
@@ -22,6 +26,8 @@ action_direction :: proc(action: Gameplay_Action) -> Direction {
 	return .None
 }
 
+// screen_to_grid_position maps an interpolated pixel origin back to a valid map
+// cell for explosion collision checks.
 screen_to_grid_position :: proc(screen_x, screen_y: i32) -> (
 	position: Grid_Position,
 	ok: bool,
@@ -37,10 +43,14 @@ screen_to_grid_position :: proc(screen_x, screen_y: i32) -> (
 	return position, is_in_map(position)
 }
 
+// cell_has_bomb safely queries the separate occupancy grid used by movement
+// rules without indexing an out-of-bounds position.
 cell_has_bomb :: proc(occupancy: ^Map_Grid, position: Grid_Position) -> bool {
 	return is_in_map(position) && occupancy[position.x][position.y] != 0
 }
 
+// is_walkable applies map bounds, terrain, item, and bomb rules before either a
+// player or enemy begins moving to a neighboring cell.
 is_walkable :: proc(
 	data: ^Map_Data,
 	bomb_occupancy: ^Map_Grid,
@@ -52,6 +62,8 @@ is_walkable :: proc(
 	return !cell_has_bomb(bomb_occupancy, position)
 }
 
+// begin_player_action captures the player's interpolation endpoints at an
+// action boundary, leaving the target unchanged when movement is blocked.
 begin_player_action :: proc(gameplay: ^Gameplay, action: Gameplay_Action) {
 	player := &gameplay.player
 	player.move_from = player.position
@@ -70,6 +82,8 @@ begin_player_action :: proc(gameplay: ^Gameplay, action: Gameplay_Action) {
 	}
 }
 
+// advance_player_action_step updates interpolation progress for the current
+// action and commits the target grid cell on its final step.
 advance_player_action_step :: proc(player: ^Player_State, completed_steps: int) {
 	player.movement_step = clamp(completed_steps, 0, MOVEMENT_STEPS_PER_TILE)
 	if player.movement_step == MOVEMENT_STEPS_PER_TILE {
@@ -77,6 +91,8 @@ advance_player_action_step :: proc(player: ^Player_State, completed_steps: int) 
 	}
 }
 
+// movement_screen_position interpolates between two grid cells for actor
+// rendering and pixel-precise collision checks during movement.
 movement_screen_position :: proc(
 	move_from, move_to: Grid_Position,
 	movement_step: int,
@@ -89,6 +105,8 @@ movement_screen_position :: proc(
 	return
 }
 
+// player_screen_position exposes the player's current interpolated position to
+// rendering and enemy/explosion collision rules.
 player_screen_position :: proc(player: ^Player_State) -> (x, y: i32) {
 	return movement_screen_position(
 		player.move_from,
@@ -97,6 +115,8 @@ player_screen_position :: proc(player: ^Player_State) -> (x, y: i32) {
 	)
 }
 
+// player_sprite_index selects the direction-specific legacy animation row from
+// the player's movement progress during rendering.
 player_sprite_index :: proc(player: ^Player_State) -> u8 {
 	if player.direction == .None do return PLAYER_IDLE_SPRITE
 

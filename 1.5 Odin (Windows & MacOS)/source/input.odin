@@ -4,6 +4,8 @@ import rl "vendor:raylib"
 
 MAX_TEXT_CODEPOINTS_PER_FRAME :: 16
 
+// Cheat_Key provides a compact typed index for the five legacy powerblast keys
+// across platform input, queued gameplay input, and tick results.
 Cheat_Key :: enum {
 	F1,
 	F2,
@@ -12,6 +14,8 @@ Cheat_Key :: enum {
 	F5,
 }
 
+// Mouse_State is the frame snapshot shared by menu hit testing, high-score
+// dismissal, and custom pointer rendering.
 Mouse_State :: struct {
 	x:             i32,
 	y:             i32,
@@ -20,6 +24,8 @@ Mouse_State :: struct {
 	right_pressed: bool,
 }
 
+// Game_Input is the semantic, allocation-free input snapshot passed unchanged to
+// whichever screen updates during the current frame.
 Game_Input :: struct {
 	menu_shortcut:   Maybe(Menu_Item),
 	menu_next:       bool,
@@ -38,6 +44,8 @@ Game_Input :: struct {
 	mouse:           Mouse_State,
 }
 
+// poll_game_input maps raylib keyboard, text, and mouse state into one semantic
+// frame snapshot consumed by menu, gameplay, and high-score updates.
 poll_game_input :: proc() -> Game_Input {
 	input: Game_Input
 

@@ -2,6 +2,8 @@ package caverace
 
 import "core:testing"
 
+// Verifies all legacy powerblast effects, including fixed storage caps and
+// saturating score doubling.
 @(test)
 legacy_cheat_effects_and_safe_limits_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({2, 2})
@@ -38,8 +40,10 @@ legacy_cheat_effects_and_safe_limits_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, active_enemy_count(&gameplay), 0)
 }
 
+// Confirms cheats are ignored without -powerblast and consumed only by the
+// fixed gameplay tick path when enabled.
 @(test)
-cheats_require_powerblast_and_run_on_fixed_step_test :: proc(t: ^testing.T) {
+cheats_require_powerblast_and_run_on_fixed_tick_test :: proc(t: ^testing.T) {
 	input: Game_Input
 	input.cheat_pressed[.F1] = true
 
@@ -50,10 +54,10 @@ cheats_require_powerblast_and_run_on_fixed_step_test :: proc(t: ^testing.T) {
 	disabled.gameplay.level_completion_enabled = true
 	disabled.gameplay.enemies[0] = enemy_at({4, 4})
 	disabled.gameplay.enemy_count = 1
-	disabled_result := update_game(&disabled, input, SIMULATION_STEP_SECONDS)
+	disabled_result := update_game(&disabled, input, GAMEPLAY_TICK_SECONDS)
 	testing.expect(t, disabled.gameplay.enemies[0].active)
 	testing.expect_value(t, disabled.gameplay.state, Gameplay_State.Playing)
-	testing.expect(t, !disabled_result.gameplay.simulation.cheat_pressed[.F1])
+	testing.expect(t, !disabled_result.gameplay.ticks.cheat_pressed[.F1])
 
 	enabled: Game
 	init_game(&enabled, Launch_Options {cheats_enabled = true})
@@ -62,25 +66,27 @@ cheats_require_powerblast_and_run_on_fixed_step_test :: proc(t: ^testing.T) {
 	enabled.gameplay.level_completion_enabled = true
 	enabled.gameplay.enemies[0] = enemy_at({4, 4})
 	enabled.gameplay.enemy_count = 1
-	enabled_result := update_game(&enabled, input, SIMULATION_STEP_SECONDS)
-	testing.expect(t, enabled_result.gameplay.simulation.cheat_pressed[.F1])
+	enabled_result := update_game(&enabled, input, GAMEPLAY_TICK_SECONDS)
+	testing.expect(t, enabled_result.gameplay.ticks.cheat_pressed[.F1])
 	testing.expect_value(t, enabled.gameplay.state, Gameplay_State.Won)
 	testing.expect_value(t, enabled.gameplay.player.score, SCORE_LEVEL_WON)
 }
 
+// Protects damage-over-pickup flash priority and the expected non-blocking
+// decay timings used by the renderer.
 @(test)
 feedback_flash_priority_and_timing_test :: proc(t: ^testing.T) {
 	feedback: Game_Feedback
-	result := Gameplay_Simulation_Result {
+	result := Gameplay_Tick_Result {
 		items_collected     = 1,
 		treasures_collected = 1,
 	}
-	request_simulation_feedback(&feedback, &result)
+	request_gameplay_feedback(&feedback, &result)
 	testing.expect_value(t, feedback.flash, Feedback_Flash.Treasure)
 	testing.expect(t, feedback_flash_alpha(&feedback) > 0)
 
 	result.player_damaged = true
-	request_simulation_feedback(&feedback, &result)
+	request_gameplay_feedback(&feedback, &result)
 	testing.expect_value(t, feedback.flash, Feedback_Flash.Damage)
 
 	advance_game_feedback(&feedback, FEEDBACK_FLASH_SECONDS)
@@ -95,6 +101,8 @@ feedback_flash_priority_and_timing_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, transition_fade_alpha(&feedback), f32(0))
 }
 
+// Verifies that screen fades remain visual-only and never suppress immediate
+// back input or routing.
 @(test)
 visual_transitions_do_not_block_game_input_test :: proc(t: ^testing.T) {
 	game: Game
@@ -103,11 +111,13 @@ visual_transitions_do_not_block_game_input_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, game.screen, App_Screen.Playing)
 	testing.expect_value(t, transition_fade_alpha(&game.feedback), f32(1))
 
-	update_game(&game, Game_Input {back = true}, SIMULATION_STEP_SECONDS)
+	update_game(&game, Game_Input {back = true}, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, game.screen, App_Screen.Menu)
 	testing.expect_value(t, transition_fade_alpha(&game.feedback), f32(1))
 }
 
+// Confirms menu selection uses the intended two-phase legacy alpha transition
+// without blocking further menu updates.
 @(test)
 menu_selection_uses_non_blocking_legacy_alpha_transition_test :: proc(t: ^testing.T) {
 	menu := Menu_State {selected = .Start_Game}

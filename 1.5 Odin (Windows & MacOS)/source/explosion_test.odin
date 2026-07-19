@@ -2,6 +2,8 @@ package caverace
 
 import "core:testing"
 
+// Verifies maximum-power explosion footprints remain unique and clipped at all
+// four map edges and corners.
 @(test)
 explosion_cells_are_clipped_and_unique_at_every_map_edge_test :: proc(t: ^testing.T) {
 	for grid_y in 0 ..< MAP_HEIGHT {
@@ -31,6 +33,8 @@ explosion_cells_are_clipped_and_unique_at_every_map_edge_test :: proc(t: ^testin
 	}
 }
 
+// Protects the legacy expand-contract animation sequence and directional sprite
+// row mapping for every explosion age.
 @(test)
 explosion_animation_uses_legacy_directional_sprite_sets_test :: proc(t: ^testing.T) {
 	expected_sets := [EXPLOSION_STEPS]int {
@@ -58,6 +62,8 @@ explosion_animation_uses_legacy_directional_sprite_sets_test :: proc(t: ^testing
 	}
 }
 
+// Confirms explosions preserve the original destructible-item and treasure
+// layer interactions.
 @(test)
 explosion_preserves_legacy_object_and_treasure_rules_test :: proc(t: ^testing.T) {
 	center := Grid_Position {5, 5}
@@ -95,6 +101,8 @@ explosion_preserves_legacy_object_and_treasure_rules_test :: proc(t: ^testing.T)
 	}
 }
 
+// Verifies deterministic iterative chain settlement starts each touched bomb
+// once without recursive mutation.
 @(test)
 explosion_chain_settles_once_without_recursion_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
@@ -104,7 +112,7 @@ explosion_chain_settles_once_without_recursion_test :: proc(t: ^testing.T) {
 	gameplay.bombs[2] = {active = true, position = {5, 5}, fuse_actions = 1, power = 2}
 	gameplay.bombs[3] = {active = true, position = {15, 5}, fuse_actions = 8, power = 2}
 
-	result: Gameplay_Simulation_Result
+	result: Gameplay_Tick_Result
 	start_ready_explosions(&gameplay, &result)
 	testing.expect_value(t, result.explosions_started, 3)
 	testing.expect_value(t, result.explosion_sound_count, 3)
@@ -118,12 +126,14 @@ explosion_chain_settles_once_without_recursion_test :: proc(t: ^testing.T) {
 		testing.expect(t, result.explosion_sound_indices[sound_index] < BOMB_SOUND_COUNT)
 	}
 
-	second_result: Gameplay_Simulation_Result
+	second_result: Gameplay_Tick_Result
 	start_ready_explosions(&gameplay, &second_result)
 	testing.expect_value(t, second_result.explosions_started, 0)
 	testing.expect_value(t, second_result.explosion_sound_count, 0)
 }
 
+// Protects one-time enemy removal, score, and sound events when multiple active
+// explosion footprints overlap.
 @(test)
 overlapping_explosions_destroy_each_enemy_and_score_once_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
@@ -138,7 +148,7 @@ overlapping_explosions_destroy_each_enemy_and_score_once_test :: proc(t: ^testin
 	gameplay.enemies[2] = enemy_at({0, 1})
 	gameplay.enemy_count = 3
 
-	result: Gameplay_Simulation_Result
+	result: Gameplay_Tick_Result
 	apply_active_explosions_to_entities(&gameplay, &result)
 	testing.expect_value(t, result.enemies_destroyed, 2)
 	testing.expect_value(t, result.squish_requests, 2)
@@ -147,13 +157,15 @@ overlapping_explosions_destroy_each_enemy_and_score_once_test :: proc(t: ^testin
 	testing.expect(t, !gameplay.enemies[1].active)
 	testing.expect(t, gameplay.enemies[2].active)
 
-	second_result: Gameplay_Simulation_Result
+	second_result: Gameplay_Tick_Result
 	apply_active_explosions_to_entities(&gameplay, &second_result)
 	testing.expect_value(t, second_result.enemies_destroyed, 0)
 	testing.expect_value(t, second_result.squish_requests, 0)
 	testing.expect_value(t, gameplay.player.score, 10 + 2 * SCORE_ENEMY_DESTROYED)
 }
 
+// Confirms an explosion hit immediately empties player energy and resolves the
+// current attempt as a death while retaining the visible blast.
 @(test)
 explosion_hit_sets_player_energy_to_zero_and_transitions_dead_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({5, 6})
@@ -163,11 +175,11 @@ explosion_hit_sets_player_energy_to_zero_and_transitions_dead_test :: proc(t: ^t
 	gameplay.bomb_occupancy[5][5] = BOMB_TICKING_SPRITE
 	seed_gameplay_random(&gameplay, 17)
 
-	frame := update_gameplay(&gameplay, {}, SIMULATION_STEP_SECONDS)
-	testing.expect_value(t, frame.simulation.explosions_started, 1)
-	testing.expect_value(t, frame.simulation.explosion_sound_count, 1)
-	testing.expect(t, frame.simulation.player_damaged)
-	testing.expect(t, frame.simulation.player_died)
+	frame := update_gameplay(&gameplay, {}, GAMEPLAY_TICK_SECONDS)
+	testing.expect_value(t, frame.ticks.explosions_started, 1)
+	testing.expect_value(t, frame.ticks.explosion_sound_count, 1)
+	testing.expect(t, frame.ticks.player_damaged)
+	testing.expect(t, frame.ticks.player_died)
 	testing.expect_value(t, gameplay.player.energy, 0)
 	testing.expect_value(t, gameplay.player.lives, 1)
 	testing.expect_value(t, gameplay.state, Gameplay_State.Dead)
@@ -175,6 +187,8 @@ explosion_hit_sets_player_energy_to_zero_and_transitions_dead_test :: proc(t: ^t
 	testing.expect_value(t, gameplay.explosions[0].age_step, 1)
 }
 
+// Verifies a completed explosion releases its paired bomb slot and occupancy
+// after the final animation step.
 @(test)
 expired_bomb_releases_its_explosion_and_occupancy_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})

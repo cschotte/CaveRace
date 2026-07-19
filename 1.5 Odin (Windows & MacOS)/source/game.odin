@@ -1,11 +1,15 @@
 package caverace
 
+// App_Screen identifies the top-level update and render route currently owned
+// by Game.
 App_Screen :: enum {
 	Menu,
 	Playing,
 	High_Scores,
 }
 
+// Game owns all screen-level state and borrows the application resource root
+// needed to start and reload gameplay sessions.
 Game :: struct {
 	screen:                App_Screen,
 	menu:                  Menu_State,
@@ -18,11 +22,15 @@ Game :: struct {
 	quit_requested:        bool,
 }
 
+// Game_Update_Result carries transient menu and gameplay events from one update
+// frame to platform audio and feedback handling.
 Game_Update_Result :: struct {
 	menu_selection_changed: bool,
 	gameplay:               Gameplay_Frame_Result,
 }
 
+// init_game establishes screen, gameplay, and high-score state while borrowing
+// application-owned resource paths for the complete game lifetime.
 init_game :: proc(
 	game: ^Game,
 	options: Launch_Options,
@@ -39,11 +47,15 @@ init_game :: proc(
 	init_high_scores(&game.high_scores, high_score_path)
 }
 
+// start_new_game resets all run progress and enters the Playing screen when the
+// menu confirms Start Game.
 start_new_game :: proc(game: ^Game) {
 	init_gameplay(&game.gameplay)
 	game.screen = .Playing
 }
 
+// update_game routes one frame to the active screen, performs screen and
+// lifecycle transitions, and returns transient audio/feedback events.
 update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_Update_Result {
 	result: Game_Update_Result
 	advance_game_feedback(&game.feedback, frame_seconds)
@@ -90,7 +102,7 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 		}
 	}
 
-	request_simulation_feedback(&game.feedback, &result.gameplay.simulation)
+	request_gameplay_feedback(&game.feedback, &result.gameplay.ticks)
 	screen_changed := game.screen != previous_screen
 	gameplay_state_changed := previous_screen == .Playing && game.screen == .Playing &&
 		game.gameplay.state != previous_gameplay_state

@@ -3,6 +3,7 @@ package caverace
 import "core:strings"
 import rl "vendor:raylib"
 
+// Tile_Theme indexes the fixed terrain texture array selected per loaded level.
 Tile_Theme :: enum {
 	Desert,
 	Forest,
@@ -11,6 +12,8 @@ Tile_Theme :: enum {
 	Winter,
 }
 
+// Screen_Assets groups full-screen backgrounds and the menu selection overlay
+// that share the application asset lifetime.
 Screen_Assets :: struct {
 	game:       rl.Texture,
 	highscore:  rl.Texture,
@@ -18,6 +21,8 @@ Screen_Assets :: struct {
 	select:     rl.Texture,
 }
 
+// Sound_Assets owns all raylib sound handles used when frame events request
+// menu, bomb, pickup, enemy, or ticking audio.
 Sound_Assets :: struct {
 	bomb:    [BOMB_SOUND_COUNT]rl.Sound,
 	item:    rl.Sound,
@@ -26,6 +31,8 @@ Sound_Assets :: struct {
 	ticking: rl.Sound,
 }
 
+// Sprite_Assets groups the vertical sprite sheets consumed by level, actor,
+// explosion, pointer, and HUD rendering.
 Sprite_Assets :: struct {
 	bomb:     rl.Texture,
 	enemy:    rl.Texture,
@@ -35,6 +42,8 @@ Sprite_Assets :: struct {
 	treasure: rl.Texture,
 }
 
+// Assets is the application-owned aggregate loaded before the main loop and
+// released as one unit during shutdown or failed startup.
 Assets :: struct {
 	screens: Screen_Assets,
 	sounds:  Sound_Assets,
@@ -42,6 +51,8 @@ Assets :: struct {
 	tiles:   [Tile_Theme]rl.Texture,
 }
 
+// load_resource_texture resolves one media-relative path and converts it to a
+// temporary C string for raylib during asset initialization.
 load_resource_texture :: proc(root, relative_path: string) -> rl.Texture {
 	path, ok := resource_path(root, {RESOURCE_MEDIA_DIRECTORY, relative_path})
 	if !ok do return {}
@@ -52,6 +63,8 @@ load_resource_texture :: proc(root, relative_path: string) -> rl.Texture {
 	return rl.LoadTexture(path_cstring)
 }
 
+// load_resource_sound resolves and loads one sound effect when the audio
+// device is available during application startup.
 load_resource_sound :: proc(root, relative_path: string) -> rl.Sound {
 	path, ok := resource_path(root, {RESOURCE_MEDIA_DIRECTORY, relative_path})
 	if !ok do return {}
@@ -62,6 +75,8 @@ load_resource_sound :: proc(root, relative_path: string) -> rl.Sound {
 	return rl.LoadSound(path_cstring)
 }
 
+// load_assets fills the application-owned asset bundle and validates every
+// required handle before the main loop is allowed to start.
 load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true) -> bool {
 	assets^ = {}
 	assets.screens.game      = load_resource_texture(resource_root, "screens/game.png")
@@ -96,6 +111,8 @@ load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true) 
 	return assets_are_valid(assets, load_audio)
 }
 
+// assets_are_valid checks dimensions and raylib handles after loading so bad
+// packages fail early instead of producing invalid texture accesses later.
 assets_are_valid :: proc(assets: ^Assets, require_audio := true) -> bool {
 	if !texture_has_size(assets.screens.game, WINDOW_WIDTH, WINDOW_HEIGHT)      do return false
 	if !texture_has_size(assets.screens.highscore, WINDOW_WIDTH, WINDOW_HEIGHT) do return false
@@ -126,11 +143,15 @@ assets_are_valid :: proc(assets: ^Assets, require_audio := true) -> bool {
 	return true
 }
 
+// texture_has_size validates full-screen images whose exact dimensions are
+// part of the fixed CaveRace presentation contract.
 texture_has_size :: proc(texture: rl.Texture, width, height: int) -> bool {
 	return rl.IsTextureValid(texture) &&
 	       texture.width == i32(width) && texture.height == i32(height)
 }
 
+// vertical_sheet_is_valid checks a loaded sprite sheet before rendering begins
+// and delegates the dimension-only rule for testability.
 vertical_sheet_is_valid :: proc(texture: rl.Texture, sprite_count: int) -> bool {
 	return rl.IsTextureValid(texture) && vertical_sheet_dimensions_are_valid(
 		int(texture.width),
@@ -139,11 +160,15 @@ vertical_sheet_is_valid :: proc(texture: rl.Texture, sprite_count: int) -> bool 
 	)
 }
 
+// vertical_sheet_dimensions_are_valid enforces the one-tile-wide, row-based
+// sprite layout used by every converted legacy sheet.
 vertical_sheet_dimensions_are_valid :: proc(width, height, sprite_count: int) -> bool {
 	return sprite_count > 0 && width == MAP_TILE_SIZE &&
 	       height >= sprite_count * MAP_TILE_SIZE && height % MAP_TILE_SIZE == 0
 }
 
+// unload_assets releases every application-owned raylib resource during
+// shutdown or failed startup, then clears the handles to make cleanup idempotent.
 unload_assets :: proc(assets: ^Assets) {
 	unload_texture(assets.screens.game)
 	unload_texture(assets.screens.highscore)
@@ -174,10 +199,14 @@ unload_assets :: proc(assets: ^Assets) {
 	assets^ = {}
 }
 
+// unload_texture safely releases one optional texture while walking the asset
+// bundle during cleanup.
 unload_texture :: proc(texture: rl.Texture) {
 	if rl.IsTextureValid(texture) do rl.UnloadTexture(texture)
 }
 
+// unload_sound safely releases one optional sound; invalid handles occur when
+// audio is unavailable or startup stops after a partial load.
 unload_sound :: proc(sound: rl.Sound) {
 	if rl.IsSoundValid(sound) do rl.UnloadSound(sound)
 }

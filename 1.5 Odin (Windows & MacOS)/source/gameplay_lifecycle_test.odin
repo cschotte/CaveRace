@@ -2,6 +2,8 @@ package caverace
 
 import "core:testing"
 
+// Protects legacy outcome precedence: destroying the last enemy wins even when
+// the player is hit on the same tick.
 @(test)
 simultaneous_last_enemy_and_player_death_resolves_as_win_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({5, 6})
@@ -17,9 +19,9 @@ simultaneous_last_enemy_and_player_death_resolves_as_win_test :: proc(t: ^testin
 	gameplay.explosions[0] = build_explosion_state(&bomb)
 	seed_gameplay_random(&gameplay, 23)
 
-	frame := update_gameplay(&gameplay, {}, SIMULATION_STEP_SECONDS)
-	testing.expect(t, frame.simulation.player_died)
-	testing.expect_value(t, frame.simulation.enemies_destroyed, 1)
+	frame := update_gameplay(&gameplay, {}, GAMEPLAY_TICK_SECONDS)
+	testing.expect(t, frame.ticks.player_died)
+	testing.expect_value(t, frame.ticks.enemies_destroyed, 1)
 	testing.expect_value(t, gameplay.state, Gameplay_State.Won)
 	testing.expect_value(t, gameplay.player.lives, 2)
 	testing.expect_value(t, gameplay.player.energy, 0)
@@ -48,6 +50,8 @@ simultaneous_last_enemy_and_player_death_resolves_as_win_test :: proc(t: ^testin
 	testing.expect_value(t, gameplay.player.score, score_after_win)
 }
 
+// Verifies death consumes one life, waits for confirmation, then reloads the
+// same level with per-level values and score penalty reset correctly.
 @(test)
 death_removes_one_life_then_confirmed_retry_reloads_with_penalty_test :: proc(t: ^testing.T) {
 	position := Grid_Position {4, 4}
@@ -64,8 +68,8 @@ death_removes_one_life_then_confirmed_retry_reloads_with_penalty_test :: proc(t:
 	gameplay.bomb_occupancy[1][1] = BOMB_TICKING_SPRITE
 	seed_gameplay_random(&gameplay, 29)
 
-	death := update_gameplay(&gameplay, {}, SIMULATION_STEP_SECONDS)
-	testing.expect(t, death.simulation.player_died)
+	death := update_gameplay(&gameplay, {}, GAMEPLAY_TICK_SECONDS)
+	testing.expect(t, death.ticks.player_died)
 	testing.expect_value(t, gameplay.state, Gameplay_State.Dead)
 	testing.expect_value(t, gameplay.player.lives, 1)
 	testing.expect_value(t, gameplay.player.energy, 0)
@@ -98,6 +102,8 @@ death_removes_one_life_then_confirmed_retry_reloads_with_penalty_test :: proc(t:
 	for bomb_state in gameplay.bombs do testing.expect(t, !bomb_state.active)
 }
 
+// Confirms a retry penalty that reaches zero still receives the legacy minimum
+// score floor before play resumes.
 @(test)
 retry_penalty_that_reaches_zero_applies_legacy_score_floor_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
@@ -110,6 +116,8 @@ retry_penalty_that_reaches_zero_applies_legacy_score_floor_test :: proc(t: ^test
 	testing.expect_value(t, gameplay.state, Gameplay_State.Load_Level)
 }
 
+// Verifies final death creates a completed run and routes it through the
+// high-score screen without retaining duplicate pending state.
 @(test)
 final_death_routes_completed_run_to_high_scores_test :: proc(t: ^testing.T) {
 	position := Grid_Position {3, 3}
@@ -125,7 +133,7 @@ final_death_routes_completed_run_to_high_scores_test :: proc(t: ^testing.T) {
 	game.gameplay.enemy_count = 1
 	seed_gameplay_random(&game.gameplay, 31)
 
-	result := update_game(&game, {}, SIMULATION_STEP_SECONDS)
+	result := update_game(&game, {}, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, game.gameplay.state, Gameplay_State.Game_Over)
 	testing.expect_value(t, game.gameplay.player.lives, 0)
 	testing.expect_value(t, game.gameplay.player.score, SCORE_BOMB_COST)
@@ -144,6 +152,8 @@ final_death_routes_completed_run_to_high_scores_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, game.screen, App_Screen.Menu)
 }
 
+// Confirms Escape abandons active gameplay immediately without applying death
+// logic or producing a completed score.
 @(test)
 escape_abandons_run_directly_without_completed_score_test :: proc(t: ^testing.T) {
 	position := Grid_Position {2, 2}
@@ -158,7 +168,7 @@ escape_abandons_run_directly_without_completed_score_test :: proc(t: ^testing.T)
 	game.gameplay.enemies[0] = enemy_at(position)
 	game.gameplay.enemy_count = 1
 
-	result := update_game(&game, Game_Input {back = true}, SIMULATION_STEP_SECONDS)
+	result := update_game(&game, Game_Input {back = true}, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, game.screen, App_Screen.Menu)
 	testing.expect_value(t, game.gameplay.state, Gameplay_State.Playing)
 	testing.expect_value(t, game.gameplay.player.lives, 1)
@@ -167,8 +177,10 @@ escape_abandons_run_directly_without_completed_score_test :: proc(t: ^testing.T)
 	testing.expect(t, !completed)
 }
 
+// Exercises a full ten-level wraparound to ensure each transition reloads clean
+// level state while preserving run-wide score progression.
 @(test)
-ten_level_cycle_wraps_and_reloads_without_stale_runtime_test :: proc(t: ^testing.T) {
+ten_level_cycle_wraps_and_reloads_without_stale_level_state_test :: proc(t: ^testing.T) {
 	gameplay: Gameplay
 	init_gameplay(&gameplay)
 	seed_gameplay_random(&gameplay, 37)

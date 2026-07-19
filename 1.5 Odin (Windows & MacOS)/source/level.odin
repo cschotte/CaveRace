@@ -23,6 +23,8 @@ Level :: struct {
 	data: Map_Data,
 }
 
+// Level_Data_Error identifies the first invalid map layer found while validating
+// a binary level before it replaces active data.
 Level_Data_Error :: enum {
 	None,
 	Invalid_Background,
@@ -47,6 +49,8 @@ level_filenames := [LEVEL_COUNT]string {
 	"10.bin",
 }
 
+// validate_level_data checks every stored tile index before a level may replace
+// active state, preventing later sprite and map accesses from leaving bounds.
 validate_level_data :: proc(data: ^Map_Data) -> Level_Data_Error {
 	for grid_y in 0 ..< MAP_HEIGHT {
 		for grid_x in 0 ..< MAP_WIDTH {
@@ -70,6 +74,8 @@ validate_level_data :: proc(data: ^Map_Data) -> Level_Data_Error {
 	return .None
 }
 
+// load_level resolves a numbered level beneath the selected resource root and
+// is called only while Gameplay is in Load_Level.
 load_level :: proc(level: ^Level, level_index: int, resource_root: string = "") -> bool {
 	if level_index < 0 || level_index >= LEVEL_COUNT {
 		fmt.eprintln("Invalid level index:", level_index)
@@ -88,6 +94,8 @@ load_level :: proc(level: ^Level, level_index: int, resource_root: string = "") 
 	return load_level_from_path(level, path)
 }
 
+// load_level_from_path reads and validates one exact legacy binary file into a
+// local value, replacing the destination only after every check succeeds.
 load_level_from_path :: proc(level: ^Level, path: string) -> bool {
 	file, open_error := os.open(path)
 	if open_error != nil {

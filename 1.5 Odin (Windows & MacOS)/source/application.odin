@@ -3,6 +3,8 @@ package caverace
 import "core:fmt"
 import rl "vendor:raylib"
 
+// Application owns platform resources and borrowed-path backing storage for the
+// complete process lifetime managed by run_application.
 Application :: struct {
 	assets:                  Assets,
 	game:                    Game,
@@ -11,6 +13,8 @@ Application :: struct {
 	audio_ready:             bool,
 }
 
+// run_application owns platform startup, resource lifetimes, and the main
+// update/draw loop; main calls it once after parsing launch options.
 run_application :: proc(options: Launch_Options) -> bool {
 	app: Application
 	resource_root, resource_root_ok := resolve_resource_root()
@@ -60,7 +64,7 @@ run_application :: proc(options: Launch_Options) -> bool {
 	rl.HideCursor()
 
 	// Slow mode reduces rendering work only. Gameplay always advances at the
-	// fixed SIMULATION_HZ rate through its accumulator.
+	// fixed GAMEPLAY_TICK_HZ rate through its accumulator.
 	rl.SetTargetFPS(target_render_fps(options))
 
 	for application_should_continue(&app.game, rl.WindowShouldClose()) {
@@ -86,10 +90,14 @@ run_application :: proc(options: Launch_Options) -> bool {
 	return true
 }
 
+// application_should_continue combines the in-game quit request with the
+// native window close signal and is evaluated at the start of every frame.
 application_should_continue :: proc(game: ^Game, window_should_close: bool) -> bool {
 	return !game.quit_requested && !window_should_close
 }
 
+// prepare_application_frame suppresses input and elapsed time while focus is
+// lost so returning to the window cannot replay queued actions or catch up.
 prepare_application_frame :: proc(
 	game: ^Game,
 	input: Game_Input,
@@ -97,31 +105,35 @@ prepare_application_frame :: proc(
 	window_focused: bool,
 ) -> (Game_Input, f64) {
 	if window_focused do return input, frame_seconds
-	// Stop held and queued actions while preserving all simulation ownership.
-	game.gameplay.simulation.input = {}
+	// Stop held and queued actions while preserving the current gameplay state.
+	game.gameplay.tick_state.input = {}
 	return {}, 0
 }
 
+// play_frame_audio translates gameplay and menu events from the latest update
+// into raylib sound calls after game state has advanced.
 play_frame_audio :: proc(assets: ^Assets, result: ^Game_Update_Result) {
 	if result.menu_selection_changed {
 		rl.PlaySound(assets.sounds.menu)
 	}
-	if result.gameplay.simulation.ticking_requested {
+	if result.gameplay.ticks.ticking_requested {
 		rl.PlaySound(assets.sounds.ticking)
 	}
-	for sound_index in 0 ..< result.gameplay.simulation.explosion_sound_count {
-		bomb_sound := result.gameplay.simulation.explosion_sound_indices[sound_index]
+	for sound_index in 0 ..< result.gameplay.ticks.explosion_sound_count {
+		bomb_sound := result.gameplay.ticks.explosion_sound_indices[sound_index]
 		assert(bomb_sound < BOMB_SOUND_COUNT)
 		rl.PlaySound(assets.sounds.bomb[bomb_sound])
 	}
-	for _ in 0 ..< result.gameplay.simulation.squish_requests {
+	for _ in 0 ..< result.gameplay.ticks.squish_requests {
 		rl.PlaySound(assets.sounds.squish)
 	}
-	for _ in 0 ..< result.gameplay.simulation.item_sound_requests {
+	for _ in 0 ..< result.gameplay.ticks.item_sound_requests {
 		rl.PlaySound(assets.sounds.item)
 	}
 }
 
+// target_render_fps selects the normal or legacy slow-mode presentation rate;
+// gameplay tick frequency is intentionally unaffected.
 target_render_fps :: proc(options: Launch_Options) -> i32 {
 	if options.slow_mode do return SLOW_RENDER_FPS
 	return TARGET_RENDER_FPS

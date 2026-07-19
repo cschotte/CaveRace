@@ -1,11 +1,15 @@
 package caverace
 
+// Menu_Item identifies the three selectable main-menu actions and provides the
+// typed order used by keyboard shortcuts and wraparound navigation.
 Menu_Item :: enum {
 	Start_Game,
 	High_Scores,
 	Quit,
 }
 
+// Menu_State owns current and previous selection plus the non-blocking transition
+// timer used to reproduce the legacy highlight effect.
 Menu_State :: struct {
 	selected:             Menu_Item,
 	previous_selected:    Menu_Item,
@@ -13,6 +17,8 @@ Menu_State :: struct {
 	transition_active:    bool,
 }
 
+// Menu_Update_Result carries a confirmed item and selection-change event from
+// menu input handling to the top-level Game router.
 Menu_Update_Result :: struct {
 	confirmed:         Maybe(Menu_Item),
 	selection_changed: bool,
@@ -26,6 +32,8 @@ MENU_SELECTION_HEIGHT    :: 40  // in pixels
 MENU_SELECTION_STEP      :: 45  // in pixels
 MENU_SELECTION_TRANSITION_SECONDS :: 0.50
 
+// update_menu applies keyboard shortcuts, navigation, and mouse selection for
+// one frame, returning a confirmed item to the top-level screen router.
 update_menu :: proc(
 	menu: ^Menu_State,
 	input: Game_Input,
@@ -61,6 +69,8 @@ update_menu :: proc(
 	return result
 }
 
+// advance_menu_transition updates the non-blocking selection cross-fade before
+// new input is processed for the current frame.
 advance_menu_transition :: proc(menu: ^Menu_State, frame_seconds: f64) {
 	if !menu.transition_active do return
 	menu.transition_elapsed += clamp(frame_seconds, 0, MAX_FRAME_DELTA_SECONDS)
@@ -70,6 +80,8 @@ advance_menu_transition :: proc(menu: ^Menu_State, frame_seconds: f64) {
 	}
 }
 
+// menu_selection_visual chooses which item and alpha to draw at the current
+// point in the two-phase legacy selection transition.
 menu_selection_visual :: proc(
 	menu: Menu_State,
 ) -> (item: Menu_Item, alpha: f32) {
@@ -85,6 +97,8 @@ menu_selection_visual :: proc(
 	return menu.selected, f32((progress - 0.5) * 2)
 }
 
+// menu_item_at_mouse converts pointer position into an optional menu item for
+// hover and click handling.
 menu_item_at_mouse :: proc(mouse: Mouse_State) -> Maybe(Menu_Item) {
 	if mouse.x < MENU_SELECTION_X || mouse.x >= MENU_SELECTION_X + MENU_SELECTION_WIDTH {
 		return nil
@@ -101,6 +115,8 @@ menu_item_at_mouse :: proc(mouse: Mouse_State) -> Maybe(Menu_Item) {
 	return nil
 }
 
+// move_menu_selection advances or reverses the selection with wraparound when
+// an arrow-key navigation event occurs.
 move_menu_selection :: proc(menu: ^Menu_State, direction: int) {
 	current := int(menu.selected)
 	next := (current + direction + MENU_ITEM_COUNT) % MENU_ITEM_COUNT

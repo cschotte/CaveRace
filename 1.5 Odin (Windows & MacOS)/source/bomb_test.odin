@@ -2,6 +2,8 @@ package caverace
 
 import "core:testing"
 
+// Bomb_Timing_Summary captures observable placement, expiry, capacity, score,
+// and occupancy results for render-rate comparison scenarios.
 Bomb_Timing_Summary :: struct {
 	placements:      int,
 	ticking_requests: int,
@@ -12,7 +14,9 @@ Bomb_Timing_Summary :: struct {
 	occupied:        u8,
 }
 
-run_bomb_timing_simulation :: proc(render_fps, seconds: int) -> Bomb_Timing_Summary {
+// run_bomb_timing_scenario executes the same timed placement at a chosen render
+// rate so timing tests can compare the resulting bomb state.
+run_bomb_timing_scenario :: proc(render_fps, seconds: int) -> Bomb_Timing_Summary {
 	position := Grid_Position {5, 5}
 	gameplay := open_gameplay_at(position)
 	gameplay.player.bomb_capacity = 1
@@ -24,9 +28,9 @@ run_bomb_timing_simulation :: proc(render_fps, seconds: int) -> Bomb_Timing_Summ
 		input: Game_Input
 		if frame_index == 0 do input.space_pressed = true
 		frame := update_gameplay(&gameplay, input, 1.0 / f64(render_fps))
-		if frame.simulation.bomb_placed do summary.placements += 1
-		if frame.simulation.ticking_requested do summary.ticking_requests += 1
-		summary.expirations += frame.simulation.bombs_expired
+		if frame.ticks.bomb_placed do summary.placements += 1
+		if frame.ticks.ticking_requested do summary.ticking_requests += 1
+		summary.expirations += frame.ticks.bombs_expired
 	}
 
 	summary.active_bombs = active_bomb_count(&gameplay)
@@ -36,8 +40,10 @@ run_bomb_timing_simulation :: proc(render_fps, seconds: int) -> Bomb_Timing_Summ
 	return summary
 }
 
+// Verifies that placement captures position, fuse, power, occupancy, and score
+// from the player state at the action boundary.
 @(test)
-bomb_placement_captures_runtime_values_test :: proc(t: ^testing.T) {
+bomb_placement_captures_current_player_values_test :: proc(t: ^testing.T) {
 	position := Grid_Position {3, 4}
 	gameplay := open_gameplay_at(position)
 	gameplay.player.bomb_capacity = 1
@@ -61,6 +67,7 @@ bomb_placement_captures_runtime_values_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, gameplay.player.score, 12 - SCORE_BOMB_COST)
 }
 
+// Protects the legacy rule that bomb cost never makes a score negative.
 @(test)
 bomb_score_cost_has_legacy_floor_test :: proc(t: ^testing.T) {
 	for initial_score in 0 ..< SCORE_BOMB_COST {
@@ -80,6 +87,8 @@ bomb_score_cost_has_legacy_floor_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, gameplay.player.score, 0)
 }
 
+// Verifies that fixed bomb slots return to player capacity exactly once after
+// their explosions finish.
 @(test)
 bomb_capacity_and_slots_are_released_once_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
@@ -107,6 +116,8 @@ bomb_capacity_and_slots_are_released_once_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, available_bomb_count(&gameplay), 0)
 }
 
+// Guards the hard four-slot storage limit even if player capacity is corrupted
+// beyond its supported maximum.
 @(test)
 bomb_fixed_slot_limit_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
@@ -123,6 +134,8 @@ bomb_fixed_slot_limit_test :: proc(t: ^testing.T) {
 	testing.expect(t, !try_place_bomb(&gameplay))
 }
 
+// Verifies that fuse expiry clears map occupancy and reports one expiration
+// without double-releasing the slot.
 @(test)
 bomb_fuse_expires_and_clears_occupancy_once_test :: proc(t: ^testing.T) {
 	position := Grid_Position {2, 2}
@@ -147,6 +160,8 @@ bomb_fuse_expires_and_clears_occupancy_once_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, available_bomb_count(&gameplay), 1)
 }
 
+// Confirms that a placed bomb participates in the shared walkability rules for
+// both player and enemy movement.
 @(test)
 placed_bomb_blocks_player_and_enemy_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({1, 1})
@@ -164,6 +179,8 @@ placed_bomb_blocks_player_and_enemy_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, gameplay.enemies[0].move_to, Grid_Position {2, 1})
 }
 
+// Verifies that ticking audio is requested only for a successful placement and
+// that a latched retry is evaluated at the next action boundary.
 @(test)
 bomb_action_requests_ticking_only_on_success_test :: proc(t: ^testing.T) {
 	position := Grid_Position {4, 4}
@@ -175,31 +192,32 @@ bomb_action_requests_ticking_only_on_success_test :: proc(t: ^testing.T) {
 	placed := update_gameplay(
 		&gameplay,
 		Game_Input {space_pressed = true},
-		SIMULATION_STEP_SECONDS,
+		GAMEPLAY_TICK_SECONDS,
 	)
-	testing.expect(t, placed.simulation.bomb_action_started)
-	testing.expect(t, placed.simulation.bomb_placed)
-	testing.expect(t, placed.simulation.ticking_requested)
+	testing.expect(t, placed.ticks.bomb_action_started)
+	testing.expect(t, placed.ticks.bomb_placed)
+	testing.expect(t, placed.ticks.ticking_requested)
 	testing.expect_value(t, gameplay.bombs[0].fuse_actions, BOMB_FUSE_ACTIONS - 1)
 
-	buffer_gameplay_input(&gameplay.simulation, Game_Input {space_pressed = true})
-	before_boundary := advance_gameplay_simulation(
+	queue_gameplay_input(&gameplay.tick_state, Game_Input {space_pressed = true})
+	before_boundary := run_gameplay_ticks(
 		&gameplay,
-		f64(MOVEMENT_STEPS_PER_TILE - 1) * SIMULATION_STEP_SECONDS,
+		f64(MOVEMENT_STEPS_PER_TILE - 1) * GAMEPLAY_TICK_SECONDS,
 	)
 	testing.expect_value(t, before_boundary.action_decisions, 0)
-	failed := advance_gameplay_simulation(&gameplay, SIMULATION_STEP_SECONDS)
+	failed := run_gameplay_ticks(&gameplay, GAMEPLAY_TICK_SECONDS)
 	testing.expect(t, failed.bomb_action_started)
 	testing.expect(t, !failed.bomb_placed)
 	testing.expect(t, !failed.ticking_requested)
 	testing.expect_value(t, active_bomb_count(&gameplay), 1)
 }
 
+// Protects fixed-tick bomb behavior from changes in presentation frame rate.
 @(test)
 bomb_timing_is_render_rate_independent_test :: proc(t: ^testing.T) {
-	at_30_fps := run_bomb_timing_simulation(30, 3)
-	at_60_fps := run_bomb_timing_simulation(60, 3)
-	at_240_fps := run_bomb_timing_simulation(240, 3)
+	at_30_fps := run_bomb_timing_scenario(30, 3)
+	at_60_fps := run_bomb_timing_scenario(60, 3)
+	at_240_fps := run_bomb_timing_scenario(240, 3)
 
 	testing.expect_value(t, at_30_fps, at_60_fps)
 	testing.expect_value(t, at_60_fps, at_240_fps)

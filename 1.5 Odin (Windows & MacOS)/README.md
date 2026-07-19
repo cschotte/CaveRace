@@ -28,7 +28,7 @@ odin build . -debug -out:../build/caverace
 ../build/caverace
 ```
 
-Run the automated map and runtime-state tests from the same directory:
+Run the automated map and gameplay-state tests from the same directory:
 
 ```sh
 odin test .
@@ -85,7 +85,7 @@ The application recognizes the original `-powerblast` and `-slow` arguments:
 ../build/caverace -slow
 ```
 
-`-slow` limits rendering to 30 FPS while gameplay simulation remains at 60 Hz.
+`-slow` limits rendering to 30 FPS while fixed gameplay ticks remain at 60 Hz.
 `-powerblast` enables F1-F5 during gameplay. Without the option, those keys do
 not mutate gameplay state.
 
@@ -99,27 +99,27 @@ not mutate gameplay state.
 | `render.odin` | Top-level screen, menu, gameplay, high-score, mouse, and feedback drawing |
 | `gameplay_state.odin` | Fixed gameplay capacities, value types, session state, and initialization |
 | `gameplay.odin` | Playing-session state-machine update and transitions |
-| `gameplay_loading.odin` | Level resource loading and validated runtime-state construction |
-| `gameplay_lifecycle.odin` | Win, retry, game-over, level-wrap, and runtime cleanup rules |
+| `gameplay_loading.odin` | Level resource loading and validated active-state construction |
+| `gameplay_lifecycle.odin` | Win, retry, game-over, level-wrap, and active-level cleanup rules |
 | `gameplay_lifecycle_test.odin` | Outcome precedence, retry, routing, and ten-level-cycle tests |
-| `gameplay_runtime.odin` | Fixed-step input buffering and simulation orchestration |
-| `gameplay_test.odin` | Map, runtime-state, input-priority, and fixed-timing regression tests |
+| `gameplay_ticks.odin` | Fixed-tick input queueing and gameplay update orchestration |
+| `gameplay_test.odin` | Map, level-state, input-priority, and fixed-tick regression tests |
 | `cheats.odin` | Gated legacy F1-F5 gameplay mutations and safe power/score limits |
 | `feedback.odin` | Non-blocking transition fades and gameplay color flashes |
-| `feedback_cheat_test.odin` | Cheat gating, feedback timing, and menu-animation tests |
+| `cheats_test.odin` | Cheat gating, feedback timing, and menu-animation tests |
 | `resources.odin` | Packaged, bundle, development, and working-directory resource resolution |
-| `release_hardening_test.odin` | Resource failures, platform-loop policy, transition cycling, and full-run smoke tests |
-| `enemy_simulation.odin` | Seeded enemy movement, rendering positions, and contact damage |
-| `enemy_simulation_test.odin` | Enemy determinism, collision, timing, and damage regression tests |
-| `bomb_simulation.odin` | Bomb placement, capacity, fuse timing, occupancy, and cleanup |
-| `bomb_simulation_test.odin` | Bomb placement, capacity, blocking, timing, and cleanup regression tests |
-| `explosion_simulation.odin` | Blast cells, animation, map/entity effects, and deterministic chain reactions |
-| `explosion_simulation_test.odin` | Edge clipping, destruction, chains, overlap, scoring, and player-hit regression tests |
-| `pickup_simulation.odin` | Item and treasure collection, caps, and retention rules |
-| `pickup_simulation_test.odin` | Pickup timing, caps, scoring, audio, and HUD-state regression tests |
+| `release_test.odin` | Resource failures, platform-loop policy, transition cycling, and full-run smoke tests |
+| `enemy.odin` | Seeded enemy movement, rendering positions, and contact damage |
+| `enemy_test.odin` | Enemy determinism, collision, timing, and damage regression tests |
+| `bomb.odin` | Bomb placement, capacity, fuse timing, occupancy, and cleanup |
+| `bomb_test.odin` | Bomb placement, capacity, blocking, timing, and cleanup regression tests |
+| `explosion.odin` | Blast cells, animation, map/entity effects, and deterministic chain reactions |
+| `explosion_test.odin` | Edge clipping, destruction, chains, overlap, scoring, and player-hit regression tests |
+| `pickup.odin` | Item and treasure collection, caps, and retention rules |
+| `pickup_test.odin` | Pickup timing, caps, scoring, audio, and HUD-state regression tests |
 | `scoring.odin` | Central legacy score-event rules |
-| `gameplay_hud.odin` | Runtime status icons and numeric score rendering |
-| `level_render.odin` | Layered rendering of map tiles and runtime entities |
+| `gameplay_hud.odin` | Gameplay status icons and numeric score rendering |
+| `level_render.odin` | Layered rendering of map tiles and active entities |
 | `player_movement.odin` | Player walkability, tile movement, coordinate conversion, and animation |
 | `player_movement_test.odin` | Player collision, movement, conversion, and animation regression tests |
 | `menu.odin` | Menu state, navigation, hit testing, and selection transitions |
@@ -147,7 +147,7 @@ written through a temporary file and then atomically renamed into place.
 
 ## Assets
 
-Runtime assets are converted to PNG and WAV files under `media/`. They include
+Game assets are converted to PNG and WAV files under `media/`. They include
 four full-screen images, six sprite sheets, five tile themes, eight sound
 effects, and ten original `.bin` levels. The application searches beside the
 executable first, then macOS bundle resources, the repository development
@@ -156,7 +156,7 @@ minimum sprite-sheet rows are validated before the application loop starts.
 
 Missing visual assets cause a clean startup failure. If audio initialization
 fails, the game continues silently. Missing, truncated, or invalid level files
-show the recoverable **Load Failed** screen instead of replacing valid runtime
+show the recoverable **Load Failed** screen instead of replacing valid level
 state.
 
 The original Amiga IFF artwork and additional converted files are preserved in

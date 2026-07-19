@@ -1,5 +1,7 @@
 package caverace
 
+// append_explosion_cell adds an in-bounds blast cell while constructing the
+// fixed explosion footprint at detonation time.
 append_explosion_cell :: proc(
 	explosion: ^Explosion_State,
 	position: Grid_Position,
@@ -11,6 +13,8 @@ append_explosion_cell :: proc(
 	explosion.cell_count += 1
 }
 
+// build_explosion_state expands a bomb into its center and four directional
+// arms once, allowing effects and rendering to share the same footprint.
 build_explosion_state :: proc(bomb: ^Bomb_State) -> Explosion_State {
 	explosion := Explosion_State {active = true}
 	append_explosion_cell(&explosion, bomb.position, .Center)
@@ -37,6 +41,8 @@ build_explosion_state :: proc(bomb: ^Bomb_State) -> Explosion_State {
 	return explosion
 }
 
+// explosion_contains_cell tests one active footprint and is reused by chain
+// reactions, entity damage, and focused regression tests.
 explosion_contains_cell :: proc(
 	explosion: ^Explosion_State,
 	position: Grid_Position,
@@ -48,6 +54,8 @@ explosion_contains_cell :: proc(
 	return false
 }
 
+// active_explosion_contains_cell checks all fixed explosion slots when applying
+// overlapping blast effects to an actor position.
 active_explosion_contains_cell :: proc(
 	gameplay: ^Gameplay,
 	position: Grid_Position,
@@ -60,6 +68,8 @@ active_explosion_contains_cell :: proc(
 	return false
 }
 
+// apply_explosion_to_level mutates destructible item and treasure layers when
+// an explosion starts, preserving the original layer interaction rules.
 apply_explosion_to_level :: proc(gameplay: ^Gameplay, explosion: ^Explosion_State) {
 	for cell_index in 0 ..< explosion.cell_count {
 		cell := explosion.cells[cell_index]
@@ -76,6 +86,8 @@ apply_explosion_to_level :: proc(gameplay: ^Gameplay, explosion: ^Explosion_Stat
 	}
 }
 
+// chain_bombs_in_explosion marks touched bombs to detonate at the same action
+// boundary without recursively mutating the fixed bomb array.
 chain_bombs_in_explosion :: proc(gameplay: ^Gameplay, explosion: ^Explosion_State) {
 	for bomb_index in 0 ..< MAX_BOMBS {
 		bomb := &gameplay.bombs[bomb_index]
@@ -86,11 +98,12 @@ chain_bombs_in_explosion :: proc(gameplay: ^Gameplay, explosion: ^Explosion_Stat
 	}
 }
 
-// Settle chains by scanning fixed slots until no newly-ready bomb remains.
-// This avoids recursive mutation and makes score, sounds, and tests repeatable.
+// start_ready_explosions settles every bomb ready at the action boundary,
+// rescanning fixed slots until chains stop. Iteration avoids recursive mutation
+// and keeps score, sounds, and tests repeatable.
 start_ready_explosions :: proc(
 	gameplay: ^Gameplay,
-	result: ^Gameplay_Simulation_Result,
+	result: ^Gameplay_Tick_Result,
 ) {
 	started: [MAX_BOMBS]bool
 	for {
@@ -120,9 +133,11 @@ start_ready_explosions :: proc(
 	}
 }
 
+// apply_active_explosions_to_entities damages actors on active blast cells once
+// per gameplay tick and records scoring, sound, and death events for the frame.
 apply_active_explosions_to_entities :: proc(
 	gameplay: ^Gameplay,
-	result: ^Gameplay_Simulation_Result,
+	result: ^Gameplay_Tick_Result,
 ) {
 	for enemy_index in 0 ..< gameplay.enemy_count {
 		enemy := &gameplay.enemies[enemy_index]
@@ -146,6 +161,8 @@ apply_active_explosions_to_entities :: proc(
 	}
 }
 
+// advance_explosion_ages advances active blast animations after effects have
+// been applied for the current gameplay tick.
 advance_explosion_ages :: proc(gameplay: ^Gameplay) {
 	for explosion_index in 0 ..< MAX_BOMBS {
 		explosion := &gameplay.explosions[explosion_index]
@@ -154,6 +171,8 @@ advance_explosion_ages :: proc(gameplay: ^Gameplay) {
 	}
 }
 
+// explosion_animation_set selects the legacy expand-contract frame group from
+// an explosion's age and is called while deriving its sprite index.
 explosion_animation_set :: proc(age_step: int) -> int {
 	step := clamp(age_step, 1, EXPLOSION_STEPS)
 	if step <= 3  do return 0
@@ -163,6 +182,8 @@ explosion_animation_set :: proc(age_step: int) -> int {
 	return 0
 }
 
+// explosion_sprite_index combines animation phase and cell direction to locate
+// the correct row in the bomb sprite sheet during rendering.
 explosion_sprite_index :: proc(
 	kind: Explosion_Cell_Kind,
 	age_step: int,

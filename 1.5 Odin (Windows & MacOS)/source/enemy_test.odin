@@ -2,6 +2,8 @@ package caverace
 
 import "core:testing"
 
+// enemy_at creates a stationary active enemy for focused movement and contact
+// tests without loading a complete level.
 enemy_at :: proc(position: Grid_Position, kind: u8 = 1) -> Enemy_State {
 	return Enemy_State {
 		active    = true,
@@ -12,6 +14,8 @@ enemy_at :: proc(position: Grid_Position, kind: u8 = 1) -> Enemy_State {
 	}
 }
 
+// block_cardinal_neighbors surrounds one cell with blocked terrain so tests can
+// exercise enemy behavior when every random direction is unavailable.
 block_cardinal_neighbors :: proc(data: ^Map_Data, position: Grid_Position) {
 	directions := [4]Direction {
 		.Down,
@@ -28,13 +32,17 @@ block_cardinal_neighbors :: proc(data: ^Map_Data, position: Grid_Position) {
 	}
 }
 
-Enemy_Simulation_Summary :: struct {
+// Enemy_Run_Summary captures final enemy movement and random state from a seeded
+// timing scenario so different render rates can be compared exactly.
+Enemy_Run_Summary :: struct {
 	enemies: [MAX_ENEMIES]Enemy_State,
 	energy:  int,
 	state:   Gameplay_State,
 }
 
-run_seeded_enemy_simulation :: proc(render_fps, seconds: int, seed: u64) -> Enemy_Simulation_Summary {
+// run_seeded_enemy_scenario advances identical seeded gameplay at a chosen
+// render rate and returns the final enemy state for comparison.
+run_seeded_enemy_scenario :: proc(render_fps, seconds: int, seed: u64) -> Enemy_Run_Summary {
 	gameplay := open_gameplay_at({0, 0})
 	gameplay.player.energy = PLAYER_START_ENERGY
 	block_cardinal_neighbors(&gameplay.level.data, gameplay.player.position)
@@ -54,6 +62,8 @@ run_seeded_enemy_simulation :: proc(render_fps, seconds: int, seed: u64) -> Enem
 	}
 }
 
+// run_stationary_contact_half_second counts damage events while player and
+// enemy overlap, allowing contact cadence to be compared across render rates.
 run_stationary_contact_half_second :: proc(render_fps: int) -> int {
 	position := Grid_Position {5, 5}
 	gameplay := open_gameplay_at(position)
@@ -69,6 +79,8 @@ run_stationary_contact_half_second :: proc(render_fps: int) -> int {
 	return gameplay.player.energy
 }
 
+// Verifies random roll mapping and session seeding produce repeatable enemy
+// direction sequences.
 @(test)
 enemy_direction_and_seed_are_deterministic_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, enemy_direction_from_roll(0), Direction.Down)
@@ -89,11 +101,13 @@ enemy_direction_and_seed_are_deterministic_test :: proc(t: ^testing.T) {
 	}
 }
 
+// Protects seeded enemy movement and random-state progression from render-rate
+// dependent behavior.
 @(test)
-enemy_simulation_is_render_rate_independent_test :: proc(t: ^testing.T) {
-	at_30_fps := run_seeded_enemy_simulation(30, 8, 12345)
-	at_60_fps := run_seeded_enemy_simulation(60, 8, 12345)
-	at_240_fps := run_seeded_enemy_simulation(240, 8, 12345)
+enemy_updates_are_render_rate_independent_test :: proc(t: ^testing.T) {
+	at_30_fps := run_seeded_enemy_scenario(30, 8, 12345)
+	at_60_fps := run_seeded_enemy_scenario(60, 8, 12345)
+	at_240_fps := run_seeded_enemy_scenario(240, 8, 12345)
 
 	testing.expect_value(t, at_30_fps, at_60_fps)
 	testing.expect_value(t, at_60_fps, at_240_fps)
@@ -101,6 +115,8 @@ enemy_simulation_is_render_rate_independent_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, at_60_fps.state, Gameplay_State.Playing)
 }
 
+// Confirms enemy interpolation covers exactly one tile over sixteen movement
+// steps before committing the target cell.
 @(test)
 enemy_moves_one_tile_in_sixteen_steps_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
@@ -123,6 +139,8 @@ enemy_moves_one_tile_in_sixteen_steps_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, y, i32(MAP_OFFSET_Y + MAP_TILE_SIZE))
 }
 
+// Exercises terrain, item, bomb, and map-edge blocking rules used when enemies
+// choose their next target.
 @(test)
 enemy_walkability_and_map_edges_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
@@ -152,6 +170,8 @@ enemy_walkability_and_map_edges_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, enemy.move_to, Grid_Position {0, 0})
 }
 
+// Runs seeded enemies across every shipped level to catch invalid movement or
+// out-of-bounds regressions in real map data.
 @(test)
 seeded_enemies_stay_walkable_on_all_levels_test :: proc(t: ^testing.T) {
 	for level_index in 0 ..< LEVEL_COUNT {
@@ -159,8 +179,8 @@ seeded_enemies_stay_walkable_on_all_levels_test :: proc(t: ^testing.T) {
 		if !testing.expect(t, load_level(&gameplay.level, level_index)) do continue
 		if !testing.expect_value(
 			t,
-			initialize_level_runtime(&gameplay),
-			Level_Runtime_Error.None,
+			setup_level_state(&gameplay),
+			Level_Setup_Error.None,
 		) {
 			continue
 		}
@@ -185,6 +205,8 @@ seeded_enemies_stay_walkable_on_all_levels_test :: proc(t: ^testing.T) {
 	}
 }
 
+// Verifies pixel-based contact recognizes actors crossing between adjacent
+// cells before either movement action completes.
 @(test)
 crossing_entities_overlap_at_pixel_step_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({1, 1})
@@ -201,6 +223,8 @@ crossing_entities_overlap_at_pixel_step_test :: proc(t: ^testing.T) {
 	testing.expect(t, player_touches_enemy(&gameplay))
 }
 
+// Protects the rule that continuous contact deals damage only once during a
+// sixteen-step action and may deal damage again at the next boundary.
 @(test)
 contact_damage_occurs_once_per_action_test :: proc(t: ^testing.T) {
 	position := Grid_Position {5, 5}
@@ -212,18 +236,18 @@ contact_damage_occurs_once_per_action_test :: proc(t: ^testing.T) {
 	block_cardinal_neighbors(&gameplay.level.data, position)
 	seed_gameplay_random(&gameplay, 7)
 
-	first_contact := update_gameplay(&gameplay, {}, SIMULATION_STEP_SECONDS)
-	testing.expect(t, first_contact.simulation.player_damaged)
+	first_contact := update_gameplay(&gameplay, {}, GAMEPLAY_TICK_SECONDS)
+	testing.expect(t, first_contact.ticks.player_damaged)
 	testing.expect_value(t, gameplay.player.energy, PLAYER_START_ENERGY - ENEMY_CONTACT_DAMAGE)
 
 	for _ in 1 ..< MOVEMENT_STEPS_PER_TILE {
-		frame := update_gameplay(&gameplay, {}, SIMULATION_STEP_SECONDS)
-		testing.expect(t, !frame.simulation.player_damaged)
+		frame := update_gameplay(&gameplay, {}, GAMEPLAY_TICK_SECONDS)
+		testing.expect(t, !frame.ticks.player_damaged)
 	}
 	testing.expect_value(t, gameplay.player.energy, PLAYER_START_ENERGY - ENEMY_CONTACT_DAMAGE)
 
-	second_contact := update_gameplay(&gameplay, {}, SIMULATION_STEP_SECONDS)
-	testing.expect(t, second_contact.simulation.player_damaged)
+	second_contact := update_gameplay(&gameplay, {}, GAMEPLAY_TICK_SECONDS)
+	testing.expect(t, second_contact.ticks.player_damaged)
 	testing.expect_value(
 		t,
 		gameplay.player.energy,
@@ -236,6 +260,8 @@ contact_damage_occurs_once_per_action_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, run_stationary_contact_half_second(240), expected_energy)
 }
 
+// Confirms contact that reduces energy to zero reports death and routes gameplay
+// to the Dead lifecycle state.
 @(test)
 zero_energy_transitions_to_dead_test :: proc(t: ^testing.T) {
 	position := Grid_Position {5, 5}
@@ -247,9 +273,9 @@ zero_energy_transitions_to_dead_test :: proc(t: ^testing.T) {
 	block_cardinal_neighbors(&gameplay.level.data, position)
 	seed_gameplay_random(&gameplay, 11)
 
-	frame := update_gameplay(&gameplay, {}, SIMULATION_STEP_SECONDS)
-	testing.expect(t, frame.simulation.player_damaged)
-	testing.expect(t, frame.simulation.player_died)
+	frame := update_gameplay(&gameplay, {}, GAMEPLAY_TICK_SECONDS)
+	testing.expect(t, frame.ticks.player_damaged)
+	testing.expect(t, frame.ticks.player_died)
 	testing.expect_value(t, gameplay.player.energy, 0)
 	testing.expect_value(t, gameplay.player.lives, 1)
 	testing.expect_value(t, gameplay.state, Gameplay_State.Dead)

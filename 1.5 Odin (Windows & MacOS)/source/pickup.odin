@@ -1,10 +1,14 @@
 package caverace
 
+// Pickup_Result reports which map layer changed at an action boundary so the
+// tick result can aggregate score feedback and audio requests.
 Pickup_Result :: struct {
 	item_collected:     bool,
 	treasure_collected: bool,
 }
 
+// try_collect_item applies one beneficial item if its player stat is below the
+// legacy cap; collect_player_cell uses the result to decide whether to clear it.
 try_collect_item :: proc(player: ^Player_State, item: u8) -> bool {
 	switch item {
 	case ITEM_POWER:
@@ -25,9 +29,9 @@ try_collect_item :: proc(player: ^Player_State, item: u8) -> bool {
 	return true
 }
 
-// Collection follows CheckLevelComplete from 1.2/1.3: an item is considered
-// before treasure, and any item occupying the cell defers treasure collection
-// even when that item cannot currently benefit the player.
+// collect_player_cell resolves pickups when a movement action commits its target.
+// It checks items before treasure, and any item defers treasure even when the
+// player's corresponding stat is already capped.
 collect_player_cell :: proc(gameplay: ^Gameplay) -> Pickup_Result {
 	result: Pickup_Result
 	position := gameplay.player.position

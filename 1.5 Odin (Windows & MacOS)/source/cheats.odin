@@ -1,7 +1,7 @@
 package caverace
 
 // apply_gameplay_cheat preserves the 1.2 powerblast effects while keeping
-// their mutations in one deterministic simulation procedure. Bomb power is
+// their mutations in one deterministic gameplay procedure. Bomb power is
 // capped because explosion storage is deliberately fixed to that safe limit.
 apply_gameplay_cheat :: proc(gameplay: ^Gameplay, cheat: Cheat_Key) {
 	switch cheat {

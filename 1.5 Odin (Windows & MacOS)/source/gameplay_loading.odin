@@ -3,7 +3,7 @@ package caverace
 import "core:fmt"
 
 // load_gameplay_level is called by Game only while the Playing screen is in
-// Load_Level. This keeps filesystem/resource concerns out of the fixed-step
+// Load_Level. This keeps filesystem/resource concerns out of the fixed-tick
 // update while retaining Gameplay ownership of the loaded and mutable data.
 load_gameplay_level :: proc(gameplay: ^Gameplay, resource_root: string) {
 	assert(gameplay.state == .Load_Level)
@@ -12,8 +12,8 @@ load_gameplay_level :: proc(gameplay: ^Gameplay, resource_root: string) {
 		return
 	}
 
-	if runtime_error := initialize_level_runtime(gameplay); runtime_error != .None {
-		fmt.eprintln("Failed to initialize level runtime:", runtime_error)
+	if setup_error := setup_level_state(gameplay); setup_error != .None {
+		fmt.eprintln("Failed to set up level state:", setup_error)
 		gameplay.state = .Load_Failed
 		return
 	}
@@ -22,10 +22,10 @@ load_gameplay_level :: proc(gameplay: ^Gameplay, resource_root: string) {
 	gameplay.state = .Playing
 }
 
-// initialize_level_runtime converts immutable map spawn markers into mutable,
+// setup_level_state converts immutable map spawn markers into mutable,
 // fixed-capacity gameplay state. It validates into locals first, so failure
 // never leaves a partly initialized session behind.
-initialize_level_runtime :: proc(gameplay: ^Gameplay) -> Level_Runtime_Error {
+setup_level_state :: proc(gameplay: ^Gameplay) -> Level_Setup_Error {
 	player_position: Grid_Position
 	player_count := 0
 	enemies: [MAX_ENEMIES]Enemy_State
@@ -65,7 +65,7 @@ initialize_level_runtime :: proc(gameplay: ^Gameplay) -> Level_Runtime_Error {
 	gameplay.bombs = {}
 	gameplay.explosions = {}
 	gameplay.bomb_occupancy = {}
-	gameplay.simulation = {}
+	gameplay.tick_state = {}
 	gameplay.level_completion_enabled = true
 	return .None
 }

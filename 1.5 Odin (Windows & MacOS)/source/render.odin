@@ -5,6 +5,8 @@ import rl "vendor:raylib"
 
 MOUSE_POINTER_TILE_INDEX :: 4
 
+// draw_game dispatches the active screen renderer, then draws shared pointer
+// and feedback overlays at the end of every render frame.
 draw_game :: proc(game: ^Game, assets: ^Assets, mouse: Mouse_State) {
 	switch game.screen {
 	case .Menu:
@@ -19,6 +21,8 @@ draw_game :: proc(game: ^Game, assets: ^Assets, mouse: Mouse_State) {
 	draw_game_feedback(&game.feedback)
 }
 
+// draw_menu renders the static menu background and current animated selection
+// when the application is on the Menu screen.
 draw_menu :: proc(menu: Menu_State, background, selection: rl.Texture) {
 	rl.DrawTexture(background, 0, 0, rl.WHITE)
 
@@ -32,6 +36,8 @@ draw_menu :: proc(menu: Menu_State, background, selection: rl.Texture) {
 	)
 }
 
+// draw_gameplay renders the active level when available and overlays the
+// lifecycle message appropriate to the current gameplay state.
 draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {
 	rl.DrawTexture(assets.screens.game, 0, 0, rl.WHITE)
 
@@ -58,6 +64,8 @@ draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {
 	}
 }
 
+// draw_gameplay_message centers a readable black-backed status prompt over the
+// gameplay screen for loading, retry, win, and failure states.
 draw_gameplay_message :: proc(message: cstring) {
 	font_size: i32 = 20
 	text_width := rl.MeasureText(message, font_size)
@@ -68,6 +76,8 @@ draw_gameplay_message :: proc(message: cstring) {
 	rl.DrawText(message, text_x, text_y, font_size, rl.WHITE)
 }
 
+// draw_high_scores renders the persisted table and, when applicable, the
+// fixed-buffer name-entry prompt on the High Scores screen.
 draw_high_scores :: proc(state: ^High_Score_State, background: rl.Texture) {
 	rl.DrawTexture(background, 0, 0, rl.WHITE)
 	rl.DrawText("NAME", HIGH_SCORE_HEADER_X, HIGH_SCORE_HEADER_Y, HIGH_SCORE_HEADER_SIZE, rl.BLACK)
@@ -121,6 +131,8 @@ draw_high_scores :: proc(state: ^High_Score_State, background: rl.Texture) {
 	}
 }
 
+// draw_mouse renders the custom legacy pointer after every screen so the native
+// cursor can remain hidden for the application lifetime.
 draw_mouse :: proc(mouse: Mouse_State, texture: rl.Texture) {
 	tile_size := f32(texture.width)
 	source := rl.Rectangle {
@@ -133,6 +145,8 @@ draw_mouse :: proc(mouse: Mouse_State, texture: rl.Texture) {
 	rl.DrawTextureRec(texture, source, position, rl.WHITE)
 }
 
+// feedback_flash_color maps domain feedback kinds to raylib colors only at the
+// rendering boundary.
 feedback_flash_color :: proc(flash: Feedback_Flash) -> rl.Color {
 	switch flash {
 	case .Damage:   return rl.RED
@@ -143,6 +157,8 @@ feedback_flash_color :: proc(flash: Feedback_Flash) -> rl.Color {
 	return rl.BLANK
 }
 
+// draw_game_feedback overlays transition and gameplay flashes after all screen
+// content, using alphas computed by the non-rendering feedback logic.
 draw_game_feedback :: proc(feedback: ^Game_Feedback) {
 	if fade_alpha := transition_fade_alpha(feedback); fade_alpha > 0 {
 		rl.DrawRectangle(

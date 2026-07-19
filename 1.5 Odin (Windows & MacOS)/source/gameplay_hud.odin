@@ -33,6 +33,8 @@ TOOLS_BOMB_SPRITE   :: 3
 #assert(TOOLS_POWER_SPRITE < TOOLS_SPRITE_COUNT)
 #assert(TOOLS_BOMB_SPRITE < TOOLS_SPRITE_COUNT)
 
+// Gameplay_Hud_State is a render-only snapshot derived from player and bomb
+// state so HUD layout code cannot mutate gameplay.
 Gameplay_Hud_State :: struct {
 	lives:           int,
 	energy:          int,
@@ -41,6 +43,8 @@ Gameplay_Hud_State :: struct {
 	score:           int,
 }
 
+// gameplay_hud_state takes a read-only snapshot of the player values needed by
+// the HUD, keeping layout code independent of gameplay mutation.
 gameplay_hud_state :: proc(gameplay: ^Gameplay) -> Gameplay_Hud_State {
 	return {
 		lives           = gameplay.player.lives,
@@ -51,6 +55,8 @@ gameplay_hud_state :: proc(gameplay: ^Gameplay) -> Gameplay_Hud_State {
 	}
 }
 
+// draw_gameplay_hud renders legacy status icons and score after the level and
+// actors have been drawn for an active gameplay screen.
 draw_gameplay_hud :: proc(gameplay: ^Gameplay, tools: rl.Texture) {
 	hud := gameplay_hud_state(gameplay)
 	for icon_index in 0 ..< hud.lives {

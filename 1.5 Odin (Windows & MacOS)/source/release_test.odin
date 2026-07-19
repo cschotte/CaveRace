@@ -4,6 +4,8 @@ import "core:os"
 import "core:path/filepath"
 import "core:testing"
 
+// Verifies resource discovery prefers packaged files, then the repository
+// development layout, using isolated temporary directories.
 @(test)
 resource_root_finds_packaged_and_development_layouts_test :: proc(t: ^testing.T) {
 	temporary_directory, directory_error := os.make_directory_temp(
@@ -69,6 +71,8 @@ resource_root_finds_packaged_and_development_layouts_test :: proc(t: ^testing.T)
 	}
 }
 
+// Confirms real startup discovery returns an absolute usable resource root in
+// the current development environment.
 @(test)
 resolved_resource_root_is_absolute_and_contains_media_test :: proc(t: ^testing.T) {
 	root, root_ok := resolve_resource_root()
@@ -78,6 +82,8 @@ resolved_resource_root_is_absolute_and_contains_media_test :: proc(t: ^testing.T
 	testing.expect(t, resource_root_is_usable(root))
 }
 
+// Protects sprite-sheet validation at the minimum required rows and with extra
+// complete rows while rejecting malformed dimensions.
 @(test)
 sprite_sheet_validation_accepts_minimum_or_more_complete_rows_test :: proc(t: ^testing.T) {
 	testing.expect(t, vertical_sheet_dimensions_are_valid(32, 17 * 32, 17))
@@ -88,6 +94,8 @@ sprite_sheet_validation_accepts_minimum_or_more_complete_rows_test :: proc(t: ^t
 	testing.expect(t, !vertical_sheet_dimensions_are_valid(32, 32, 0))
 }
 
+// Verifies missing or malformed level files fail recoverably without replacing
+// the last valid Level value or trapping the lifecycle state.
 @(test)
 missing_and_invalid_level_files_do_not_replace_valid_state_test :: proc(t: ^testing.T) {
 	temporary_directory, directory_error := os.make_directory_temp(
@@ -127,6 +135,8 @@ missing_and_invalid_level_files_do_not_replace_valid_state_test :: proc(t: ^test
 	testing.expect_value(t, gameplay.state, Gameplay_State.Load_Level)
 }
 
+// Confirms native close, focus loss, and focus recovery do not mutate owned game
+// state or replay queued gameplay input.
 @(test)
 window_close_and_focus_loss_are_non_destructive_test :: proc(t: ^testing.T) {
 	game: Game
@@ -137,7 +147,7 @@ window_close_and_focus_loss_are_non_destructive_test :: proc(t: ^testing.T) {
 	testing.expect(t, !application_should_continue(&game, false))
 
 	game.quit_requested = false
-	game.gameplay.simulation.input = {
+	game.gameplay.tick_state.input = {
 		move_right   = true,
 		bomb_pending = true,
 	}
@@ -153,13 +163,15 @@ window_close_and_focus_loss_are_non_destructive_test :: proc(t: ^testing.T) {
 	)
 	testing.expect_value(t, unfocused_input, Game_Input {})
 	testing.expect_value(t, unfocused_seconds, f64(0))
-	testing.expect_value(t, game.gameplay.simulation.input, Gameplay_Input_Buffer {})
+	testing.expect_value(t, game.gameplay.tick_state.input, Gameplay_Input_Buffer {})
 
 	focused_input, focused_seconds := prepare_application_frame(&game, input, 0.2, true)
 	testing.expect_value(t, focused_input, input)
 	testing.expect_value(t, focused_seconds, f64(0.2))
 }
 
+// Exercises repeated menu, gameplay, and score-screen routing to ensure borrowed
+// resource and persistence paths remain valid across resets.
 @(test)
 repeated_menu_game_and_score_transitions_keep_borrowed_state_test :: proc(t: ^testing.T) {
 	game: Game
@@ -187,6 +199,8 @@ repeated_menu_game_and_score_transitions_keep_borrowed_state_test :: proc(t: ^te
 	}
 }
 
+// Runs a deterministic end-to-end game flow through loading, pickup, win, retry,
+// game over, persisted high score, menu return, and quit.
 @(test)
 deterministic_complete_run_smoke_test :: proc(t: ^testing.T) {
 	temporary_directory, directory_error := os.make_directory_temp(
@@ -217,9 +231,9 @@ deterministic_complete_run_smoke_test :: proc(t: ^testing.T) {
 	position := game.gameplay.player.position
 	game.gameplay.level.data.item[position.x][position.y] = 0
 	game.gameplay.level.data.treasure[position.x][position.y] = 1
-	game.gameplay.simulation.action_step = MOVEMENT_STEPS_PER_TILE - 1
-	pickup_frame := update_game(&game, {}, SIMULATION_STEP_SECONDS)
-	testing.expect_value(t, pickup_frame.gameplay.simulation.treasures_collected, 1)
+	game.gameplay.tick_state.action_step = MOVEMENT_STEPS_PER_TILE - 1
+	pickup_frame := update_game(&game, {}, GAMEPLAY_TICK_SECONDS)
+	testing.expect_value(t, pickup_frame.gameplay.ticks.treasures_collected, 1)
 	testing.expect(t, game.gameplay.player.score >= SCORE_TREASURE_PICKUP)
 
 	for enemy_index in 0 ..< game.gameplay.enemy_count {
@@ -237,7 +251,7 @@ deterministic_complete_run_smoke_test :: proc(t: ^testing.T) {
 	game.gameplay.enemies = {}
 	game.gameplay.enemies[0] = enemy_at(game.gameplay.player.position)
 	game.gameplay.enemy_count = 1
-	update_game(&game, {}, SIMULATION_STEP_SECONDS)
+	update_game(&game, {}, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, game.gameplay.state, Gameplay_State.Dead)
 	testing.expect_value(t, game.gameplay.player.lives, 1)
 	update_game(&game, Game_Input {confirm = true}, 0)
@@ -250,7 +264,7 @@ deterministic_complete_run_smoke_test :: proc(t: ^testing.T) {
 	game.gameplay.enemies = {}
 	game.gameplay.enemies[0] = enemy_at(game.gameplay.player.position)
 	game.gameplay.enemy_count = 1
-	update_game(&game, {}, SIMULATION_STEP_SECONDS)
+	update_game(&game, {}, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, game.screen, App_Screen.High_Scores)
 	testing.expect_value(t, game.high_scores.mode, High_Score_Mode.Entering_Name)
 

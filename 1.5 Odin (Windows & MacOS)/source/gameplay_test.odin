@@ -2,24 +2,28 @@ package caverace
 
 import "core:testing"
 
-Simulation_Test_Summary :: struct {
-	steps:              int,
+// Gameplay_Run_Summary records fixed-tick and movement outcomes from a held-input
+// timing scenario for render-rate independence checks.
+Gameplay_Run_Summary :: struct {
+	ticks:              int,
 	action_decisions:   int,
 	movement_decisions: int,
 	player_position:    Grid_Position,
 }
 
-run_held_direction_simulation :: proc(render_fps, seconds: int) -> Simulation_Test_Summary {
+// run_held_direction_scenario advances held movement at a chosen render rate so
+// fixed-tick totals and final position can be compared.
+run_held_direction_scenario :: proc(render_fps, seconds: int) -> Gameplay_Run_Summary {
 	gameplay := Gameplay {state = .Playing}
 	input := Game_Input {move_right = true}
-	summary: Simulation_Test_Summary
+	summary: Gameplay_Run_Summary
 
 	for _ in 0 ..< render_fps * seconds {
 		frame_result := update_gameplay(&gameplay, input, 1.0 / f64(render_fps))
-		summary.steps += frame_result.simulation.steps_run
-		summary.action_decisions += frame_result.simulation.action_decisions
-		if frame_result.simulation.action_decisions > 0 &&
-		   frame_result.simulation.last_action == .Move_Right {
+		summary.ticks += frame_result.ticks.ticks_run
+		summary.action_decisions += frame_result.ticks.action_decisions
+		if frame_result.ticks.action_decisions > 0 &&
+		   frame_result.ticks.last_action == .Move_Right {
 			summary.movement_decisions += 1
 		}
 	}
@@ -27,6 +31,8 @@ run_held_direction_simulation :: proc(render_fps, seconds: int) -> Simulation_Te
 	return summary
 }
 
+// Verifies a fresh run starts in Load_Level with legacy player defaults and no
+// active level objective.
 @(test)
 gameplay_initial_state_test :: proc(t: ^testing.T) {
 	gameplay: Gameplay
@@ -46,6 +52,8 @@ gameplay_initial_state_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, gameplay.state, Gameplay_State.Load_Level)
 }
 
+// Confirms level-start reset preserves lives and score while restoring only the
+// values intended to reset between attempts and levels.
 @(test)
 level_start_reset_preserves_run_progress_test :: proc(t: ^testing.T) {
 	player := Player_State {
@@ -66,6 +74,8 @@ level_start_reset_preserves_run_progress_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, player.score, 350)
 }
 
+// Loads every shipped level and validates spawn extraction into bounded mutable
+// player and enemy state.
 @(test)
 all_levels_load_and_extract_spawns_test :: proc(t: ^testing.T) {
 	for level_index in 0 ..< LEVEL_COUNT {
@@ -90,8 +100,8 @@ all_levels_load_and_extract_spawns_test :: proc(t: ^testing.T) {
 			}
 		}
 
-		runtime_error := initialize_level_runtime(&gameplay)
-		testing.expect_value(t, runtime_error, Level_Runtime_Error.None)
+		setup_error := setup_level_state(&gameplay)
+		testing.expect_value(t, setup_error, Level_Setup_Error.None)
 		testing.expect(t, gameplay.level_completion_enabled)
 		testing.expect_value(t, expected_player_count, 1)
 		testing.expect_value(t, gameplay.player.position, expected_player)
@@ -125,6 +135,8 @@ all_levels_load_and_extract_spawns_test :: proc(t: ^testing.T) {
 	}
 }
 
+// Verifies each stored map layer rejects its first out-of-range sprite value and
+// accepts a zero-initialized level.
 @(test)
 level_data_validation_test :: proc(t: ^testing.T) {
 	data: Map_Data
@@ -149,22 +161,24 @@ level_data_validation_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, validate_level_data(&data), Level_Data_Error.Invalid_Player)
 }
 
+// Protects setup errors for missing players, duplicate players, and enemy counts
+// beyond fixed storage capacity.
 @(test)
 spawn_validation_test :: proc(t: ^testing.T) {
 	gameplay: Gameplay
 	init_gameplay(&gameplay)
 	testing.expect_value(
 		t,
-		initialize_level_runtime(&gameplay),
-		Level_Runtime_Error.Missing_Player,
+		setup_level_state(&gameplay),
+		Level_Setup_Error.Missing_Player,
 	)
 
 	gameplay.level.data.player[0][0] = PLAYER_SPAWN_MARKER
 	gameplay.level.data.player[1][0] = PLAYER_SPAWN_MARKER
 	testing.expect_value(
 		t,
-		initialize_level_runtime(&gameplay),
-		Level_Runtime_Error.Multiple_Players,
+		setup_level_state(&gameplay),
+		Level_Setup_Error.Multiple_Players,
 	)
 
 	gameplay.level.data = {}
@@ -174,13 +188,15 @@ spawn_validation_test :: proc(t: ^testing.T) {
 	}
 	testing.expect_value(
 		t,
-		initialize_level_runtime(&gameplay),
-		Level_Runtime_Error.Too_Many_Enemies,
+		setup_level_state(&gameplay),
+		Level_Setup_Error.Too_Many_Enemies,
 	)
 }
 
+// Confirms successful level setup replaces all mutable entity, bomb, occupancy,
+// and tick state left from the previous level.
 @(test)
-spawn_extraction_clears_stale_runtime_state_test :: proc(t: ^testing.T) {
+spawn_extraction_clears_stale_level_state_test :: proc(t: ^testing.T) {
 	gameplay: Gameplay
 	init_gameplay(&gameplay)
 	if !testing.expect(t, load_level(&gameplay.level, 0)) do return
@@ -199,7 +215,7 @@ spawn_extraction_clears_stale_runtime_state_test :: proc(t: ^testing.T) {
 		age_step = 7,
 	}
 	gameplay.bomb_occupancy[1][1] = 1
-	gameplay.simulation = Gameplay_Simulation_State {
+	gameplay.tick_state = Gameplay_Tick_State {
 		accumulator_seconds = 0.1,
 		action_step         = 7,
 		input               = {move_left = true, bomb_pending = true},
@@ -207,8 +223,8 @@ spawn_extraction_clears_stale_runtime_state_test :: proc(t: ^testing.T) {
 
 	testing.expect_value(
 		t,
-		initialize_level_runtime(&gameplay),
-		Level_Runtime_Error.None,
+		setup_level_state(&gameplay),
+		Level_Setup_Error.None,
 	)
 	testing.expect_value(t, gameplay.player.direction, Direction.None)
 	testing.expect_value(t, gameplay.player.lives, PLAYER_START_LIVES)
@@ -216,12 +232,13 @@ spawn_extraction_clears_stale_runtime_state_test :: proc(t: ^testing.T) {
 	testing.expect(t, !gameplay.bombs[0].active)
 	testing.expect(t, !gameplay.explosions[0].active)
 	testing.expect_value(t, gameplay.bomb_occupancy[1][1], u8(0))
-	testing.expect_value(t, gameplay.simulation, Gameplay_Simulation_State {})
+	testing.expect_value(t, gameplay.tick_state, Gameplay_Tick_State {})
 	for enemy_index in gameplay.enemy_count ..< MAX_ENEMIES {
 		testing.expect(t, !gameplay.enemies[enemy_index].active)
 	}
 }
 
+// Verifies grid bounds and fixed grid-to-screen conversion helpers at map edges.
 @(test)
 grid_position_helpers_test :: proc(t: ^testing.T) {
 	testing.expect(t, is_in_map({0, 0}))
@@ -239,20 +256,24 @@ grid_position_helpers_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, y, i32(MAP_OFFSET_Y + (MAP_HEIGHT - 1) * MAP_TILE_SIZE))
 }
 
+// Protects the fixed 60 Hz gameplay clock from render-rate dependent tick counts
+// or movement decisions.
 @(test)
-fixed_simulation_is_render_rate_independent_test :: proc(t: ^testing.T) {
-	at_30_fps := run_held_direction_simulation(30, 4)
-	at_60_fps := run_held_direction_simulation(60, 4)
-	at_240_fps := run_held_direction_simulation(240, 4)
+gameplay_ticks_are_render_rate_independent_test :: proc(t: ^testing.T) {
+	at_30_fps := run_held_direction_scenario(30, 4)
+	at_60_fps := run_held_direction_scenario(60, 4)
+	at_240_fps := run_held_direction_scenario(240, 4)
 
 	testing.expect_value(t, at_30_fps, at_60_fps)
 	testing.expect_value(t, at_60_fps, at_240_fps)
-	testing.expect_value(t, at_60_fps.steps, 4 * SIMULATION_HZ)
+	testing.expect_value(t, at_60_fps.ticks, 4 * GAMEPLAY_TICK_HZ)
 	testing.expect_value(t, at_60_fps.action_decisions, 15)
 	testing.expect_value(t, at_60_fps.movement_decisions, 15)
 	testing.expect_value(t, at_60_fps.player_position, Grid_Position {15, 0})
 }
 
+// Confirms the original action priority remains bomb, down, up, right, then left
+// when several inputs are available at one boundary.
 @(test)
 legacy_action_priority_test :: proc(t: ^testing.T) {
 	input := Gameplay_Input_Buffer {
@@ -276,50 +297,56 @@ legacy_action_priority_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, select_gameplay_action(&input), Gameplay_Action.None)
 }
 
+// Verifies an edge-triggered bomb press remains queued until the next complete
+// action boundary rather than being lost between render frames.
 @(test)
 bomb_press_is_latched_until_action_boundary_test :: proc(t: ^testing.T) {
-	gameplay := Gameplay {simulation = {action_step = 1}}
-	buffer_gameplay_input(&gameplay.simulation, Game_Input {space_pressed = true})
+	gameplay := Gameplay {tick_state = {action_step = 1}}
+	queue_gameplay_input(&gameplay.tick_state, Game_Input {space_pressed = true})
 
-	before_step := advance_gameplay_simulation(&gameplay, 1.0 / 240.0)
-	testing.expect_value(t, before_step.steps_run, 0)
-	testing.expect(t, gameplay.simulation.input.bomb_pending)
+	before_step := run_gameplay_ticks(&gameplay, 1.0 / 240.0)
+	testing.expect_value(t, before_step.ticks_run, 0)
+	testing.expect(t, gameplay.tick_state.input.bomb_pending)
 
-	before_boundary := advance_gameplay_simulation(
+	before_boundary := run_gameplay_ticks(
 		&gameplay,
-		f64(MOVEMENT_STEPS_PER_TILE - 1) * SIMULATION_STEP_SECONDS,
+		f64(MOVEMENT_STEPS_PER_TILE - 1) * GAMEPLAY_TICK_SECONDS,
 	)
-	testing.expect_value(t, before_boundary.steps_run, MOVEMENT_STEPS_PER_TILE - 1)
+	testing.expect_value(t, before_boundary.ticks_run, MOVEMENT_STEPS_PER_TILE - 1)
 	testing.expect_value(t, before_boundary.action_decisions, 0)
-	testing.expect(t, gameplay.simulation.input.bomb_pending)
+	testing.expect(t, gameplay.tick_state.input.bomb_pending)
 
-	at_boundary := advance_gameplay_simulation(&gameplay, SIMULATION_STEP_SECONDS)
+	at_boundary := run_gameplay_ticks(&gameplay, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, at_boundary.action_decisions, 1)
 	testing.expect_value(t, at_boundary.last_action, Gameplay_Action.Place_Bomb)
 	testing.expect(t, at_boundary.bomb_action_started)
-	testing.expect(t, !gameplay.simulation.input.bomb_pending)
+	testing.expect(t, !gameplay.tick_state.input.bomb_pending)
 }
 
+// Exercises zero delta, queued cheats, large-frame clamping, and the per-frame
+// tick cap that prevents runaway catch-up.
 @(test)
-edge_input_and_simulation_limits_test :: proc(t: ^testing.T) {
+edge_input_and_tick_limits_test :: proc(t: ^testing.T) {
 	gameplay: Gameplay
 	input: Game_Input
 	input.cheat_pressed[.F3] = true
-	buffer_gameplay_input(&gameplay.simulation, input)
+	queue_gameplay_input(&gameplay.tick_state, input)
 
-	before_step := advance_gameplay_simulation(&gameplay, 0)
-	testing.expect(t, gameplay.simulation.input.cheat_pending[.F3])
+	before_step := run_gameplay_ticks(&gameplay, 0)
+	testing.expect(t, gameplay.tick_state.input.cheat_pending[.F3])
 	testing.expect(t, !before_step.cheat_pressed[.F3])
 
-	after_step := advance_gameplay_simulation(&gameplay, SIMULATION_STEP_SECONDS, true)
+	after_step := run_gameplay_ticks(&gameplay, GAMEPLAY_TICK_SECONDS, true)
 	testing.expect(t, after_step.cheat_pressed[.F3])
-	testing.expect(t, !gameplay.simulation.input.cheat_pending[.F3])
+	testing.expect(t, !gameplay.tick_state.input.cheat_pending[.F3])
 
-	clamped := advance_gameplay_simulation(&gameplay, 1.0)
-	testing.expect_value(t, clamped.steps_run, MAX_SIMULATION_STEPS_PER_FRAME)
-	testing.expect(t, MAX_SIMULATION_STEPS_PER_FRAME < MOVEMENT_STEPS_PER_TILE)
+	clamped := run_gameplay_ticks(&gameplay, 1.0)
+	testing.expect_value(t, clamped.ticks_run, MAX_GAMEPLAY_TICKS_PER_FRAME)
+	testing.expect(t, MAX_GAMEPLAY_TICKS_PER_FRAME < MOVEMENT_STEPS_PER_TILE)
 }
 
+// Confirms slow rendering does not change gameplay frequency and that high-score
+// text capacity remains bounded independently of frame rate.
 @(test)
 render_rate_and_high_score_input_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, target_render_fps({}), i32(TARGET_RENDER_FPS))

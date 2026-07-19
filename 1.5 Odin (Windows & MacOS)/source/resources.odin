@@ -6,6 +6,8 @@ import "core:path/filepath"
 RESOURCE_MEDIA_DIRECTORY  :: "media"
 RESOURCE_LEVEL_DIRECTORY  :: "levels"
 
+// resource_path joins a root with a small fixed list of resource components and
+// returns an owned path to loaders during startup or level changes.
 resource_path :: proc(
 	root: string,
 	parts: []string,
@@ -20,6 +22,8 @@ resource_path :: proc(
 	return joined, true
 }
 
+// resource_root_is_usable checks the required game-screen marker before a
+// candidate directory is accepted as a complete resource root.
 resource_root_is_usable :: proc(root: string) -> bool {
 	marker_path, ok := resource_path(
 		root,
@@ -29,6 +33,8 @@ resource_root_is_usable :: proc(root: string) -> bool {
 	return ok && os.is_file(marker_path)
 }
 
+// owned_resource_root_if_usable validates and normalizes a candidate while
+// making ownership explicit for the caller that keeps the selected path.
 owned_resource_root_if_usable :: proc(
 	candidate: string,
 	allocator := context.allocator,
@@ -74,6 +80,8 @@ find_resource_root_from :: proc(
 	return owned_resource_root_if_usable(working_directory, allocator)
 }
 
+// resolve_resource_root gathers process directories and selects the first
+// packaged, bundle, development, or working-directory layout that is usable.
 resolve_resource_root :: proc(
 	allocator := context.allocator,
 ) -> (root: string, ok: bool) {

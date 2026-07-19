@@ -2,6 +2,8 @@ package caverace
 
 import "core:testing"
 
+// Pickup_Timing_Summary captures collection events and resulting map/player
+// state from a render-rate comparison scenario.
 Pickup_Timing_Summary :: struct {
 	items_collected:     int,
 	treasures_collected: int,
@@ -12,7 +14,9 @@ Pickup_Timing_Summary :: struct {
 	item_cell:           u8,
 }
 
-run_pickup_timing_simulation :: proc(render_fps, seconds: int) -> Pickup_Timing_Summary {
+// run_pickup_timing_scenario advances the same item approach at a chosen render
+// rate and returns collection events and final state for comparison.
+run_pickup_timing_scenario :: proc(render_fps, seconds: int) -> Pickup_Timing_Summary {
 	gameplay := open_gameplay_at({0, 0})
 	gameplay.player.energy = PLAYER_START_ENERGY
 	gameplay.player.bomb_power = PLAYER_START_BOMB_POWER
@@ -25,9 +29,9 @@ run_pickup_timing_simulation :: proc(render_fps, seconds: int) -> Pickup_Timing_
 			Game_Input {move_right = true},
 			1.0 / f64(render_fps),
 		)
-		summary.items_collected += frame.simulation.items_collected
-		summary.treasures_collected += frame.simulation.treasures_collected
-		summary.item_sounds += frame.simulation.item_sound_requests
+		summary.items_collected += frame.ticks.items_collected
+		summary.treasures_collected += frame.ticks.treasures_collected
+		summary.item_sounds += frame.ticks.item_sound_requests
 	}
 
 	summary.player_position = gameplay.player.position
@@ -37,6 +41,8 @@ run_pickup_timing_simulation :: proc(render_fps, seconds: int) -> Pickup_Timing_
 	return summary
 }
 
+// Verifies every score event uses the centralized legacy arithmetic, including
+// costs, rewards, penalties, and the action floor.
 @(test)
 all_legacy_score_events_use_the_central_rule_set_test :: proc(t: ^testing.T) {
 	player := Player_State {score = SCORE_BOMB_COST - 1}
@@ -75,6 +81,8 @@ all_legacy_score_events_use_the_central_rule_set_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, player.score, 0)
 }
 
+// Confirms each beneficial item mutates the intended stat, clears its map cell,
+// awards score, and emits one collection event.
 @(test)
 all_four_beneficial_items_apply_caps_clear_and_score_test :: proc(t: ^testing.T) {
 	position := Grid_Position {4, 4}
@@ -113,6 +121,8 @@ all_four_beneficial_items_apply_caps_clear_and_score_test :: proc(t: ^testing.T)
 	testing.expect_value(t, life_gameplay.player.score, SCORE_ITEM_PICKUP)
 }
 
+// Protects the rule that a capped item remains in place and defers treasure in
+// the same cell until it can be collected.
 @(test)
 capped_items_remain_and_defer_treasure_test :: proc(t: ^testing.T) {
 	position := Grid_Position {6, 6}
@@ -143,6 +153,8 @@ capped_items_remain_and_defer_treasure_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, gameplay.player.score, SCORE_ITEM_PICKUP + SCORE_TREASURE_PICKUP)
 }
 
+// Verifies every item type is retained when its corresponding player stat is
+// already at the supported cap.
 @(test)
 each_item_at_its_cap_is_retained_test :: proc(t: ^testing.T) {
 	position := Grid_Position {2, 2}
@@ -162,6 +174,8 @@ each_item_at_its_cap_is_retained_test :: proc(t: ^testing.T) {
 	}
 }
 
+// Confirms collection occurs only after the movement action commits the player's
+// destination cell, not during interpolation.
 @(test)
 pickup_occurs_only_when_action_reaches_occupied_cell_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({1, 1})
@@ -169,16 +183,16 @@ pickup_occurs_only_when_action_reaches_occupied_cell_test :: proc(t: ^testing.T)
 	gameplay.player.bomb_power = PLAYER_START_BOMB_POWER
 	gameplay.level.data.item[2][1] = ITEM_POWER
 
-	buffer_gameplay_input(&gameplay.simulation, Game_Input {move_right = true})
-	before_arrival := advance_gameplay_simulation(
+	queue_gameplay_input(&gameplay.tick_state, Game_Input {move_right = true})
+	before_arrival := run_gameplay_ticks(
 		&gameplay,
-		f64(MOVEMENT_STEPS_PER_TILE - 1) * SIMULATION_STEP_SECONDS,
+		f64(MOVEMENT_STEPS_PER_TILE - 1) * GAMEPLAY_TICK_SECONDS,
 	)
 	testing.expect_value(t, before_arrival.items_collected, 0)
 	testing.expect_value(t, before_arrival.item_sound_requests, 0)
 	testing.expect_value(t, gameplay.level.data.item[2][1], u8(ITEM_POWER))
 
-	arrival := advance_gameplay_simulation(&gameplay, SIMULATION_STEP_SECONDS)
+	arrival := run_gameplay_ticks(&gameplay, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, gameplay.player.position, Grid_Position {2, 1})
 	testing.expect_value(t, arrival.items_collected, 1)
 	testing.expect_value(t, arrival.item_sound_requests, 1)
@@ -187,6 +201,8 @@ pickup_occurs_only_when_action_reaches_occupied_cell_test :: proc(t: ^testing.T)
 	testing.expect_value(t, gameplay.player.score, SCORE_ITEM_PICKUP)
 }
 
+// Verifies treasure collection requests the shared item sound exactly once at
+// action completion.
 @(test)
 treasure_requests_one_item_sound_on_action_completion_test :: proc(t: ^testing.T) {
 	position := Grid_Position {3, 3}
@@ -194,12 +210,12 @@ treasure_requests_one_item_sound_on_action_completion_test :: proc(t: ^testing.T
 	gameplay.player.energy = PLAYER_START_ENERGY
 	gameplay.level.data.treasure[position.x][position.y] = 2
 
-	before_completion := advance_gameplay_simulation(
+	before_completion := run_gameplay_ticks(
 		&gameplay,
-		f64(MOVEMENT_STEPS_PER_TILE - 1) * SIMULATION_STEP_SECONDS,
+		f64(MOVEMENT_STEPS_PER_TILE - 1) * GAMEPLAY_TICK_SECONDS,
 	)
 	testing.expect_value(t, before_completion.treasures_collected, 0)
-	frame := advance_gameplay_simulation(&gameplay, SIMULATION_STEP_SECONDS)
+	frame := run_gameplay_ticks(&gameplay, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, frame.treasures_collected, 1)
 	testing.expect_value(t, frame.items_collected, 0)
 	testing.expect_value(t, frame.item_sound_requests, 1)
@@ -207,26 +223,29 @@ treasure_requests_one_item_sound_on_action_completion_test :: proc(t: ^testing.T
 	testing.expect_value(t, gameplay.player.score, SCORE_TREASURE_PICKUP)
 }
 
+// Protects the legacy minimum score floor applied at every completed action.
 @(test)
 legacy_score_floor_applies_at_action_completion_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
 	gameplay.player.energy = PLAYER_START_ENERGY
 	gameplay.player.score = 0
 
-	advance_gameplay_simulation(
+	run_gameplay_ticks(
 		&gameplay,
-		f64(MOVEMENT_STEPS_PER_TILE - 1) * SIMULATION_STEP_SECONDS,
+		f64(MOVEMENT_STEPS_PER_TILE - 1) * GAMEPLAY_TICK_SECONDS,
 	)
 	testing.expect_value(t, gameplay.player.score, 0)
-	advance_gameplay_simulation(&gameplay, SIMULATION_STEP_SECONDS)
+	run_gameplay_ticks(&gameplay, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, gameplay.player.score, SCORE_BOMB_COST)
 }
 
+// Confirms pickup timing, scoring, audio requests, and resulting player state are
+// independent of render frequency.
 @(test)
 pickup_timing_is_render_rate_independent_test :: proc(t: ^testing.T) {
-	at_30_fps := run_pickup_timing_simulation(30, 1)
-	at_60_fps := run_pickup_timing_simulation(60, 1)
-	at_240_fps := run_pickup_timing_simulation(240, 1)
+	at_30_fps := run_pickup_timing_scenario(30, 1)
+	at_60_fps := run_pickup_timing_scenario(60, 1)
+	at_240_fps := run_pickup_timing_scenario(240, 1)
 
 	testing.expect_value(t, at_30_fps, at_60_fps)
 	testing.expect_value(t, at_60_fps, at_240_fps)
@@ -238,8 +257,10 @@ pickup_timing_is_render_rate_independent_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, at_60_fps.item_cell, u8(0))
 }
 
+// Verifies the HUD snapshot reflects gameplay values and fixed legacy icon and
+// score positions.
 @(test)
-hud_snapshot_matches_runtime_state_and_legacy_positions_test :: proc(t: ^testing.T) {
+hud_snapshot_matches_gameplay_state_and_legacy_positions_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
 	gameplay.player.lives = 3
 	gameplay.player.energy = 6

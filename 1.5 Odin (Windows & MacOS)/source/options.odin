@@ -3,11 +3,15 @@ package caverace
 import "core:fmt"
 import "core:os"
 
+// Launch_Options stores the two legacy compatibility switches parsed once and
+// then borrowed by application and gameplay update policy.
 Launch_Options :: struct {
 	cheats_enabled: bool,
 	slow_mode:      bool,
 }
 
+// parse_launch_options recognizes the two legacy command-line switches once at
+// startup and reports unknown arguments without failing the launch.
 parse_launch_options :: proc() -> Launch_Options {
 	options: Launch_Options
 
@@ -25,6 +29,8 @@ parse_launch_options :: proc() -> Launch_Options {
 	return options
 }
 
+// print_launch_options reports usage and active compatibility modes after
+// parsing, before platform initialization begins.
 print_launch_options :: proc(options: Launch_Options) {
 	if len(os.args) == 1 {
 		fmt.println()
@@ -38,9 +44,9 @@ print_launch_options :: proc(options: Launch_Options) {
 
 	if options.slow_mode {
 		fmt.printf(
-			"Slow mode enabled: %d FPS rendering, %d Hz simulation.\n",
+			"Slow mode enabled: %d FPS rendering, %d Hz gameplay.\n",
 			SLOW_RENDER_FPS,
-			SIMULATION_HZ,
+			GAMEPLAY_TICK_HZ,
 		)
 	}
 }

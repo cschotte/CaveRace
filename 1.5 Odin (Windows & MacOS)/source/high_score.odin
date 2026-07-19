@@ -15,25 +15,34 @@ HIGH_SCORE_INPUT_Y     :: 316
 HIGH_SCORE_INPUT_SIZE  :: 14
 HIGH_SCORE_INPUT_SCORE_X :: 465
 
+// High_Score_Name stores a validated, zero-terminated fixed-capacity name for
+// rendering and the on-disk leaderboard format.
 High_Score_Name :: struct {
 	bytes:  [HIGH_SCORE_NAME_CAPACITY]u8,
 	length: int,
 }
 
+// High_Score_Entry pairs one normalized name with its unsigned persisted score.
 High_Score_Entry :: struct {
 	name:  High_Score_Name,
 	score: u64,
 }
 
+// High_Score_Table owns the fixed, descending leaderboard shared by screen logic
+// and persistence.
 High_Score_Table :: struct {
 	entries: [HIGH_SCORE_ENTRY_COUNT]High_Score_Entry,
 }
 
+// High_Score_Mode distinguishes passive table viewing from an active qualifying
+// name-entry session.
 High_Score_Mode :: enum {
 	Viewing,
 	Entering_Name,
 }
 
+// High_Score_State owns the current table and entry workflow while borrowing the
+// application-owned persistence path for the Game lifetime.
 High_Score_State :: struct {
 	table:         High_Score_Table,
 	mode:          High_Score_Mode,
@@ -43,11 +52,15 @@ High_Score_State :: struct {
 	storage_path:  string,
 }
 
+// High_Score_Update_Result reports screen dismissal and whether a confirmed name
+// changed the table and therefore requires persistence.
 High_Score_Update_Result :: struct {
 	back_requested: bool,
 	table_changed:  bool,
 }
 
+// high_score_character normalizes one accepted ASCII rune for deterministic
+// fixed-size name entry and rejects unsupported input from the platform layer.
 high_score_character :: proc(character: rune) -> (normalized: u8, ok: bool) {
 	if character >= 'a' && character <= 'z' {
 		return u8(character - 'a' + 'A'), true
@@ -58,6 +71,8 @@ high_score_character :: proc(character: rune) -> (normalized: u8, ok: bool) {
 	return 0, false
 }
 
+// append_high_score_character appends one normalized character while enforcing
+// the legacy name limit during text input and default-table construction.
 append_high_score_character :: proc(name: ^High_Score_Name, character: rune) -> bool {
 	if name.length >= HIGH_SCORE_NAME_MAX do return false
 	normalized, ok := high_score_character(character)
@@ -68,6 +83,8 @@ append_high_score_character :: proc(name: ^High_Score_Name, character: rune) -> 
 	return true
 }
 
+// remove_high_score_character applies one backspace to the fixed name buffer
+// while preserving its C-compatible zero terminator.
 remove_high_score_character :: proc(name: ^High_Score_Name) -> bool {
 	if name.length == 0 do return false
 	name.length -= 1
@@ -75,6 +92,8 @@ remove_high_score_character :: proc(name: ^High_Score_Name) -> bool {
 	return true
 }
 
+// set_high_score_name replaces a fixed name from trusted defaults or fallback
+// text using the same normalization rules as interactive entry.
 set_high_score_name :: proc(name: ^High_Score_Name, text: string) {
 	name^ = {}
 	for character in text {
@@ -83,10 +102,14 @@ set_high_score_name :: proc(name: ^High_Score_Name, text: string) {
 	}
 }
 
+// high_score_name_string exposes the occupied bytes as a borrowed Odin string
+// for comparisons, persistence tests, and other non-C consumers.
 high_score_name_string :: proc(name: ^High_Score_Name) -> string {
 	return string(name.bytes[:name.length])
 }
 
+// high_score_name_is_valid verifies length, allowed characters, and trailing
+// zero bytes before persisted data is accepted or written.
 high_score_name_is_valid :: proc(name: ^High_Score_Name) -> bool {
 	if name.length < 0 || name.length > HIGH_SCORE_NAME_MAX do return false
 	for index in 0 ..< name.length {
@@ -105,6 +128,8 @@ high_score_name_is_valid :: proc(name: ^High_Score_Name) -> bool {
 	return true
 }
 
+// default_high_score_table builds the original leaderboard used on first run
+// and whenever stored data is missing or invalid.
 default_high_score_table :: proc() -> High_Score_Table {
 	table: High_Score_Table
 	defaults := [HIGH_SCORE_ENTRY_COUNT]struct {
@@ -127,6 +152,8 @@ default_high_score_table :: proc() -> High_Score_Table {
 	return table
 }
 
+// high_score_table_is_valid checks every entry and descending score order at
+// the persistence boundary.
 high_score_table_is_valid :: proc(table: ^High_Score_Table) -> bool {
 	for entry_index in 0 ..< HIGH_SCORE_ENTRY_COUNT {
 		entry := &table.entries[entry_index]
@@ -138,6 +165,8 @@ high_score_table_is_valid :: proc(table: ^High_Score_Table) -> bool {
 	return true
 }
 
+// high_score_insertion_index finds the stable position for a completed score;
+// existing ties remain ahead to match the legacy ordering.
 high_score_insertion_index :: proc(
 	table: ^High_Score_Table,
 	score: u64,
@@ -149,6 +178,8 @@ high_score_insertion_index :: proc(
 	return HIGH_SCORE_ENTRY_COUNT, false
 }
 
+// insert_high_score shifts lower entries and adds a qualifying score after the
+// player confirms their name.
 insert_high_score :: proc(
 	table: ^High_Score_Table,
 	name: High_Score_Name,
@@ -163,11 +194,15 @@ insert_high_score :: proc(
 	return true
 }
 
+// completed_run_score converts the signed gameplay score to the unsigned file
+// representation while safely mapping non-positive values to zero.
 completed_run_score :: proc(run: Completed_Run) -> u64 {
 	if run.score <= 0 do return 0
 	return u64(run.score)
 }
 
+// open_high_scores prepares viewing or name-entry mode whenever Game routes to
+// the leaderboard, optionally carrying a just-completed run.
 open_high_scores :: proc(state: ^High_Score_State, completed_run: Maybe(Completed_Run)) {
 	state.mode = .Viewing
 	state.input_name = {}
@@ -182,6 +217,8 @@ open_high_scores :: proc(state: ^High_Score_State, completed_run: Maybe(Complete
 	}
 }
 
+// update_high_scores handles one frame of dismissal or fixed-buffer name entry
+// and reports when persistence is required.
 update_high_scores :: proc(
 	state: ^High_Score_State,
 	input: Game_Input,

@@ -2,6 +2,8 @@ package caverace
 
 import "core:fmt"
 
+// main prints launch information, delegates the complete application lifetime,
+// and reports the normal shutdown message to the terminal.
 main :: proc() {
 	fmt.println("CaveRace (1.5) Copyright 1997-2026 NavaTron B.V.")
 

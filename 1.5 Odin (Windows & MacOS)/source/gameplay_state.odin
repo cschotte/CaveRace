@@ -2,7 +2,7 @@ package caverace
 
 import "core:math/rand"
 
-// Fixed gameplay capacities and legacy rule values. Runtime storage is kept
+// Fixed gameplay capacities and legacy rule values. Active state is kept
 // inline and bounded so ownership and memory use remain visible in Gameplay.
 MAX_ENEMIES :: 16
 MAX_BOMBS   :: 4
@@ -67,18 +67,22 @@ PLAYER_DIRECTION_FRAME_COUNT :: 4
 
 #assert(MAX_BOMBS == PLAYER_MAX_BOMB_CAPACITY)
 #assert(MOVEMENT_STEPS_PER_TILE * MOVEMENT_PIXELS_PER_STEP == MAP_TILE_SIZE)
-#assert(MAX_SIMULATION_STEPS_PER_FRAME < MOVEMENT_STEPS_PER_TILE)
+#assert(MAX_GAMEPLAY_TICKS_PER_FRAME < MOVEMENT_STEPS_PER_TILE)
 #assert(PLAYER_IDLE_SPRITE < PLAYER_SPRITE_COUNT)
 #assert(PLAYER_RIGHT_FIRST_SPRITE + PLAYER_DIRECTION_FRAME_COUNT == PLAYER_SPRITE_COUNT)
 #assert(BOMB_TICKING_SPRITE < BOMB_SPRITE_COUNT)
 #assert(EXPLOSION_SET_3_FIRST_SPRITE + 4 < BOMB_SPRITE_COUNT)
 #assert(MAX_EXPLOSION_CELLS == 41)
 
+// Grid_Position stores integer map coordinates used by level data, movement,
+// occupancy, collisions, and rendering conversions.
 Grid_Position :: struct {
 	x: int,
 	y: int,
 }
 
+// Direction represents cardinal actor facing and movement, with None used for
+// idle or non-movement actions.
 Direction :: enum {
 	None,
 	Down,
@@ -87,6 +91,8 @@ Direction :: enum {
 	Left,
 }
 
+// Gameplay_Action is the single prioritized command selected at each sixteen-
+// step action boundary.
 Gameplay_Action :: enum {
 	None,
 	Place_Bomb,
@@ -96,6 +102,8 @@ Gameplay_Action :: enum {
 	Move_Left,
 }
 
+// Gameplay_Input_Buffer keeps held directions and latched edge-triggered actions
+// until the fixed gameplay clock reaches a safe consumption point.
 Gameplay_Input_Buffer :: struct {
 	move_down:     bool,
 	move_up:       bool,
@@ -105,15 +113,19 @@ Gameplay_Input_Buffer :: struct {
 	cheat_pending: [Cheat_Key]bool,
 }
 
-Gameplay_Simulation_State :: struct {
+// Gameplay_Tick_State persists the fixed-clock accumulator, current action
+// progress, contact guard, and queued input across render frames.
+Gameplay_Tick_State :: struct {
 	accumulator_seconds:    f64,
 	action_step:            int,
 	contact_damage_applied: bool,
 	input:                  Gameplay_Input_Buffer,
 }
 
-Gameplay_Simulation_Result :: struct {
-	steps_run:               int,
+// Gameplay_Tick_Result aggregates diagnostics and transient gameplay events from
+// all fixed ticks processed during one render-frame update.
+Gameplay_Tick_Result :: struct {
+	ticks_run:               int,
 	action_decisions:        int,
 	last_action:             Gameplay_Action,
 	bomb_action_started:     bool,
@@ -133,6 +145,8 @@ Gameplay_Simulation_Result :: struct {
 	cheat_pressed:           [Cheat_Key]bool,
 }
 
+// Player_State owns run-wide resources together with current level position,
+// interpolation, facing, upgrades, and score.
 Player_State :: struct {
 	position:      Grid_Position,
 	move_from:     Grid_Position,
@@ -146,6 +160,8 @@ Player_State :: struct {
 	score:         int,
 }
 
+// Enemy_State represents one fixed enemy slot, including activity, sprite kind,
+// and the interpolation endpoints for its current movement action.
 Enemy_State :: struct {
 	active:        bool,
 	kind:          u8,
@@ -156,6 +172,8 @@ Enemy_State :: struct {
 	direction:     Direction,
 }
 
+// Bomb_State represents one fixed bomb slot from placement through fuse expiry;
+// its array index also owns the corresponding explosion slot.
 Bomb_State :: struct {
 	active:       bool,
 	position:     Grid_Position,
@@ -163,6 +181,8 @@ Bomb_State :: struct {
 	power:        int,
 }
 
+// Explosion_Cell_Kind selects the directional sprite variant used for one cell
+// of a precomputed blast footprint.
 Explosion_Cell_Kind :: enum u8 {
 	Center,
 	Down,
@@ -171,6 +191,8 @@ Explosion_Cell_Kind :: enum u8 {
 	Right,
 }
 
+// Explosion_Cell pairs one affected map position with its directional rendering
+// role inside an Explosion_State footprint.
 Explosion_Cell :: struct {
 	position: Grid_Position,
 	kind:     Explosion_Cell_Kind,
@@ -185,14 +207,17 @@ Explosion_State :: struct {
 	cell_count: int,
 }
 
-Level_Runtime_Error :: enum {
+// Level_Setup_Error describes spawn-data failures detected before loaded map
+// data may become active mutable gameplay state.
+Level_Setup_Error :: enum {
 	None,
 	Missing_Player,
 	Multiple_Players,
 	Too_Many_Enemies,
 }
 
-// Gameplay_State describes the lifecycle within the Playing screen.
+// Gameplay_State describes the lifecycle within the Playing screen and selects
+// the update, loading, message, and transition behavior used each frame.
 Gameplay_State :: enum {
 	Load_Level,
 	Playing,
@@ -202,6 +227,8 @@ Gameplay_State :: enum {
 	Load_Failed,
 }
 
+// Gameplay owns one complete run: lifecycle state, loaded level, player progress,
+// bounded active entities, fixed clock, and session random generator.
 Gameplay :: struct {
 	state:                    Gameplay_State,
 	level:                    Level,
@@ -213,22 +240,28 @@ Gameplay :: struct {
 	bombs:                    [MAX_BOMBS]Bomb_State,
 	explosions:               [MAX_BOMBS]Explosion_State,
 	bomb_occupancy:           Map_Grid,
-	simulation:               Gameplay_Simulation_State,
+	tick_state:               Gameplay_Tick_State,
 	random_state:             rand.Xoshiro256_Random_State,
 	// Enabled only after a validated level has supplied its enemy objective.
 	level_completion_enabled: bool,
 }
 
+// Completed_Run carries the final score across the one-time transition from
+// gameplay to high-score qualification.
 Completed_Run :: struct {
 	score: int,
 }
 
+// Gameplay_Frame_Result returns screen-routing requests, fixed-tick events, and
+// an optional completed run from update_gameplay.
 Gameplay_Frame_Result :: struct {
 	back_requested: bool,
-	simulation:     Gameplay_Simulation_Result,
+	ticks:          Gameplay_Tick_Result,
 	completed_run:  Maybe(Completed_Run),
 }
 
+// init_gameplay creates a fresh run with default player resources and a new
+// random seed; Game calls it at application startup and for Start Game.
 init_gameplay :: proc(gameplay: ^Gameplay) {
 	gameplay^ = Gameplay {
 		state  = .Load_Level,
@@ -237,16 +270,21 @@ init_gameplay :: proc(gameplay: ^Gameplay) {
 	seed_gameplay_random(gameplay, rand.uint64())
 }
 
+// is_in_map validates grid coordinates before any fixed map array is indexed.
 is_in_map :: proc(position: Grid_Position) -> bool {
 	return position.x >= 0 && position.x < MAP_WIDTH &&
 	       position.y >= 0 && position.y < MAP_HEIGHT
 }
 
+// grid_position_to_screen converts a valid map cell origin to its fixed pixel
+// position for movement interpolation and rendering.
 grid_position_to_screen :: proc(position: Grid_Position) -> (x, y: i32) {
 	return i32(MAP_OFFSET_X + position.x * MAP_TILE_SIZE),
 	       i32(MAP_OFFSET_Y + position.y * MAP_TILE_SIZE)
 }
 
+// new_player_state returns the run-wide defaults used whenever a new game is
+// initialized before the first level is loaded.
 new_player_state :: proc() -> Player_State {
 	return Player_State {
 		lives         = PLAYER_START_LIVES,
@@ -256,8 +294,8 @@ new_player_state :: proc() -> Player_State {
 	}
 }
 
-// The legacy game keeps lives and score between attempts/levels, but restores
-// the per-level energy and bomb upgrades whenever the map is reloaded.
+// reset_player_for_level_start preserves run-wide lives and score while restoring
+// energy and bomb upgrades before a retry or next-level load.
 reset_player_for_level_start :: proc(player: ^Player_State) {
 	player.move_from = player.position
 	player.move_to = player.position

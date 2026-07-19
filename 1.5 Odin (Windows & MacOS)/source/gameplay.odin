@@ -1,7 +1,7 @@
 package caverace
 
 // update_gameplay performs one non-blocking frame update. Playing-state logic
-// advances through the fixed-step accumulator; screen transitions remain
+// advances through the fixed-tick accumulator; screen transitions remain
 // immediate so menu/back input is responsive at any render rate.
 update_gameplay :: proc(
 	gameplay: ^Gameplay,
@@ -18,13 +18,13 @@ update_gameplay :: proc(
 	switch gameplay.state {
 	case .Load_Level:
 	case .Playing:
-		buffer_gameplay_input(&gameplay.simulation, input)
-		result.simulation = advance_gameplay_simulation(
+		queue_gameplay_input(&gameplay.tick_state, input)
+		result.ticks = run_gameplay_ticks(
 			gameplay,
 			frame_seconds,
 			cheats_enabled,
 		)
-		result.completed_run = resolve_gameplay_outcome(gameplay, result.simulation)
+		result.completed_run = resolve_gameplay_outcome(gameplay, result.ticks)
 
 	case .Dead:
 		if input.confirm {

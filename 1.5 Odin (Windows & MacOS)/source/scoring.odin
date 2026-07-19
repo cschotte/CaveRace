@@ -1,7 +1,7 @@
 package caverace
 
 // Score_Event keeps every legacy score mutation in one small rule set so
-// simulation and lifecycle code do not duplicate thresholds or arithmetic.
+// gameplay updates and lifecycle code do not duplicate thresholds or arithmetic.
 Score_Event :: enum {
 	Bomb_Placed,
 	Item_Collected,
@@ -12,6 +12,8 @@ Score_Event :: enum {
 	Action_Floor,
 }
 
+// apply_score_event centralizes every legacy score mutation and is called by
+// gameplay systems exactly where the corresponding event is committed.
 apply_score_event :: proc(player: ^Player_State, event: Score_Event) {
 	switch event {
 	case .Bomb_Placed:
