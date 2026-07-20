@@ -62,6 +62,54 @@ enemy_direction_from_roll :: proc(roll: int) -> Direction {
 	return .None
 }
 
+manhattan_distance :: proc(a, b: Grid_Position) -> int {
+	return abs(a.x - b.x) + abs(a.y - b.y)
+}
+
+opposite_direction :: proc(direction: Direction) -> Direction {
+	switch direction {
+	case .Down:  return .Up
+	case .Up:    return .Down
+	case .Right: return .Left
+	case .Left:  return .Right
+	case .None:  return .None
+	}
+	return .None
+}
+
+enemy_pursuit_chance :: proc(gameplay: ^Gameplay) -> f32 {
+	chance := level_metadata(gameplay.level_index).enemy_pursuit_chance
+	if gameplay.difficulty == .Assisted do chance *= 0.5
+	return clamp(chance, 0, 0.35)
+}
+
+// pursuit_direction selects only walkable steps that reduce Manhattan
+// distance. It is called after a metadata chance succeeds, so early caves keep
+// the original fully random behavior.
+pursuit_direction :: proc(gameplay: ^Gameplay, enemy: ^Enemy_State) -> Direction {
+	directions := [4]Direction{.Down, .Up, .Right, .Left}
+	candidates: [4]Direction
+	candidate_count := 0
+	reverse_candidate := Direction.None
+	reverse := opposite_direction(enemy.direction)
+	current_distance := manhattan_distance(enemy.position, gameplay.player.position)
+	for direction in directions {
+		delta := direction_delta(direction)
+		target := Grid_Position{enemy.position.x + delta.x, enemy.position.y + delta.y}
+		if is_walkable(&gameplay.level.data, &gameplay.bomb_occupancy, target) &&
+		   manhattan_distance(target, gameplay.player.position) < current_distance {
+			if direction == reverse {
+				reverse_candidate = direction
+				continue
+			}
+			candidates[candidate_count] = direction
+			candidate_count += 1
+		}
+	}
+	if candidate_count == 0 do return reverse_candidate
+	return candidates[gameplay_random_max(gameplay, candidate_count)]
+}
+
 // begin_enemy_action chooses the enemy's target cell for the next movement
 // action while preserving its current cell when the destination is blocked.
 begin_enemy_action :: proc(
@@ -91,7 +139,14 @@ begin_enemy_actions :: proc(gameplay: ^Gameplay) {
 	for &enemy in enemy_slots(gameplay) {
 		if !enemy.active do continue
 		roll := gameplay_random_max(gameplay, 4)
-		begin_enemy_action(gameplay, &enemy, enemy_direction_from_roll(roll))
+		direction := enemy_direction_from_roll(roll)
+		chance := enemy_pursuit_chance(gameplay)
+		if chance > 0 && gameplay_random_max(gameplay, 1000) < int(chance * 1000) {
+			if pursued := pursuit_direction(gameplay, &enemy); pursued != .None {
+				direction = pursued
+			}
+		}
+		begin_enemy_action(gameplay, &enemy, direction)
 	}
 }
 

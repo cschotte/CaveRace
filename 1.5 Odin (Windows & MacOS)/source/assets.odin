@@ -81,6 +81,8 @@ Sound_Assets :: struct {
 	hit:     rl.Sound,
 	squish:  rl.Sound,
 	ticking: rl.Sound,
+	menu:    rl.Sound,
+	record:  rl.Sound,
 }
 
 // Sprite_Assets groups the vertical sprite sheets consumed by level, actor,
@@ -163,8 +165,13 @@ load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true) 
 		assets.sounds.hit     = load_resource_sound(resource_root, "sounds/item.wav")
 		assets.sounds.squish  = load_resource_sound(resource_root, "sounds/squish.wav")
 		assets.sounds.ticking = load_resource_sound(resource_root, "sounds/ticking.wav")
+		assets.sounds.menu    = load_resource_sound(resource_root, "sounds/menu.wav")
+		assets.sounds.record  = load_resource_sound(resource_root, "sounds/menu.wav")
 		if rl.IsSoundValid(assets.sounds.hit) {
 			rl.SetSoundPitch(assets.sounds.hit, 0.55)
+		}
+		if rl.IsSoundValid(assets.sounds.record) {
+			rl.SetSoundPitch(assets.sounds.record, 1.35)
 		}
 
 		for relative_path, cue in MUSIC_PATHS {
@@ -211,6 +218,8 @@ assets_are_valid :: proc(assets: ^Assets, require_audio := true) -> bool {
 		if !rl.IsSoundValid(assets.sounds.hit)     do return false
 		if !rl.IsSoundValid(assets.sounds.squish)  do return false
 		if !rl.IsSoundValid(assets.sounds.ticking) do return false
+		if !rl.IsSoundValid(assets.sounds.menu)    do return false
+		if !rl.IsSoundValid(assets.sounds.record)  do return false
 		for music in assets.music {
 			if !rl.IsMusicValid(music) do return false
 		}
@@ -272,6 +281,8 @@ unload_assets :: proc(assets: ^Assets) {
 	unload_sound(assets.sounds.hit)
 	unload_sound(assets.sounds.squish)
 	unload_sound(assets.sounds.ticking)
+	unload_sound(assets.sounds.menu)
+	unload_sound(assets.sounds.record)
 	for music in assets.music {
 		unload_music(music)
 	}

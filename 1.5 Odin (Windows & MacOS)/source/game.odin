@@ -7,6 +7,14 @@ App_Screen :: enum {
 	Playing,
 }
 
+Rumble_Event :: enum {
+	None,
+	Light,
+	Damage,
+	Explosion,
+	Victory,
+}
+
 // Game owns all platform-independent screen, menu, settings and run state.
 // Filesystem paths and raylib resources remain Application-owned.
 Game :: struct {
@@ -18,6 +26,7 @@ Game :: struct {
 	settings:              Settings,
 	last_input_device:     Input_Device,
 	feedback:              Game_Feedback,
+	effects:               Game_Effects,
 	cheats_enabled:        bool,
 	pause:                 Pause_State,
 	debug_overlay_visible: bool,
@@ -29,6 +38,16 @@ Game_Update_Result :: struct {
 	settings_changed:     bool,
 	display_changed:      bool,
 	quit_requested:       bool,
+	menu_sound_requests:  int,
+	record_sound_requests: int,
+	victory_started:      bool,
+	rumble:               Rumble_Event,
+}
+
+menu_audio_input :: proc(input: Game_Input) -> bool {
+	return input.confirm || input.back || input.pause_pressed ||
+	       input.menu_up_pressed || input.menu_down_pressed ||
+	       input.menu_left_pressed || input.menu_right_pressed
 }
 
 init_game :: proc(
@@ -52,6 +71,7 @@ init_game :: proc(
 start_new_game :: proc(game: ^Game) {
 	init_gameplay(&game.gameplay, game.settings.difficulty)
 	game.gameplay.mode = .Campaign
+	game.effects = {}
 	game.pause = {}
 	game.screen = .Playing
 }
@@ -60,6 +80,7 @@ start_practice_game :: proc(game: ^Game, level_index: int) {
 	init_gameplay(&game.gameplay, game.settings.difficulty)
 	game.gameplay.mode = .Practice
 	game.gameplay.level_index = clamp(level_index, 0, LEVEL_COUNT - 1)
+	game.effects = {}
 	game.pause = {}
 	game.screen = .Playing
 }
@@ -68,6 +89,7 @@ start_game_tutorial :: proc(game: ^Game) {
 	game.gameplay.difficulty = game.settings.difficulty
 	setup_tutorial_level(&game.gameplay, &game.tutorial)
 	game.gameplay.mode = .Tutorial
+	game.effects = {}
 	game.pause = {}
 	game.screen = .Tutorial
 }
@@ -76,6 +98,7 @@ show_main_menu :: proc(game: ^Game) {
 	begin_main_menu(&game.front_end)
 	begin_menu(&game.menu)
 	game.pause = {}
+	game.effects = {}
 	game.screen = .Main_Menu
 }
 
@@ -105,6 +128,7 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 	)
 	game.feedback.reduced_flashes = game.settings.reduced_flashes
 	advance_game_feedback(&game.feedback, frame_seconds)
+	advance_game_effects(&game.effects, frame_seconds)
 	when ODIN_DEBUG {
 		if input.debug_toggle_pressed {
 			game.debug_overlay_visible = !game.debug_overlay_visible
@@ -112,6 +136,8 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 	}
 	previous_screen := game.screen
 	previous_gameplay_state := game.gameplay.state
+	previous_pause_open := game.pause.open
+	menu_audio_context := previous_screen == .Main_Menu || game.pause.open
 
 	switch game.screen {
 	case .Intro:
@@ -214,18 +240,46 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 	}
 
 	request_gameplay_feedback(&game.feedback, &result.gameplay.ticks)
+	if menu_audio_context && menu_audio_input(input) {
+		result.menu_sound_requests = 1
+	}
+	if !previous_pause_open && game.pause.open do result.menu_sound_requests = 1
 	if previous_screen == .Playing && game.screen == .Playing &&
 	   previous_gameplay_state != .Won && game.gameplay.state == .Won &&
 	   game.gameplay.mode == .Campaign && !game.cheats_enabled {
 		record := record_for_profile(&game.settings.records, game.gameplay.difficulty)
-		result.settings_changed = update_level_record(record, &game.gameplay.level_result) ||
-			result.settings_changed
+		if update_level_record(record, &game.gameplay.level_result) {
+			result.settings_changed = true
+			result.record_sound_requests = 1
+		}
 	}
 	if previous_screen == .Playing && game.screen == .Playing &&
 	   previous_gameplay_state != game.gameplay.state &&
 	   (game.gameplay.state == .Game_Over || game.gameplay.state == .Game_Won) {
-		result.settings_changed = update_local_record(game) || result.settings_changed
+		if update_local_record(game) {
+			result.settings_changed = true
+			result.record_sound_requests = 1
+		}
 	}
+	result.victory_started = previous_screen == .Playing && game.screen == .Playing &&
+		previous_gameplay_state != .Game_Won && game.gameplay.state == .Game_Won
+	if result.victory_started {
+		result.rumble = .Victory
+	} else if result.gameplay.ticks.player_damaged {
+		result.rumble = .Damage
+	} else if result.gameplay.ticks.explosions_started > 0 {
+		result.rumble = .Explosion
+	} else if result.gameplay.ticks.items_collected > 0 ||
+	          result.gameplay.ticks.treasures_collected > 0 {
+		result.rumble = .Light
+	}
+	request_game_effects(
+		&game.effects,
+		&game.gameplay,
+		&result.gameplay.ticks,
+		result.victory_started,
+		game.settings.reduced_flashes,
+	)
 	screen_changed := game.screen != previous_screen
 	gameplay_state_changed := (previous_screen == .Playing || previous_screen == .Tutorial) &&
 		game.screen == previous_screen && game.gameplay.state != previous_gameplay_state

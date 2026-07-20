@@ -3,6 +3,8 @@ package caverace
 import "core:fmt"
 import rl "vendor:raylib"
 
+MUSIC_CROSSFADE_SECONDS :: 0.45
+
 // Application owns platform resources and allocated paths for the complete
 // process lifetime managed by run_application.
 Application :: struct {
@@ -12,6 +14,8 @@ Application :: struct {
 	settings_path: string,
 	audio_ready:   bool,
 	active_music:  Maybe(Music_Cue),
+	outgoing_music: Maybe(Music_Cue),
+	music_fade_elapsed: f64,
 	input_poll:    Input_Poll_State,
 	canvas:        rl.RenderTexture2D,
 	applied_display_mode: Display_Mode,
@@ -110,8 +114,9 @@ run_application :: proc(options: Launch_Options) -> bool {
 			}
 		}
 		if app.audio_ready {
-			update_game_music(&app)
+			update_game_music(&app, frame_seconds)
 			play_frame_audio(&app.assets, &update_result)
+			apply_frame_rumble(&app, update_result.rumble)
 		}
 
 		draw_application_frame(&app)
@@ -141,6 +146,10 @@ draw_application_frame :: proc(app: ^Application) {
 	rl.EndTextureMode()
 
 	destination := presentation_rectangle(int(rl.GetScreenWidth()), int(rl.GetScreenHeight()))
+	shake_x, shake_y := screen_shake_offset(app.game.feedback, app.game.settings.screen_shake)
+	presentation_scale := destination.width / WINDOW_WIDTH
+	destination.x += f32(shake_x) * presentation_scale
+	destination.y += f32(shake_y) * presentation_scale
 	source := rl.Rectangle {
 		width  = WINDOW_WIDTH,
 		height = -WINDOW_HEIGHT,
@@ -202,30 +211,51 @@ music_gain_for_game :: proc(game: ^Game) -> f32 {
 	return 1
 }
 
+music_crossfade_gains :: proc(elapsed_seconds: f64) -> (incoming, outgoing: f32) {
+	progress := f32(clamp(elapsed_seconds / MUSIC_CROSSFADE_SECONDS, 0, 1))
+	return progress, 1 - progress
+}
+
 // update_game_music switches tracks only when the requested cue changes and
 // services the active raylib stream every frame.
-update_game_music :: proc(app: ^Application) {
+update_game_music :: proc(app: ^Application, frame_seconds: f64) {
 	desired := music_cue_for_game(&app.game)
 	if active, ok := app.active_music.?; ok {
-		if active == desired {
-			rl.SetMusicVolume(
-				app.assets.music[active],
-				music_gain_for_game(&app.game) * f32(app.game.settings.music_volume) / 100,
-			)
-			rl.UpdateMusicStream(app.assets.music[active])
-			return
+		if active != desired {
+			if outgoing, outgoing_ok := app.outgoing_music.?; outgoing_ok {
+				rl.StopMusicStream(app.assets.music[outgoing])
+			}
+			app.outgoing_music = active
+			app.music_fade_elapsed = 0
+			app.assets.music[desired].looping = music_cue_loops(desired)
+			rl.SetMusicVolume(app.assets.music[desired], 0)
+			rl.PlayMusicStream(app.assets.music[desired])
+			app.active_music = desired
 		}
-		rl.StopMusicStream(app.assets.music[active])
+	} else {
+		app.assets.music[desired].looping = music_cue_loops(desired)
+		rl.PlayMusicStream(app.assets.music[desired])
+		app.active_music = desired
 	}
 
-	app.assets.music[desired].looping = music_cue_loops(desired)
-	rl.SetMusicVolume(
-		app.assets.music[desired],
-		music_gain_for_game(&app.game) * f32(app.game.settings.music_volume) / 100,
-	)
-	rl.PlayMusicStream(app.assets.music[desired])
-	app.active_music = desired
-	rl.UpdateMusicStream(app.assets.music[desired])
+	active, _ := app.active_music.?
+	base_gain := music_gain_for_game(&app.game) *
+		f32(clamp(app.game.settings.music_volume, 0, 100)) / 100
+	if outgoing, ok := app.outgoing_music.?; ok {
+		app.music_fade_elapsed += clamp(frame_seconds, 0, MAX_FRAME_DELTA_SECONDS)
+		incoming_gain, outgoing_gain := music_crossfade_gains(app.music_fade_elapsed)
+		rl.SetMusicVolume(app.assets.music[active], base_gain * incoming_gain)
+		rl.SetMusicVolume(app.assets.music[outgoing], base_gain * outgoing_gain)
+		rl.UpdateMusicStream(app.assets.music[active])
+		rl.UpdateMusicStream(app.assets.music[outgoing])
+		if app.music_fade_elapsed >= MUSIC_CROSSFADE_SECONDS {
+			rl.StopMusicStream(app.assets.music[outgoing])
+			app.outgoing_music = {}
+		}
+	} else {
+		rl.SetMusicVolume(app.assets.music[active], base_gain)
+		rl.UpdateMusicStream(app.assets.music[active])
+	}
 }
 
 // update_application advances platform-independent game state, then fulfills
@@ -307,28 +337,67 @@ apply_sfx_volume :: proc(assets: ^Assets, volume_percent: int) {
 	rl.SetSoundVolume(assets.sounds.hit, volume)
 	rl.SetSoundVolume(assets.sounds.squish, volume)
 	rl.SetSoundVolume(assets.sounds.ticking, volume)
+	rl.SetSoundVolume(assets.sounds.menu, volume)
+	rl.SetSoundVolume(assets.sounds.record, volume)
+}
+
+limited_audio_request_count :: proc(requested, maximum: int) -> int {
+	return clamp(requested, 0, maximum)
 }
 
 // play_frame_audio translates gameplay events from the latest update into
 // raylib sound calls after game state has advanced.
 play_frame_audio :: proc(assets: ^Assets, result: ^Game_Update_Result) {
-	for _ in 0 ..< result.gameplay.ticks.ticking_requests {
+	for _ in 0 ..< limited_audio_request_count(result.gameplay.ticks.ticking_requests, 1) {
+		if rl.IsSoundPlaying(assets.sounds.ticking) do break
 		rl.PlaySound(assets.sounds.ticking)
 	}
-	for _ in 0 ..< result.gameplay.ticks.contact_hit_requests {
+	for _ in 0 ..< limited_audio_request_count(result.gameplay.ticks.contact_hit_requests, 1) {
+		if rl.IsSoundPlaying(assets.sounds.hit) do break
 		rl.PlaySound(assets.sounds.hit)
 	}
-	for sound_index in 0 ..< result.gameplay.ticks.explosion_sound_count {
+	for sound_index in 0 ..< limited_audio_request_count(result.gameplay.ticks.explosion_sound_count, MAX_BOMBS) {
 		bomb_sound := result.gameplay.ticks.explosion_sound_indices[sound_index]
 		assert(bomb_sound < BOMB_SOUND_COUNT)
-		rl.PlaySound(assets.sounds.bomb[bomb_sound])
+		if !rl.IsSoundPlaying(assets.sounds.bomb[bomb_sound]) {
+			rl.PlaySound(assets.sounds.bomb[bomb_sound])
+		}
 	}
-	for _ in 0 ..< result.gameplay.ticks.squish_requests {
+	for _ in 0 ..< limited_audio_request_count(result.gameplay.ticks.squish_requests, 1) {
+		if rl.IsSoundPlaying(assets.sounds.squish) do break
 		rl.PlaySound(assets.sounds.squish)
 	}
-	for _ in 0 ..< result.gameplay.ticks.item_sound_requests {
+	for _ in 0 ..< limited_audio_request_count(result.gameplay.ticks.item_sound_requests, 1) {
+		if rl.IsSoundPlaying(assets.sounds.item) do break
 		rl.PlaySound(assets.sounds.item)
 	}
+	if result.menu_sound_requests > 0 && !rl.IsSoundPlaying(assets.sounds.menu) {
+		rl.PlaySound(assets.sounds.menu)
+	}
+	if result.record_sound_requests > 0 {
+		rl.StopSound(assets.sounds.record)
+		rl.PlaySound(assets.sounds.record)
+	}
+}
+
+rumble_parameters :: proc(event: Rumble_Event) -> (left, right, duration: f32) {
+	switch event {
+	case .None:      return 0, 0, 0
+	case .Light:     return 0.12, 0.18, 0.08
+	case .Damage:    return 0.55, 0.75, 0.18
+	case .Explosion: return 0.35, 0.55, 0.12
+	case .Victory:   return 0.35, 0.65, 0.45
+	}
+	return 0, 0, 0
+}
+
+apply_frame_rumble :: proc(app: ^Application, event: Rumble_Event) {
+	if event == .None || !app.controller_connected ||
+	   !app.game.settings.controller_rumble {
+		return
+	}
+	left, right, duration := rumble_parameters(event)
+	rl.SetGamepadVibration(GAMEPAD_INDEX, left, right, duration)
 }
 
 // target_render_fps selects the normal or legacy slow-mode presentation rate;

@@ -1,6 +1,6 @@
 package caverace
 
-SETTINGS_VERSION :: 2
+SETTINGS_VERSION :: 3
 
 Display_Mode :: enum {
 	Windowed,
@@ -14,6 +14,7 @@ Settings :: struct {
 	window_scale:       int,
 	reduced_flashes:    bool,
 	screen_shake:       int,
+	controller_rumble:  bool,
 	high_contrast_preview: bool,
 	pause_on_focus_loss: bool,
 	difficulty:         Difficulty_Profile,
@@ -31,6 +32,7 @@ default_settings :: proc() -> Settings {
 		window_scale         = 1,
 		reduced_flashes      = false,
 		screen_shake         = 50,
+		controller_rumble    = true,
 		high_contrast_preview = false,
 		pause_on_focus_loss  = true,
 		difficulty           = .Standard,

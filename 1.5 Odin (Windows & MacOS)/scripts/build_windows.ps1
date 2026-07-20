@@ -37,11 +37,24 @@ Copy-Item -Recurse (Join-Path $SourceDirectory "levels") (Join-Path $DistDirecto
 $RequiredFiles = @(
     $ExecutablePath,
     (Join-Path $DistDirectory "media/screens/game_border.png"),
+    (Join-Path $DistDirectory "media/screens/Score.png"),
     (Join-Path $DistDirectory "levels/10.bin")
 )
 foreach ($RequiredFile in $RequiredFiles) {
     if (-not (Test-Path $RequiredFile -PathType Leaf)) {
         throw "Package is missing required file: $RequiredFile"
+    }
+}
+
+if ($env:CAVERACE_WINDOWS_CERT_SHA1) {
+    & signtool sign /sha1 $env:CAVERACE_WINDOWS_CERT_SHA1 /fd SHA256 `
+        /tr "http://timestamp.digicert.com" /td SHA256 $ExecutablePath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Authenticode signing failed with exit code $LASTEXITCODE."
+    }
+    & signtool verify /pa /v $ExecutablePath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Authenticode verification failed with exit code $LASTEXITCODE."
     }
 }
 

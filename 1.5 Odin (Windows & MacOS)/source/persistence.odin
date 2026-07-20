@@ -17,6 +17,7 @@ Persisted_Settings :: struct {
 	window_scale:          int,
 	reduced_flashes:       bool,
 	screen_shake:          int,
+	controller_rumble:     bool,
 	high_contrast_preview: bool,
 	pause_on_focus_loss:    bool,
 	difficulty:            int,
@@ -46,6 +47,7 @@ settings_to_document :: proc(settings: Settings) -> Persisted_Settings {
 		window_scale             = settings.window_scale,
 		reduced_flashes          = settings.reduced_flashes,
 		screen_shake             = settings.screen_shake,
+		controller_rumble        = settings.controller_rumble,
 		high_contrast_preview    = settings.high_contrast_preview,
 		pause_on_focus_loss      = settings.pause_on_focus_loss,
 		difficulty               = int(settings.difficulty),
@@ -138,6 +140,9 @@ settings_from_document :: proc(document: Persisted_Settings) -> (Settings, bool)
 	settings.reduced_flashes = document.reduced_flashes
 	if document.screen_shake >= 0 && document.screen_shake <= 100 {
 		settings.screen_shake = document.screen_shake
+	}
+	if document.version >= 3 {
+		settings.controller_rumble = document.controller_rumble
 	}
 	settings.high_contrast_preview = document.high_contrast_preview
 	settings.pause_on_focus_loss = document.pause_on_focus_loss

@@ -34,6 +34,7 @@ Settings_Menu_Item :: enum {
 	Window_Scale,
 	Reduced_Flashes,
 	Screen_Shake,
+	Controller_Rumble,
 	High_Contrast,
 	Pause_On_Focus_Loss,
 	Difficulty,
@@ -120,6 +121,9 @@ adjust_setting :: proc(
 		value := clamp(settings.screen_shake + delta * 10, 0, 100)
 		changed = value != settings.screen_shake
 		settings.screen_shake = value
+	case .Controller_Rumble:
+		settings.controller_rumble = !settings.controller_rumble
+		changed = true
 	case .High_Contrast:
 		settings.high_contrast_preview = !settings.high_contrast_preview
 		changed = true

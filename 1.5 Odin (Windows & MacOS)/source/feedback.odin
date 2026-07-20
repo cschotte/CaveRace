@@ -3,6 +3,7 @@ package caverace
 TRANSITION_FADE_SECONDS :: 0.40
 FEEDBACK_FLASH_SECONDS  :: 0.14
 FEEDBACK_FLASH_ALPHA    :: 0.28
+SCREEN_SHAKE_SECONDS    :: 0.16
 
 // Feedback_Flash identifies the short gameplay overlay requested by the
 // highest-priority event in the current frame.
@@ -20,6 +21,9 @@ Game_Feedback :: struct {
 	flash_remaining:      f64,
 	flash:                Feedback_Flash,
 	reduced_flashes:      bool,
+	shake_remaining:      f64,
+	shake_phase:          f64,
+	shake_strength:       f32,
 }
 
 // contact_grace_player_visible drives a local, non-color-only blink that
@@ -57,6 +61,11 @@ request_gameplay_feedback :: proc(
 		feedback.flash = flash
 		feedback.flash_remaining = FEEDBACK_FLASH_SECONDS
 	}
+	if result.player_damaged || result.explosions_started > 0 {
+		feedback.shake_remaining = SCREEN_SHAKE_SECONDS
+		feedback.shake_strength = 1
+		if result.player_damaged do feedback.shake_strength = 1.35
+	}
 }
 
 // advance_game_feedback reduces active visual-effect timers once per render
@@ -65,7 +74,27 @@ advance_game_feedback :: proc(feedback: ^Game_Feedback, frame_seconds: f64) {
 	delta := clamp(frame_seconds, 0, MAX_FRAME_DELTA_SECONDS)
 	feedback.transition_remaining = max(feedback.transition_remaining - delta, 0)
 	feedback.flash_remaining = max(feedback.flash_remaining - delta, 0)
+	feedback.shake_remaining = max(feedback.shake_remaining - delta, 0)
+	feedback.shake_phase += delta * 60
 	if feedback.flash_remaining == 0 do feedback.flash = .None
+	if feedback.shake_remaining == 0 do feedback.shake_strength = 0
+}
+
+// screen_shake_offset returns at most two presentation pixels at 100% and is
+// exactly zero when disabled, inactive, or configured to zero.
+screen_shake_offset :: proc(feedback: Game_Feedback, intensity_percent: int) -> (i32, i32) {
+	intensity := clamp(intensity_percent, 0, 100)
+	if intensity == 0 || feedback.shake_remaining <= 0 do return 0, 0
+	amplitude := f32(2) * f32(intensity) / 100 * feedback.shake_strength
+	pixels := clamp(i32(amplitude + 0.5), 1, 2)
+	phase := int(feedback.shake_phase) % 4
+	switch phase {
+	case 0: return pixels, 0
+	case 1: return 0, -pixels
+	case 2: return -pixels, 0
+	case 3: return 0, pixels
+	}
+	return 0, 0
 }
 
 // transition_fade_alpha converts remaining transition time to the normalized

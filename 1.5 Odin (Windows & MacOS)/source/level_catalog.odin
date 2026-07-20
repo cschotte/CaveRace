@@ -23,16 +23,16 @@ Level_Metadata :: struct {
 }
 
 LEVEL_METADATA :: [LEVEL_COUNT]Level_Metadata {
-	{"Cave 1",  .Forest, .A, 4, 120, true,  0},
-	{"Cave 2",  .Winter, .A, 3, 150, true,  0},
-	{"Cave 3",  .Desert, .A, 3, 180, true,  0},
-	{"Cave 4",  .Oil,    .B, 3, 210, false, 0},
-	{"Cave 5",  .Lava,   .B, 3, 240, false, 0},
-	{"Cave 6",  .Forest, .B, 3, 270, false, 0},
-	{"Cave 7",  .Winter, .B, 3, 300, false, 0},
-	{"Cave 8",  .Desert, .C, 3, 330, false, 0},
-	{"Cave 9",  .Oil,    .C, 3, 360, false, 0},
-	{"Cave 10", .Lava,   .C, 5, 420, false, 0},
+	{"Cave 1",  .Forest, .A, 4, 120, true,  0.00},
+	{"Cave 2",  .Winter, .A, 3, 150, true,  0.00},
+	{"Cave 3",  .Desert, .A, 3, 180, true,  0.00},
+	{"Cave 4",  .Oil,    .B, 3, 210, false, 0.00},
+	{"Cave 5",  .Lava,   .B, 3, 240, false, 0.05},
+	{"Cave 6",  .Forest, .B, 3, 270, false, 0.10},
+	{"Cave 7",  .Winter, .B, 3, 300, false, 0.15},
+	{"Cave 8",  .Desert, .C, 3, 330, false, 0.20},
+	{"Cave 9",  .Oil,    .C, 3, 360, false, 0.25},
+	{"Cave 10", .Lava,   .C, 5, 420, false, 0.30},
 }
 
 #assert(len(LEVEL_METADATA) == LEVEL_COUNT)

@@ -21,6 +21,12 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 	case .Playing:
 		draw_gameplay(game, assets)
 	}
+	if game.screen == .Tutorial ||
+	   (game.screen == .Playing &&
+	    (game.gameplay.state == .Playing || game.gameplay.state == .Dead ||
+	     game.gameplay.state == .Game_Won)) {
+		draw_game_effects(&game.effects)
+	}
 	if (game.screen == .Playing || game.screen == .Tutorial) && game.pause.open {
 		draw_game_pause(game)
 	}
@@ -257,7 +263,7 @@ draw_settings_menu :: proc(game: ^Game) {
 			color = rl.GOLD
 			prefix = "> "
 		}
-		y := i32(92 + item_index * 24)
+		y := i32(88 + item_index * 22)
 		rl.DrawText(prefix, 163, y, 16, color)
 		switch item {
 		case .Music:              draw_ui_format(187, y, 16, color, "MUSIC                 %3d%%", settings.music_volume)
@@ -269,6 +275,7 @@ draw_settings_menu :: proc(game: ^Game) {
 		case .Window_Scale:       draw_ui_format(187, y, 16, color, "WINDOW SCALE            %dx", settings.window_scale)
 		case .Reduced_Flashes:    draw_ui_format(187, y, 16, color, "REDUCED FLASHES        %s", "ON" if settings.reduced_flashes else "OFF")
 		case .Screen_Shake:       draw_ui_format(187, y, 16, color, "SCREEN SHAKE          %3d%%", settings.screen_shake)
+		case .Controller_Rumble:  draw_ui_format(187, y, 16, color, "CONTROLLER RUMBLE      %s", "ON" if settings.controller_rumble else "OFF")
 		case .High_Contrast:      draw_ui_format(187, y, 16, color, "DANGER HATCHING        %s", "ON" if settings.high_contrast_preview else "OFF")
 		case .Pause_On_Focus_Loss: draw_ui_format(187, y, 16, color, "FOCUS PAUSE             %s", "ON" if settings.pause_on_focus_loss else "OFF")
 		case .Difficulty:         draw_ui_format(187, y, 16, color, "DIFFICULTY       %s", difficulty_label(settings.difficulty))

@@ -128,6 +128,8 @@ start_ready_explosions :: proc(
 
 	for bomb_index in 0 ..< MAX_BOMBS {
 		if !started[bomb_index] do continue
+		result.explosion_positions[result.explosions_started] =
+			gameplay.bombs[bomb_index].position
 		result.explosions_started += 1
 		assert(result.explosion_sound_count < MAX_BOMBS)
 		result.explosion_sound_indices[result.explosion_sound_count] =
@@ -151,6 +153,7 @@ apply_active_explosions_to_entities :: proc(
 		)
 		if ok && active_explosion_contains_cell(gameplay, position) {
 			enemy.active = false
+			result.enemy_destroyed_positions[result.enemies_destroyed] = position
 			apply_score_event(
 				&gameplay.player,
 				.Enemy_Destroyed,
