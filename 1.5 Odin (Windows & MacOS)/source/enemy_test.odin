@@ -101,6 +101,25 @@ enemy_direction_and_seed_are_deterministic_test :: proc(t: ^testing.T) {
 	}
 }
 
+@(test)
+cosmetic_random_draws_do_not_change_seeded_enemy_trace_test :: proc(t: ^testing.T) {
+	a, b: Gameplay
+	seed_gameplay_random(&a, 0xA11E_0001)
+	seed_gameplay_random(&b, 0xA11E_0001)
+
+	for _ in 0 ..< 64 {
+		_ = gameplay_cosmetic_random_max(&b, BOMB_SOUND_COUNT)
+	}
+	for _ in 0 ..< 128 {
+		testing.expect_value(
+			t,
+			gameplay_random_max(&a, 4),
+			gameplay_random_max(&b, 4),
+		)
+	}
+	testing.expect_value(t, a.run_seed, b.run_seed)
+}
+
 // Protects seeded enemy movement and random-state progression from render-rate
 // dependent behavior.
 @(test)

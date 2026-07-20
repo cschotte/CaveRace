@@ -14,18 +14,19 @@ Cheat_Key :: enum {
 // their mutations in one deterministic gameplay procedure. Bomb power is
 // capped because explosion storage is deliberately fixed to that safe limit.
 apply_gameplay_cheat :: proc(gameplay: ^Gameplay, cheat: Cheat_Key) {
+	tuning := gameplay_tuning(gameplay.difficulty)
 	switch cheat {
 	case .F1:
 		for &enemy in enemy_slots(gameplay) {
 			enemy.active = false
 		}
 	case .F2:
-		gameplay.player.lives = PLAYER_MAX_LIVES
-		gameplay.player.energy = PLAYER_MAX_ENERGY
+		gameplay.player.lives = tuning.player_max_lives
+		gameplay.player.energy = tuning.player_max_energy
 	case .F3:
-		gameplay.player.bomb_capacity = PLAYER_MAX_BOMB_CAPACITY
+		gameplay.player.bomb_capacity = tuning.player_max_bomb_capacity
 	case .F4:
-		if gameplay.player.bomb_power < PLAYER_MAX_BOMB_POWER {
+		if gameplay.player.bomb_power < tuning.player_max_bomb_power {
 			gameplay.player.bomb_power += 1
 		}
 	case .F5:

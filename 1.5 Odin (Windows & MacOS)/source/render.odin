@@ -16,6 +16,11 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 	}
 
 	draw_game_feedback(game.feedback)
+	when ODIN_DEBUG {
+		if game.screen == .Playing && game.debug_overlay_visible {
+			draw_debug_overlay(game)
+		}
+	}
 }
 
 // draw_game_pause keeps the active cave visible beneath a high-contrast
@@ -42,7 +47,7 @@ draw_game_pause :: proc() {
 		rl.GOLD,
 	)
 
-	prompt: cstring = "P / ESC / CONTROLLER START TO RESUME"
+	prompt: cstring = "P / CONTROLLER START TO RESUME"
 	prompt_size: i32 = 16
 	prompt_width := rl.MeasureText(prompt, prompt_size)
 	rl.DrawText(

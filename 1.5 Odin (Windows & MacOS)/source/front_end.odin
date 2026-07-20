@@ -10,13 +10,13 @@ FRONT_END_TRANSITION_SECONDS :: 0.5
 
 // Each story panel remains visible for the length of its matching music track.
 INTRO_IMAGE_SECONDS :: [INTRO_LAST_IMAGE - INTRO_FIRST_IMAGE + 1]f64 {
-	40.4742916666667,
-	31.4547083333333,
-	39.962375,
-	36.1744583333333,
-	32.3661666666667,
-	30.8662916666667,
-	9.18716666666667,
+	59.3,
+	48.992,
+	44.928,
+	53.68,
+	43.4226666666667,
+	39.3093333333333,
+	40.0866666666667,
 }
 
 // skip_intro_image advances immediately to the next story panel. Skipping the

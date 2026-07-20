@@ -14,6 +14,22 @@ advance_intro_for_test :: proc(front_end: ^Front_End_State, seconds: f64) -> boo
 }
 
 @(test)
+intro_panel_timing_matches_packaged_track_lengths_test :: proc(t: ^testing.T) {
+	expected_seconds := [7]f64 {
+		59.3,
+		48.992,
+		44.928,
+		53.68,
+		43.4226666666667,
+		39.3093333333333,
+		40.0866666666667,
+	}
+	for expected, panel_index in expected_seconds {
+		testing.expect_value(t, intro_image_seconds(panel_index), expected)
+	}
+}
+
+@(test)
 intro_advances_zero_through_six_then_completes_test :: proc(t: ^testing.T) {
 	front_end: Front_End_State
 	begin_intro(&front_end)
@@ -118,9 +134,9 @@ completed_intro_routes_to_main_menu_test :: proc(t: ^testing.T) {
 music_cues_follow_intro_menu_level_and_outcome_state_test :: proc(t: ^testing.T) {
 	game: Game
 	init_game(&game)
-	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Intro_Eldora)
+	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Intro_Space)
 	game.front_end.image_index = INTRO_LAST_IMAGE
-	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Intro_Protect)
+	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Intro_Bombs)
 
 	show_main_menu(&game)
 	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Main_Menu)
@@ -128,9 +144,9 @@ music_cues_follow_intro_menu_level_and_outcome_state_test :: proc(t: ^testing.T)
 
 	game.gameplay.level_index = 0
 	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Cave_A)
-	game.gameplay.level_index = 1
+	game.gameplay.level_index = 3
 	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Cave_B)
-	game.gameplay.level_index = 2
+	game.gameplay.level_index = 7
 	testing.expect_value(t, music_cue_for_game(&game), Music_Cue.Cave_C)
 
 	game.gameplay.state = .Won
@@ -144,6 +160,6 @@ music_cues_follow_intro_menu_level_and_outcome_state_test :: proc(t: ^testing.T)
 
 	testing.expect(t, music_cue_loops(.Main_Menu))
 	testing.expect(t, music_cue_loops(.Cave_A))
-	testing.expect(t, !music_cue_loops(.Intro_Eldora))
+	testing.expect(t, !music_cue_loops(.Intro_Space))
 	testing.expect(t, !music_cue_loops(.Level_Complete))
 }

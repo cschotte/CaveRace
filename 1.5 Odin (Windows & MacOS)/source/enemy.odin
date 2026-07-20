@@ -10,18 +10,33 @@ enemy_slots :: proc(gameplay: ^Gameplay) -> []Enemy_State {
 	return gameplay.enemies[:gameplay.enemy_count]
 }
 
-// seed_gameplay_random initializes the session-owned generator at startup and
-// lets deterministic tests replay enemy choices and sound selection.
+COSMETIC_RANDOM_SEED_XOR :: u64(0x9e3779b97f4a7c15)
+
+// seed_gameplay_random initializes independent session-owned AI and cosmetic
+// streams. Audio/visual variation can advance without changing enemy choices.
 seed_gameplay_random :: proc(gameplay: ^Gameplay, seed: u64) {
-	generator := rand.xoshiro256_random_generator(&gameplay.random_state)
-	rand.reset_u64(seed, generator)
+	gameplay.run_seed = seed
+	ai_generator := rand.xoshiro256_random_generator(&gameplay.ai_random_state)
+	rand.reset_u64(seed, ai_generator)
+	cosmetic_generator := rand.xoshiro256_random_generator(
+		&gameplay.cosmetic_random_state,
+	)
+	rand.reset_u64(seed ~ COSMETIC_RANDOM_SEED_XOR, cosmetic_generator)
 }
 
 // gameplay_random_max draws a bounded value from the session generator for
 // deterministic gameplay decisions that must not use global random state.
 gameplay_random_max :: proc(gameplay: ^Gameplay, upper_bound: int) -> int {
 	assert(upper_bound > 0)
-	generator := rand.xoshiro256_random_generator(&gameplay.random_state)
+	generator := rand.xoshiro256_random_generator(&gameplay.ai_random_state)
+	return rand.int_max(upper_bound, generator)
+}
+
+// gameplay_cosmetic_random_max is reserved for presentation choices that must
+// never influence deterministic enemy movement or future challenge seeds.
+gameplay_cosmetic_random_max :: proc(gameplay: ^Gameplay, upper_bound: int) -> int {
+	assert(upper_bound > 0)
+	generator := rand.xoshiro256_random_generator(&gameplay.cosmetic_random_state)
 	return rand.int_max(upper_bound, generator)
 }
 
@@ -125,8 +140,12 @@ player_touches_enemy :: proc(gameplay: ^Gameplay) -> bool {
 
 // apply_enemy_contact_damage applies one capped legacy damage event after the
 // gameplay clock has ensured contact is charged only once per action.
-apply_enemy_contact_damage :: proc(player: ^Player_State) -> bool {
+apply_enemy_contact_damage :: proc(
+	player: ^Player_State,
+	difficulty: Difficulty_Profile = .Standard,
+) -> bool {
 	if player.energy <= 0 do return false
-	player.energy = max(player.energy - ENEMY_CONTACT_DAMAGE, 0)
+	tuning := gameplay_tuning(difficulty)
+	player.energy = max(player.energy - tuning.enemy_contact_damage, 0)
 	return true
 }

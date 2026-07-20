@@ -82,7 +82,7 @@ finish_gameplay_action_interval :: proc(
 	if pickup.item_collected || pickup.treasure_collected {
 		result.item_sound_requests += 1
 	}
-	apply_score_event(&gameplay.player, .Action_Floor)
+	apply_score_event(&gameplay.player, .Action_Floor, gameplay.difficulty)
 }
 
 // run_gameplay_ticks advances as many fixed gameplay ticks as the render-frame
@@ -116,7 +116,10 @@ run_gameplay_ticks :: proc(
 		player_was_alive := gameplay.player.energy > 0
 		if !tick_state.contact_damage_applied && player_touches_enemy(gameplay) {
 			tick_state.contact_damage_applied = true
-			result.player_damaged = apply_enemy_contact_damage(&gameplay.player)
+			result.player_damaged = apply_enemy_contact_damage(
+				&gameplay.player,
+				gameplay.difficulty,
+			)
 		}
 
 		apply_active_explosions_to_entities(gameplay, &result)

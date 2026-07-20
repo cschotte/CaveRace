@@ -1,8 +1,64 @@
 package caverace
 
+import "core:bytes"
 import "core:os"
 import "core:path/filepath"
 import "core:testing"
+
+@(test)
+packaged_intro_music_matches_soundtrack_cues_one_through_seven_test :: proc(
+	t: ^testing.T,
+) {
+	resource_root, root_ok := resolve_resource_root()
+	if !testing.expect(t, root_ok) do return
+	defer delete(resource_root)
+
+	soundtrack_filenames := [7]string {
+		"01_intro_space.ogg",
+		"02_intro_eldora.ogg",
+		"03_intro_mining.ogg",
+		"04_intro_aliens.ogg",
+		"05_intro_defense.ogg",
+		"06_intro_hero.ogg",
+		"07_intro_bombs.ogg",
+	}
+	music_paths := MUSIC_PATHS
+	for soundtrack_filename, intro_index in soundtrack_filenames {
+		cue := Music_Cue(int(Music_Cue.Intro_Space) + intro_index)
+		packaged_path, packaged_ok := resource_path(
+			resource_root,
+			{RESOURCE_MEDIA_DIRECTORY, music_paths[cue]},
+		)
+		if !testing.expect(t, packaged_ok) do continue
+		defer delete(packaged_path)
+
+		soundtrack_path, soundtrack_error := filepath.join({
+			resource_root,
+			"..",
+			"soundtrack",
+			"renders",
+			"ogg",
+			soundtrack_filename,
+		})
+		if !testing.expect(t, soundtrack_error == nil) do continue
+		defer delete(soundtrack_path)
+
+		packaged_data, packaged_error := os.read_entire_file_from_path(
+			packaged_path,
+			context.allocator,
+		)
+		if !testing.expect(t, packaged_error == nil) do continue
+		defer delete(packaged_data)
+		soundtrack_data, soundtrack_read_error := os.read_entire_file_from_path(
+			soundtrack_path,
+			context.allocator,
+		)
+		if !testing.expect(t, soundtrack_read_error == nil) do continue
+		defer delete(soundtrack_data)
+
+		testing.expect(t, bytes.equal(packaged_data, soundtrack_data))
+	}
+}
 
 // Verifies resource discovery prefers packaged files, then the repository
 // development layout, using isolated temporary directories.
@@ -67,6 +123,61 @@ resource_root_finds_packaged_and_development_layouts_test :: proc(t: ^testing.T)
 	root, root_ok = find_resource_root_from(build, working)
 	if testing.expect(t, root_ok) {
 		testing.expect_value(t, root, build)
+		delete(root)
+	}
+}
+
+// Verifies the macOS app-bundle layout resolves Contents/Resources while the
+// direct executable-directory case above covers the Windows package layout.
+@(test)
+resource_root_finds_macos_bundle_layout_test :: proc(t: ^testing.T) {
+	temporary_directory, directory_error := os.make_directory_temp(
+		"",
+		"caverace-bundle-resources-*",
+		context.allocator,
+	)
+	if !testing.expect(t, directory_error == nil) do return
+	defer {
+		_ = os.remove_all(temporary_directory)
+		delete(temporary_directory)
+	}
+
+	executable_directory, executable_error := filepath.join(
+		{temporary_directory, "CaveRace.app", "Contents", "MacOS"},
+	)
+	resource_screens, resources_error := filepath.join(
+		{temporary_directory, "CaveRace.app", "Contents", "Resources", "media", "screens"},
+	)
+	working_directory, working_error := filepath.join({temporary_directory, "working"})
+	if !testing.expect(
+		t,
+		executable_error == nil && resources_error == nil && working_error == nil,
+	) {
+		return
+	}
+	defer {
+		delete(executable_directory)
+		delete(resource_screens)
+		delete(working_directory)
+	}
+	if !testing.expect(t, os.make_directory_all(executable_directory) == nil) do return
+	if !testing.expect(t, os.make_directory_all(resource_screens) == nil) do return
+	if !testing.expect(t, os.make_directory_all(working_directory) == nil) do return
+
+	marker, marker_error := filepath.join({resource_screens, "game_border.png"})
+	if !testing.expect(t, marker_error == nil) do return
+	defer delete(marker)
+	if !testing.expect(t, os.write_entire_file(marker, "") == nil) do return
+
+	root, root_ok := find_resource_root_from(executable_directory, working_directory)
+	if testing.expect(t, root_ok) {
+		expected_root, expected_error := filepath.join(
+			{temporary_directory, "CaveRace.app", "Contents", "Resources"},
+		)
+		if testing.expect(t, expected_error == nil) {
+			testing.expect_value(t, root, expected_root)
+			delete(expected_root)
+		}
 		delete(root)
 	}
 }

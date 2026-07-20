@@ -128,7 +128,7 @@ start_ready_explosions :: proc(
 		result.explosions_started += 1
 		assert(result.explosion_sound_count < MAX_BOMBS)
 		result.explosion_sound_indices[result.explosion_sound_count] =
-			u8(gameplay_random_max(gameplay, BOMB_SOUND_COUNT))
+			u8(gameplay_cosmetic_random_max(gameplay, BOMB_SOUND_COUNT))
 		result.explosion_sound_count += 1
 	}
 }
@@ -148,7 +148,11 @@ apply_active_explosions_to_entities :: proc(
 		)
 		if ok && active_explosion_contains_cell(gameplay, position) {
 			enemy.active = false
-			apply_score_event(&gameplay.player, .Enemy_Destroyed)
+			apply_score_event(
+				&gameplay.player,
+				.Enemy_Destroyed,
+				gameplay.difficulty,
+			)
 			result.enemies_destroyed += 1
 			result.squish_requests += 1
 		}

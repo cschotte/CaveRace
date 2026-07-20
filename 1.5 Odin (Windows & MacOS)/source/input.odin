@@ -14,6 +14,7 @@ Game_Input :: struct {
 	move_up:         bool,
 	move_right:      bool,
 	move_left:       bool,
+	debug_toggle_pressed: bool,
 	cheat_pressed:   [Cheat_Key]bool,
 }
 
@@ -24,7 +25,7 @@ poll_game_input :: proc() -> Game_Input {
 
 	input.confirm       = rl.IsKeyPressed(.ENTER)
 	input.back          = rl.IsKeyPressed(.ESCAPE)
-	input.pause_pressed = rl.IsKeyPressed(.P) || input.back ||
+	input.pause_pressed = rl.IsKeyPressed(.P) ||
 	                      rl.IsGamepadButtonPressed(0, .MIDDLE_RIGHT)
 	input.space_pressed = rl.IsKeyPressed(.SPACE)
 
@@ -32,6 +33,9 @@ poll_game_input :: proc() -> Game_Input {
 	input.move_up    = rl.IsKeyDown(.UP)
 	input.move_right = rl.IsKeyDown(.RIGHT)
 	input.move_left  = rl.IsKeyDown(.LEFT)
+	when ODIN_DEBUG {
+		input.debug_toggle_pressed = rl.IsKeyPressed(.F10)
+	}
 
 	input.cheat_pressed[.F1] = rl.IsKeyPressed(.F1)
 	input.cheat_pressed[.F2] = rl.IsKeyPressed(.F2)

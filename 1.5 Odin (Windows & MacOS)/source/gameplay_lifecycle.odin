@@ -17,9 +17,9 @@ clear_level_state :: proc(gameplay: ^Gameplay) {
 begin_level_retry :: proc(gameplay: ^Gameplay) {
 	assert(gameplay.state == .Dead)
 	assert(gameplay.player.lives > 0)
-	apply_score_event(&gameplay.player, .Death_Retry)
-	apply_score_event(&gameplay.player, .Action_Floor)
-	reset_player_for_level_start(&gameplay.player)
+	apply_score_event(&gameplay.player, .Death_Retry, gameplay.difficulty)
+	apply_score_event(&gameplay.player, .Action_Floor, gameplay.difficulty)
+	reset_player_for_level_start(&gameplay.player, gameplay.difficulty)
 	clear_level_state(gameplay)
 	gameplay.state = .Load_Level
 }
@@ -30,7 +30,7 @@ begin_next_level :: proc(gameplay: ^Gameplay) {
 	assert(gameplay.state == .Won)
 	assert(gameplay.level_index < LEVEL_COUNT - 1)
 	gameplay.level_index += 1
-	reset_player_for_level_start(&gameplay.player)
+	reset_player_for_level_start(&gameplay.player, gameplay.difficulty)
 	clear_level_state(gameplay)
 	gameplay.state = .Load_Level
 }
@@ -43,7 +43,7 @@ resolve_gameplay_outcome :: proc(
 	ticks: Gameplay_Tick_Result,
 ) {
 	if gameplay.level_completion_enabled && active_enemy_count(gameplay) == 0 {
-		apply_score_event(&gameplay.player, .Level_Won)
+		apply_score_event(&gameplay.player, .Level_Won, gameplay.difficulty)
 		clear_level_state(gameplay)
 		if gameplay.level_index == LEVEL_COUNT - 1 {
 			gameplay.state = .Game_Won
@@ -60,7 +60,7 @@ resolve_gameplay_outcome :: proc(
 		return
 	}
 
-	apply_score_event(&gameplay.player, .Action_Floor)
+	apply_score_event(&gameplay.player, .Action_Floor, gameplay.difficulty)
 	clear_level_state(gameplay)
 	gameplay.state = .Game_Over
 }

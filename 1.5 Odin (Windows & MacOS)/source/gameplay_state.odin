@@ -2,22 +2,11 @@ package caverace
 
 import "core:math/rand"
 
-// Fixed gameplay capacities and legacy rule values. Active state is kept
-// inline and bounded so ownership and memory use remain visible in Gameplay.
+// Fixed gameplay capacities. Active state is kept inline and bounded so
+// ownership and memory use remain visible in Gameplay; tuneables are centralized
+// in tuning.odin.
 MAX_ENEMIES :: 16
 MAX_BOMBS   :: 4
-
-PLAYER_START_LIVES         :: 4
-PLAYER_MAX_LIVES           :: 4
-PLAYER_START_ENERGY        :: 8
-PLAYER_MAX_ENERGY          :: 8
-PLAYER_START_BOMB_CAPACITY :: 1
-PLAYER_MAX_BOMB_CAPACITY   :: 4
-PLAYER_START_BOMB_POWER    :: 1
-PLAYER_MAX_BOMB_POWER      :: 10
-
-ENEMY_CONTACT_DAMAGE :: 2
-BOMB_FUSE_ACTIONS    :: 12
 BOMB_SOUND_COUNT     :: 4
 
 MAX_EXPLOSION_CELLS :: 1 + 4 * PLAYER_MAX_BOMB_POWER
@@ -28,19 +17,6 @@ INDESTRUCTIBLE_ITEM_FIRST :: 9
 EXPLOSION_SET_1_FIRST_SPRITE :: 2
 EXPLOSION_SET_2_FIRST_SPRITE :: 7
 EXPLOSION_SET_3_FIRST_SPRITE :: 12
-
-WALKABLE_TERRAIN_LIMIT :: 25
-PASSABLE_ITEM_LIMIT     :: 4
-
-MOVEMENT_STEPS_PER_TILE  :: 16
-MOVEMENT_PIXELS_PER_STEP :: 2
-
-SCORE_BOMB_COST       :: 5
-SCORE_ITEM_PICKUP     :: 50
-SCORE_ENEMY_DESTROYED :: 75
-SCORE_TREASURE_PICKUP :: 100
-SCORE_LEVEL_WON       :: 100
-SCORE_DEATH_PENALTY   :: 50
 
 ITEM_POWER         :: 1
 ITEM_BOMB_CAPACITY :: 2
@@ -224,6 +200,7 @@ Gameplay_State :: enum {
 // bounded active entities, fixed clock, and session random generator.
 Gameplay :: struct {
 	state:                    Gameplay_State,
+	difficulty:               Difficulty_Profile,
 	level:                    Level,
 	level_index:              int,
 	theme:                    Tile_Theme,
@@ -234,7 +211,9 @@ Gameplay :: struct {
 	explosions:               [MAX_BOMBS]Explosion_State,
 	bomb_occupancy:           Map_Grid,
 	tick_state:               Gameplay_Tick_State,
-	random_state:             rand.Xoshiro256_Random_State,
+	run_seed:                 u64,
+	ai_random_state:          rand.Xoshiro256_Random_State,
+	cosmetic_random_state:    rand.Xoshiro256_Random_State,
 	// Enabled only after a validated level has supplied its enemy objective.
 	level_completion_enabled: bool,
 }
@@ -248,10 +227,14 @@ Gameplay_Frame_Result :: struct {
 
 // init_gameplay creates a fresh run with default player resources and a new
 // random seed; Game calls it at application startup and for Start Game.
-init_gameplay :: proc(gameplay: ^Gameplay) {
+init_gameplay :: proc(
+	gameplay: ^Gameplay,
+	difficulty: Difficulty_Profile = .Standard,
+) {
 	gameplay^ = Gameplay {
-		state  = .Load_Level,
-		player = new_player_state(),
+		state      = .Load_Level,
+		difficulty = difficulty,
+		player     = new_player_state(difficulty),
 	}
 	seed_gameplay_random(gameplay, rand.uint64())
 }
@@ -271,23 +254,30 @@ grid_position_to_screen :: proc(position: Grid_Position) -> (x, y: i32) {
 
 // new_player_state returns the run-wide defaults used whenever a new game is
 // initialized before the first level is loaded.
-new_player_state :: proc() -> Player_State {
+new_player_state :: proc(
+	difficulty: Difficulty_Profile = .Standard,
+) -> Player_State {
+	tuning := gameplay_tuning(difficulty)
 	return Player_State {
-		lives         = PLAYER_START_LIVES,
-		energy        = PLAYER_START_ENERGY,
-		bomb_capacity = PLAYER_START_BOMB_CAPACITY,
-		bomb_power    = PLAYER_START_BOMB_POWER,
+		lives         = tuning.player_start_lives,
+		energy        = tuning.player_start_energy,
+		bomb_capacity = tuning.player_start_bomb_capacity,
+		bomb_power    = tuning.player_start_bomb_power,
 	}
 }
 
 // reset_player_for_level_start preserves run-wide lives and score while restoring
 // energy and bomb upgrades before a retry or next-level load.
-reset_player_for_level_start :: proc(player: ^Player_State) {
+reset_player_for_level_start :: proc(
+	player: ^Player_State,
+	difficulty: Difficulty_Profile = .Standard,
+) {
+	tuning := gameplay_tuning(difficulty)
 	player.move_from = player.position
 	player.move_to = player.position
 	player.movement_step = 0
 	player.direction = .None
-	player.energy = PLAYER_START_ENERGY
-	player.bomb_capacity = PLAYER_START_BOMB_CAPACITY
-	player.bomb_power = PLAYER_START_BOMB_POWER
+	player.energy = tuning.player_start_energy
+	player.bomb_capacity = tuning.player_start_bomb_capacity
+	player.bomb_power = tuning.player_start_bomb_power
 }

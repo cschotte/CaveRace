@@ -18,7 +18,7 @@ load_gameplay_level :: proc(gameplay: ^Gameplay, resource_root: string) {
 		return
 	}
 
-	gameplay.theme = Tile_Theme(gameplay_random_max(gameplay, len(Tile_Theme)))
+	gameplay.theme = level_metadata(gameplay.level_index).theme
 	gameplay.state = .Playing
 }
 

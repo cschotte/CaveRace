@@ -17,6 +17,7 @@ Game :: struct {
 	feedback:        Game_Feedback,
 	cheats_enabled:  bool,
 	paused:          bool,
+	debug_overlay_visible: bool,
 }
 
 // Game_Update_Result carries transient effects and explicit I/O requests to the
@@ -58,6 +59,11 @@ show_main_menu :: proc(game: ^Game) {
 update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_Update_Result {
 	result: Game_Update_Result
 	advance_game_feedback(&game.feedback, frame_seconds)
+	when ODIN_DEBUG {
+		if input.debug_toggle_pressed {
+			game.debug_overlay_visible = !game.debug_overlay_visible
+		}
+	}
 	previous_screen := game.screen
 	previous_gameplay_state := game.gameplay.state
 

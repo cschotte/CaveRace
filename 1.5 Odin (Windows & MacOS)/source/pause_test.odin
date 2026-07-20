@@ -22,7 +22,7 @@ pause_toggle_freezes_gameplay_and_clears_queued_input_test :: proc(t: ^testing.T
 	expected_gameplay.tick_state.input = {}
 	update_game(
 		&game,
-		Game_Input {back = true, pause_pressed = true},
+		Game_Input {pause_pressed = true},
 		GAMEPLAY_TICK_SECONDS * 4,
 	)
 	testing.expect(t, game.paused)
@@ -39,7 +39,7 @@ pause_toggle_freezes_gameplay_and_clears_queued_input_test :: proc(t: ^testing.T
 
 	update_game(
 		&game,
-		Game_Input {back = true, pause_pressed = true},
+		Game_Input {pause_pressed = true},
 		GAMEPLAY_TICK_SECONDS * 4,
 	)
 	testing.expect(t, !game.paused)
@@ -48,6 +48,18 @@ pause_toggle_freezes_gameplay_and_clears_queued_input_test :: proc(t: ^testing.T
 
 	update_game(&game, {}, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, game.gameplay.tick_state.action_step, 8)
+}
+
+@(test)
+escape_returns_active_gameplay_to_main_menu_test :: proc(t: ^testing.T) {
+	game: Game
+	init_game(&game)
+	start_new_game(&game)
+	game.gameplay.state = .Playing
+
+	update_game(&game, Game_Input {back = true}, 0)
+	testing.expect(t, !game.paused)
+	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
 }
 
 @(test)

@@ -15,13 +15,13 @@ Screen_Assets :: struct {
 // Music_Cue names every track used by the intro, menu, gameplay, and terminal
 // screens.
 Music_Cue :: enum {
+	Intro_Space,
 	Intro_Eldora,
 	Intro_Mining,
 	Intro_Aliens,
 	Intro_Defense,
 	Intro_Hero,
 	Intro_Bombs,
-	Intro_Protect,
 	Main_Menu,
 	Cave_A,
 	Cave_B,
@@ -32,7 +32,7 @@ Music_Cue :: enum {
 }
 
 #assert(len(Music_Cue) == 14)
-#assert(int(Music_Cue.Intro_Protect) - int(Music_Cue.Intro_Eldora) + 1 == INTRO_LAST_IMAGE - INTRO_FIRST_IMAGE + 1)
+#assert(int(Music_Cue.Intro_Bombs) - int(Music_Cue.Intro_Space) + 1 == INTRO_LAST_IMAGE - INTRO_FIRST_IMAGE + 1)
 
 // Resource manifests keep array indices and enum values as the single mapping
 // between domain-facing asset slots and packaged filenames.
@@ -56,13 +56,13 @@ BOMB_SOUND_PATHS :: [BOMB_SOUND_COUNT]string {
 }
 
 MUSIC_PATHS :: [Music_Cue]string {
-	.Intro_Eldora   = "music/01_intro_eldora.ogg",
-	.Intro_Mining   = "music/02_intro_mining.ogg",
-	.Intro_Aliens   = "music/03_intro_aliens.ogg",
-	.Intro_Defense  = "music/04_intro_defense.ogg",
-	.Intro_Hero     = "music/05_intro_hero.ogg",
-	.Intro_Bombs    = "music/06_intro_bombs.ogg",
-	.Intro_Protect  = "music/07_intro_protect.ogg",
+	.Intro_Space    = "music/01_intro_space.ogg",
+	.Intro_Eldora   = "music/02_intro_eldora.ogg",
+	.Intro_Mining   = "music/03_intro_mining.ogg",
+	.Intro_Aliens   = "music/04_intro_aliens.ogg",
+	.Intro_Defense  = "music/05_intro_defense.ogg",
+	.Intro_Hero     = "music/06_intro_hero.ogg",
+	.Intro_Bombs    = "music/07_intro_bombs.ogg",
 	.Main_Menu      = "music/08_main_menu.ogg",
 	.Cave_A         = "music/09_gameplay_a.ogg",
 	.Cave_B         = "music/10_gameplay_b.ogg",

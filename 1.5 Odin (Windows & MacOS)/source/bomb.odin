@@ -40,11 +40,11 @@ try_place_bomb :: proc(gameplay: ^Gameplay) -> bool {
 	gameplay.bombs[slot] = Bomb_State {
 		active       = true,
 		position     = position,
-		fuse_actions = BOMB_FUSE_ACTIONS,
+		fuse_actions = gameplay_tuning(gameplay.difficulty).bomb_fuse_actions,
 		power        = gameplay.player.bomb_power,
 	}
 	gameplay.bomb_occupancy[position.x][position.y] = BOMB_TICKING_SPRITE
-	apply_score_event(&gameplay.player, .Bomb_Placed)
+	apply_score_event(&gameplay.player, .Bomb_Placed, gameplay.difficulty)
 	return true
 }
 
