@@ -241,9 +241,10 @@ pickup_timing_is_render_rate_independent_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, at_60_fps.item_cell, u8(0))
 }
 
-// Verifies the compact numeric HUD includes resources and explicit objectives.
+// Verifies the render-independent HUD snapshot retains modern resources and
+// objectives even though active play uses the unobstructed 1.3 presentation.
 @(test)
-hud_snapshot_includes_numeric_resources_and_objectives_test :: proc(t: ^testing.T) {
+hud_snapshot_preserves_resources_and_objectives_without_top_bar_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
 	gameplay.level_index = 2
 	gameplay.initial_enemy_count = 4

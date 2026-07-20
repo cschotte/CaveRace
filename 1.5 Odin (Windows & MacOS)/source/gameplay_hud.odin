@@ -1,7 +1,30 @@
 package caverace
 
-import "core:fmt"
+import "core:strconv"
 import rl "vendor:raylib"
+
+// These coordinates are the original CaveRace 1.3 HUD compartments baked into
+// game_border.png. Keep gameplay information inside that lower frame so the
+// 19x11 playfield remains completely unobstructed.
+HUD_LIVES_X       :: 16
+HUD_LIVES_Y       :: 374
+HUD_LIVES_SPACING :: 20
+
+HUD_ENERGY_X       :: 106
+HUD_ENERGY_Y       :: 366
+HUD_ENERGY_SPACING :: 10
+
+HUD_BOMBS_X       :: 196
+HUD_BOMBS_Y       :: 366
+HUD_BOMBS_SPACING :: 12
+
+HUD_POWER_X       :: 254
+HUD_POWER_Y       :: 366
+HUD_POWER_SPACING :: 16
+
+HUD_SCORE_RIGHT     :: 446
+HUD_SCORE_Y         :: 376
+HUD_SCORE_FONT_SIZE :: 10
 
 TOOLS_LIFE_SPRITE   :: 0
 TOOLS_ENERGY_SPRITE :: 1
@@ -44,39 +67,27 @@ gameplay_hud_state :: proc(gameplay: ^Gameplay) -> Gameplay_Hud_State {
 	}
 }
 
-draw_hud_text :: proc(x, y, size: i32, format: string, args: ..any) {
-	buffer: [128]byte
-	formatted := fmt.bprintf(buffer[:len(buffer) - 1], format, ..args)
-	buffer[len(formatted)] = 0
-	rl.DrawText(cstring(raw_data(buffer[:])), x, y, size, rl.WHITE)
-}
-
+// draw_gameplay_hud deliberately restores the version 1.3 presentation. The
+// complete modern HUD snapshot remains available to tests and other screens,
+// but active play draws only the original bottom-frame icons and score.
 draw_gameplay_hud :: proc(gameplay: ^Gameplay, tools: rl.Texture) {
 	hud := gameplay_hud_state(gameplay)
-	rl.DrawRectangle(8, 5, 624, 25, rl.Fade(rl.BLACK, 0.78))
-	rl.DrawRectangleLines(8, 5, 624, 25, rl.Fade(rl.GOLD, 0.85))
-	draw_hud_text(
-		18,
-		9,
-		16,
-		"CAVE %d     ALIENS %d     TREASURE %d/%d",
-		hud.level,
-		hud.aliens_remaining,
-		hud.treasure_collected,
-		hud.treasure_total,
-	)
-
-	box_y: i32 = 362
-	rl.DrawRectangle(8, box_y, 624, 34, rl.Fade(rl.BLACK, 0.9))
-	draw_vertical_sprite(tools, TOOLS_LIFE_SPRITE, 12, box_y + 1)
-	draw_hud_text(44, box_y + 9, 16, "x%d", hud.lives)
-	draw_vertical_sprite(tools, TOOLS_ENERGY_SPRITE, 84, box_y + 1)
-	draw_hud_text(116, box_y + 9, 16, "%d/%d", hud.energy, hud.max_energy)
-	draw_vertical_sprite(tools, TOOLS_BOMB_SPRITE, 178, box_y + 1)
-	draw_hud_text(210, box_y + 9, 16, "%d/%d", hud.available_bombs, hud.bomb_capacity)
-	draw_vertical_sprite(tools, TOOLS_POWER_SPRITE, 276, box_y + 1)
-	draw_hud_text(308, box_y + 9, 16, "x%d", hud.bomb_power)
-	draw_hud_text(378, box_y + 9, 16, "SCORE %06d", hud.score)
+	for icon_index in 0 ..< hud.lives {
+		draw_vertical_sprite(
+			tools,
+			TOOLS_LIFE_SPRITE,
+			i32(HUD_LIVES_X + icon_index * HUD_LIVES_SPACING),
+			HUD_LIVES_Y,
+		)
+	}
+	for icon_index in 0 ..< hud.energy {
+		draw_vertical_sprite(
+			tools,
+			TOOLS_ENERGY_SPRITE,
+			i32(HUD_ENERGY_X + icon_index * HUD_ENERGY_SPACING),
+			HUD_ENERGY_Y,
+		)
+	}
 
 	if gameplay.player.contact_grace_ticks > 0 || gameplay.player.blast_grace_ticks > 0 {
 		pulse_ticks := max(
@@ -85,6 +96,36 @@ draw_gameplay_hud :: proc(gameplay: ^Gameplay, tools: rl.Texture) {
 		)
 		pulse_color := rl.RED
 		if (pulse_ticks / 4) % 2 == 0 do pulse_color = rl.YELLOW
-		rl.DrawRectangleLines(81, box_y, 94, 34, pulse_color)
+		rl.DrawRectangleLines(HUD_ENERGY_X - 3, HUD_ENERGY_Y - 3, 85, 37, pulse_color)
 	}
+	for icon_index in 0 ..< hud.available_bombs {
+		draw_vertical_sprite(
+			tools,
+			TOOLS_BOMB_SPRITE,
+			i32(HUD_BOMBS_X + icon_index * HUD_BOMBS_SPACING),
+			HUD_BOMBS_Y,
+		)
+	}
+	for icon_index in 0 ..< hud.bomb_power {
+		draw_vertical_sprite(
+			tools,
+			TOOLS_POWER_SPRITE,
+			i32(HUD_POWER_X + icon_index * HUD_POWER_SPACING),
+			HUD_POWER_Y,
+		)
+	}
+
+	// The original fifth compartment is retained for the live score. Using the
+	// default font keeps this allocation-free and does not change score logic.
+	score_buffer: [32]byte
+	score_text := strconv.write_int(score_buffer[:len(score_buffer) - 1], i64(hud.score), 10)
+	score_cstring := cstring(raw_data(score_text))
+	score_width := rl.MeasureText(score_cstring, HUD_SCORE_FONT_SIZE)
+	rl.DrawText(
+		score_cstring,
+		i32(HUD_SCORE_RIGHT) - score_width,
+		HUD_SCORE_Y,
+		HUD_SCORE_FONT_SIZE,
+		rl.WHITE,
+	)
 }
