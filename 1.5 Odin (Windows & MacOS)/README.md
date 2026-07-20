@@ -6,15 +6,6 @@ graphics, keyboard input, streamed music, and sound effects. The rewrite keeps
 the ten original level files and the recognizable pixel-art rules while giving
 the game a modern, cross-platform application loop.
 
-| Forest | Winter | Lava |
-| --- | --- | --- |
-| ![Forest level](../images/demo1.png) | ![Winter level](../images/demo2.png) | ![Lava level](../images/demo3.png) |
-
-The implemented game includes the complete seven-panel story intro, alternating
-title and controls screens, all ten levels, player and enemy movement, bombs,
-chain reactions, pickups, scoring, retries, level progression, game over, and a
-final victory screen.
-
 ## Requirements
 
 - A current [Odin compiler]
@@ -25,53 +16,53 @@ The source imports `vendor:raylib` from the Odin distribution.
 
 ## Build and run
 
-From the repository root on macOS or a Unix-like shell:
+Reproducible package commands build the executable and copy every runtime
+resource into the platform layout checked by the game:
 
 ```sh
-cd "1.5 Odin (Windows & MacOS)/source"
-mkdir -p ../build
-odin build . -debug -out:../build/caverace
-../build/caverace
+cd "1.5 Odin (Windows & MacOS)"
+./scripts/build_macos.sh release   # or debug
 ```
-
-For an optimized build, omit `-debug`. On Windows, give the output an `.exe`
-suffix:
 
 ```powershell
-Set-Location "1.5 Odin (Windows & MacOS)/source"
-New-Item -ItemType Directory -Force ../build | Out-Null
-odin build . -debug -out:../build/caverace.exe
-../build/caverace.exe
+Set-Location "1.5 Odin (Windows & MacOS)"
+.\scripts\build_windows.ps1 release   # or debug
 ```
 
-Run the automated suite from the `source` directory:
+Outputs are `dist/macos/CaveRace.app` and `dist/windows/CaveRace.exe` with its
+adjacent `media/` and `levels/` directories. Each script starts from a clean
+platform output directory and fails if the executable, screen marker, or final
+level is absent.
 
-```sh
-odin test .
-```
+For a credentialed release, `scripts/build_macos.sh` reads
+`CAVERACE_SIGN_IDENTITY` and `CAVERACE_NOTARY_PROFILE` to sign with hardened
+runtime, submit, wait, staple, and validate. The Windows script optionally reads
+`CAVERACE_WINDOWS_CERT_SHA1` for Authenticode signing. 
 
-For the same style and correctness checks used during development:
+For the correctness checks used during development:
 
 ```sh
 odin check . -vet -vet-cast -vet-style -vet-tabs -warnings-as-errors
 ```
 
-The repository's `.vscode/tasks.json` defines `odin: build debug` as the
-default build task. `.vscode/launch.json` builds and launches
-`build/caverace` through LLDB with `source/` as the working directory.
-
 ## Controls and launch options
 
-The current edition is keyboard-controlled.
+All player-facing flows work without a mouse. Keyboard and controller bindings
+can be remapped from Settings; arrow keys and the left stick remain movement
+fallbacks, while Escape/controller B stay reserved for Back. Xbox-style labels
+below use raylib's standard layout. Controller rumble can be disabled
+independently, and Screen Shake at 0% is exactly still.
 
 | Input | Action |
 | --- | --- |
-| Window close button | Quit |
-| Any key | Start from the title or controls screen; leave game over or final victory |
-| Arrow keys | Move during gameplay |
-| Space | Skip one story panel; place a bomb during gameplay |
-| Enter | Retry after death; continue after levels 1–9; retry a failed level load |
-| Escape | Skip the complete intro; return from gameplay to the main menu |
+| Arrow keys or WASD | Move; navigate menus (left stick/D-pad on controller) |
+| Space / controller A | Place a bomb during gameplay; skip the current story panel |
+| Enter or Space / controller A | Confirm menu and outcome actions |
+| R / controller X | Quick-retry after death or start a new run from game over |
+| P / controller Start | Open/close pause during active campaign or tutorial play |
+| Escape / controller B | Go back; Escape retains direct active-gameplay-to-menu behavior |
+| Main-menu Quit or window close | Quit safely |
+| F10 | Toggle the diagnostics overlay in debug builds; absent from release builds |
 | F1 | Destroy all enemies and complete the level when cheats are enabled |
 | F2 | Restore four lives and eight energy when cheats are enabled |
 | F3 | Grant four-bomb capacity when cheats are enabled |
@@ -83,7 +74,6 @@ The original command-line switches remain supported:
 ```sh
 ../build/caverace -powerblast
 ../build/caverace -slow
-../build/caverace -powerblast -slow
 ```
 
 - `-powerblast` enables F1–F5. Without it, those keys do not change game state.
@@ -92,9 +82,19 @@ The original command-line switches remain supported:
 
 ## Game flow
 
-The application starts with the story intro. Space advances one panel and
-Escape skips directly to the main menu. The title and controls screens then
-alternate every five seconds until any key starts a new game.
+The application starts with the NavaTron branding image and its 3.84-second
+audio cue, then enters the story automatically. Each panel advances automatically
+when its music finishes. Space/A skips the current panel, while Escape/B skips
+the complete story and opens the stable, selectable main menu. Start Game offers a
+recommended tutorial on first launch. Tutorial is
+always replayable from the menu, while Practice/Level Select, How to
+Play, Settings, Replay Story, and Quit remain directly accessible. How to Play
+shows the supplied full-screen Controls artwork with a device-aware Back hint.
+
+Each original story illustration also receives a restrained animated accent:
+space and treasure twinkles, alien eye glow, fuse sparks, torch movement,
+explosion smoke/embers, and homecoming sunlight motes. These overlays are fixed,
+deterministic, and reduced in count, speed, and brightness by Reduced Flashes.
 
 Gameplay uses these explicit lifecycle states:
 
@@ -102,22 +102,31 @@ Gameplay uses these explicit lifecycle states:
 | --- | --- |
 | Load level | Read and validate the requested `.bin` file outside the simulation update |
 | Playing | Queue frame input and advance deterministic 60 Hz gameplay ticks |
-| Dead | Wait for Enter, apply the retry penalty, reset level upgrades, and reload the same level |
-| Won | Wait for Enter, preserve run progress, and load the next level |
-| Game won | Show the final victory screen after level 10; any key returns to the menu |
-| Game over | Show the game-over screen after the last life; any key returns to the menu |
+| Dead | Wait for Confirm or Quick Retry, preserve score, reset level upgrades, and reload the same level |
+| Won | Show time, objective, damage, medal, and an exact score ledger; Confirm loads the next level |
+| Game won | Show the final victory screen after level 10; Confirm returns to the menu |
+| Game over | Show the game-over screen after the last life; Quick Retry starts a run and Confirm returns to menu |
 | Load failed | Preserve valid state and allow Enter to retry or Escape to return to the menu |
+
+P or controller Start opens a simulation-freezing pause menu with Resume,
+Restart Level, Settings, Controls, and Main Menu. Restart and Main Menu require
+confirmation. Focus loss opens the same pause menu by default, and queued
+movement/bomb input is cleared on both pause edges. Escape retains the direct
+gameplay-to-menu behavior requested for this edition.
 
 Completing level 10 never wraps back to level 1. If the final enemy and player
 are destroyed in the same update, level completion takes precedence.
 
 ## Gameplay rules
 
-The map is 19×11 cells, rendered as 32×32 tiles in a fixed 640×400 window.
-Actors move one tile over 16 fixed simulation steps. Frame input is buffered so
-a bomb press is not lost between action boundaries. Losing window focus clears
-queued input and pauses elapsed simulation time, preventing catch-up movement
-when focus returns.
+The map is 19×11 cells, rendered as 32×32 tiles on a fixed 640×400 canvas.
+Windowed 1×/2×/3× modes use integer scaling where the display permits it;
+borderless mode preserves aspect ratio with letterboxing when necessary.
+Actors move one tile over 12 fixed simulation steps: 0.20 seconds at 60 Hz.
+Frame input is buffered so a bomb press is not lost between action boundaries.
+Bomb placement is independent from movement, so placing one no longer consumes
+an idle movement interval. Losing window focus opens pause and suppresses
+elapsed simulation time, preventing catch-up movement when focus returns.
 
 Each new game starts with:
 
@@ -128,36 +137,65 @@ Each new game starts with:
 | Simultaneous bombs | 1 | 4 |
 | Bomb power | 1 | 10 |
 
-Enemies choose a cardinal direction from the session-owned seeded random
-generator at each action boundary. Contact removes two energy once per action.
+Enemies choose a cardinal direction from the session-owned seeded gameplay
+generator at each action boundary. Caves 1–4 retain fully random movement;
+caves 5–10 add a modest 5–30% chance to choose a walkable step that reduces
+Manhattan distance, preferring not to reverse when another reducing step is
+available. Assisted halves that chance. Cosmetic variations use a
+separate seeded generator, so adding a sound or visual draw cannot alter an
+enemy trace. Contact
+removes two energy and grants 45 fixed ticks (0.75 seconds) of contact grace on
+Standard. Assisted contact removes one energy with 60 ticks of grace; Assisted
+blasts remove four energy once and preview danger for the full fuse, while
+Standard blasts remain lethal and preview the final 36 ticks. Damage is
+communicated by a player blink, energy-HUD pulse, red flash, and pitched hit cue.
 Up to 16 enemies and four bombs are stored inline in fixed arrays; gameplay does
 not allocate entities dynamically.
 
 Bombs capture the player's position and current power when placed. A bomb uses
 one of four fixed slots, blocks movement through its cell, and counts down for
-12 action boundaries. Blasts have a center plus four directional arms, can
+180 fixed ticks (3.0 seconds). Its ticking cadence accelerates and the exact
+damage footprint is previewed during the final 36 ticks (0.60 seconds). Blasts
+have a center plus four directional arms, can
 destroy enemies, the player, treasure, and destructible objects, and trigger
 other bombs deterministically without recursive entity mutation.
 
 ### Pickups and scoring
 
 The four beneficial object types are bomb power, bomb capacity, full energy,
-and an extra life. A pickup at its cap remains on the map. Items are checked
-before treasure, so an uncollectable capped item continues to cover treasure in
-the same cell.
+and an extra life. A pickup at its cap is collected as visible salvage for 25
+points, clearing the cell so it cannot permanently cover treasure. Items are
+checked before treasure.
 
 | Event | Score change |
 | --- | ---: |
-| Place a bomb | −5 when at least 5 points are available |
 | Collect an item | +50 |
+| Salvage a capped item | +25 |
 | Destroy an enemy | +75 |
 | Collect treasure | +100 |
 | Complete a level | +100 |
-| Confirm a retry | −50 when at least 50 points are available |
+| Collect all cave treasure | +250 |
+| Complete without damage | +200 |
+| Complete at or under par | +150 |
 
-The legacy action-floor rule changes a zero score to 5 after an action. Score
-and remaining lives persist across levels. Energy, bomb capacity, and bomb
-power reset to their starting values on retry and when entering the next level.
+Bomb placement, empty actions, retries, and restarts do not mutate score. Score
+and remaining lives persist across levels. Energy is restored between caves;
+bomb capacity and power carry into the next cave. Death resets those upgrades
+on Standard, while Assisted preserves them.
+
+Every cave completion displays all point sources, active bonuses, elapsed/par
+time, treasure, hits, damage, deaths, final score, and medal. Bronze requires a
+clear, Silver adds either all treasure or par, and Gold requires both in the
+same clear. Par times are metadata, never access gates. Campaign completion and
+failure do not create or save high scores, times, or medals. Every cave is
+available in Practice, where retries are effectively unlimited.
+
+Committed events also produce bounded presentation feedback: at most 64 tiny
+particles and eight score popups, a maximum two-pixel optional shake, short
+controller pulses, and category-limited sound voices. Reduced Flashes removes
+full-screen color flashes and halves particle burst density while preserving
+text, shape, sound, and optional rumble cues. These effects consume only the
+cosmetic RNG stream and never influence fixed-step gameplay.
 
 ## Architecture and ownership
 
@@ -165,12 +203,13 @@ The project intentionally remains one `caverace` package. Files separate
 responsibilities without introducing framework layers or cyclic package
 dependencies.
 
-1. `Application` owns the allocated resource root, raylib handles, window and
-   audio lifetime, active music stream, and frame loop.
-2. `Game` owns platform-independent screen routing, front-end state, gameplay,
-   and visual feedback.
+1. `Application` owns resource/settings paths, atomic persistence calls, raylib
+   handles, fixed presentation canvas, window/audio lifetime, and frame loop.
+2. `Game` owns platform-independent screen routing, menu/tutorial/settings,
+   gameplay, pause state, last input device, and visual feedback.
 3. `Gameplay` owns the complete run: loaded mutable level data, player progress,
-   fixed enemy/bomb/explosion storage, occupancy, input accumulator, and RNG.
+   fixed enemy/bomb/explosion storage, occupancy, input accumulator, selected
+   difficulty profile, and separate gameplay/cosmetic RNG streams.
 4. `Game_Input` is an allocation-free semantic snapshot built at the raylib
    boundary.
 5. Updates return transient result structs; only `Application` turns them into
@@ -189,13 +228,17 @@ raylib resources and leaves the asset bundle empty.
 | File | Responsibility |
 | --- | --- |
 | `caverace.odin` | Entry point, launch-option parsing call, and console messages |
-| `application.odin` | Window/audio startup, owned resource lifetime, frame loop, music routing, sound playback, and level-load requests |
+| `application.odin` | Window/audio startup, scaled canvas, settings path, frame loop, crossfaded/ducked music, voice-limited SFX, rumble, and application requests |
 | `options.odin` | `-powerblast` and `-slow` parsing and reporting |
 | `config.odin` | Window, fixed-tick, map, theme, and content-schema constants |
-| `input.odin` | raylib keyboard state to semantic `Game_Input` mapping |
+| `input.odin` | raylib keyboard/Xbox-style controller state to semantic `Game_Input` mapping |
+| `bindings.odin` | Remappable keyboard actions, conflict checks, labels, and last-device policy |
+| `settings.odin` | Settings defaults and validation |
+| `persistence.odin` | Version-4 settings-only JSON, older-version acceptance, validation, and flushed atomic sibling replacement |
 | `assets.odin` | Asset manifests, loading, validation, rollback, and cleanup |
 | `resources.odin` | Packaged, app-bundle, development, and working-directory resource discovery |
 | `render.odin` | Top-level screen rendering, lifecycle messages, fades, and feedback flashes |
+| `debug_overlay.odin` | Debug-build F10 diagnostics and collision-cell outlines |
 | `level_render.odin` | Layered map, bomb, actor, and explosion rendering |
 | `gameplay_hud.odin` | Read-only HUD snapshot, status icons, and score rendering |
 
@@ -203,15 +246,22 @@ raylib resources and leaves the asset bundle empty.
 
 | File | Responsibility |
 | --- | --- |
-| `game.odin` | Top-level screen state, new-game/menu transitions, update routing, and application requests |
-| `front_end.odin` | Story timing, title/controls loop, image transitions, skip behavior, and start policy |
-| `feedback.odin` | Non-blocking transition fades and damage/item/treasure flashes |
+| `game.odin` | Top-level branding/story/campaign/tutorial/menu transitions, update routing, and application requests |
+| `front_end.odin` | Story timing, stable title presentation, image transitions, and skip behavior |
+| `story_effects.odin` | Deterministic per-panel story twinkles, glows, flame, smoke, embers, and Reduced Flashes policy |
+| `menu.odin` | Main/help/settings/binding/level-select navigation and settings mutation |
+| `tutorial.odin` | Dedicated tutorial map, gated learning steps, skip, completion, and replay |
+| `pause.odin` | Pause selection, confirmations, focus-safe freeze, and queued-input clearing |
+| `feedback.odin` | Non-blocking transition fades, accessible flashes, and bounded shake timing |
+| `effects.odin` | Fixed particle/score-popup pools driven by cosmetic RNG only |
 
 ### Gameplay state and systems
 
 | File | Responsibility |
 | --- | --- |
-| `gameplay_state.odin` | Fixed capacities, rule constants, gameplay value types, owned session state, and initialization |
+| `gameplay_state.odin` | Gameplay value types, fixed storage, owned session state, and initialization |
+| `tuning.odin` | Named gameplay tuneables and difficulty-profile values |
+| `level_catalog.odin` | Fixed level names, themes, treasure totals, pars, and pursuit ramp |
 | `gameplay.odin` | Per-frame gameplay lifecycle routing |
 | `gameplay_loading.odin` | Validated level loading and conversion of spawn grids into active state |
 | `gameplay_lifecycle.odin` | Retry, next-level, completion, final victory, game-over, and level-state cleanup rules |
@@ -221,24 +271,10 @@ raylib resources and leaves the asset bundle empty.
 | `bomb.odin` | Capacity, placement, occupancy, fuse timing, and slot cleanup |
 | `explosion.odin` | Blast footprints, map/entity effects, chain reactions, animation, and sound selection |
 | `pickup.odin` | Item caps, item/treasure collection order, and pickup results |
-| `scoring.odin` | Central legacy score-event rules |
+| `scoring.odin` | Central visible, attributable score-event rules |
+| `progression.odin` | Run/level telemetry, result accounting, and medals |
 | `cheats.odin` | Gated F1–F5 gameplay mutations |
 | `level.odin` | Original binary map layout, filenames, file I/O, and tile-index validation |
-
-### Tests
-
-| File | Coverage |
-| --- | --- |
-| `front_end_test.odin` | Intro timing and skip flow, crossfades, menu loop, start behavior, and music cues |
-| `gameplay_test.odin` | Initialization, every level, validation, spawn extraction, fixed ticks, input priority, and limits |
-| `gameplay_lifecycle_test.odin` | Win/death precedence, retries, routing, all ten levels, and final victory |
-| `player_movement_test.odin` | Walkability, coordinate equivalence, movement timing, collisions, and animation |
-| `enemy_test.odin` | Seed determinism, rate independence, movement, contact, damage, and all-level walkability |
-| `bomb_test.odin` | Placement, score cost, capacity, occupancy, timing, blocking, and cleanup |
-| `explosion_test.odin` | Edge clipping, animation, destruction, chains, overlap, scoring, and player damage |
-| `pickup_test.odin` | Every pickup, caps, timing, scoring, audio requests, and HUD snapshots |
-| `cheats_test.odin` | Cheat gating and limits, feedback priority, and non-blocking transitions |
-| `release_test.odin` | Resource resolution/failure, focus policy, repeated routing, and a complete-run smoke test |
 
 ## Level data
 
@@ -258,9 +294,10 @@ one and only one player spawn, and the 16-enemy capacity. A validated file is
 copied into mutable gameplay state; player, enemies, bombs, explosions, and bomb
 occupancy are maintained separately from the stored spawn grids.
 
-Each successful load chooses one of five tile themes—Desert, Forest, Lava, Oil,
-or Winter—from the session RNG. The theme is visual and does not change the map
-rules.
+Each level has fixed metadata for its display name, tile theme, treasure total,
+par time, tutorial-hint flag, and future AI-bias field.
+Reloading or retrying a cave therefore preserves its visual identity. Themes
+remain visual and do not change map rules.
 
 ## Media inventory
 
@@ -268,42 +305,25 @@ All runtime media is under `source/media/`.
 
 | Directory | Files | Format and use |
 | --- | ---: | --- |
-| `intro/` | 7 | 640×400 PNG story panels |
+| `intro/` | 16 | Branding PNG/OGG plus seven 640×400 PNG story panels with matching OGG narration |
 | `screens/` | 5 | 640×400 PNG menu, controls, gameplay border, game-over, and victory screens |
-| `music/` | 14 | 48 kHz stereo Ogg Vorbis tracks streamed by raylib |
-| `sounds/` | 8 | WAV effects; seven are loaded by the current game |
+| `music/` | 4 | Ogg Vorbis menu, level-complete, game-over, and victory cues streamed by raylib |
+| `sounds/` | 9 | Ogg Vorbis gameplay and menu effects |
 | `sprites/` | 6 | 32-pixel-wide vertical actor, object, treasure, bomb, and HUD sheets |
 | `tiles/` | 5 | 32×1600 sheets containing 50 terrain tiles per theme |
 
-### Story panels and timing
-
-Each intro panel has a matching numbered music track and remains on screen for
-the duration encoded in `front_end.odin`.
-
-| Panel | Image and track stem | Seconds |
-| ---: | --- | ---: |
-| 1 | `01_intro_eldora` | 40.474 |
-| 2 | `02_intro_mining` | 31.455 |
-| 3 | `03_intro_aliens` | 39.962 |
-| 4 | `04_intro_defense` | 36.174 |
-| 5 | `05_intro_hero` | 32.366 |
-| 6 | `06_intro_bombs` | 30.866 |
-| 7 | `07_intro_protect` | 9.187 |
-
-Front-end image changes crossfade through black over 0.5 seconds. Screen and
-gameplay-state changes also start a non-blocking 0.4-second black overlay.
-Damage, item, and treasure events produce short red, green, and blue flashes.
-
 ### Music and sounds
 
-The menu loops `08_main_menu.ogg`. Levels rotate through
-`09_gameplay_a.ogg`, `10_gameplay_b.ogg`, and `11_gameplay_c.ogg` by level
-index. Level completion, final victory, and game over use tracks 12, 13, and 14
-respectively. Intro and outcome tracks are finite; menu and cave tracks loop.
+The branding and story cues are finite, `menu.ogg` loops throughout the main
+menu and Controls/Settings pages, and active tutorial/cave play is silent.
+Level completion, final victory, and game over use their matching finite cues.
+Cue changes use a 0.45-second two-stream
+crossfade, and pause ducks both streams to 50% without advancing simulation.
 
-The active WAV effects are four randomized bomb sounds, `item.wav`,
-`squish.wav`, and `ticking.wav`. `menu.wav` is retained as a legacy media file
-but is not loaded; menu audio comes from the streamed OGG track.
+The active OGG effects are four randomized bomb sounds, pitched contact,
+`item.ogg`, `squish.ogg`, `ticking.ogg`, and `menu.ogg`. Repeated
+events are capped per category and already-playing variants are not stacked,
+preventing ticking, pickup, menu, or explosion bursts from clipping badly.
 
 ### Sprite sheets
 
