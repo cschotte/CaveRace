@@ -13,12 +13,6 @@ Medal :: enum {
 	Gold,
 }
 
-Run_Stats :: struct {
-	elapsed_ticks: int,
-	hits:          int,
-	deaths:        int,
-}
-
 Level_Stats :: struct {
 	elapsed_ticks:    int,
 	start_score:      int,
@@ -85,7 +79,6 @@ record_gameplay_damage :: proc(gameplay: ^Gameplay, amount: int) {
 	if amount <= 0 do return
 	gameplay.level_stats.hits += 1
 	gameplay.level_stats.damage_taken += amount
-	gameplay.run_stats.hits += 1
 }
 
 finalize_level_result :: proc(gameplay: ^Gameplay) {

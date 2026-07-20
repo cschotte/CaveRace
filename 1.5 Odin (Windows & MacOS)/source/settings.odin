@@ -40,17 +40,6 @@ default_settings :: proc() -> Settings {
 	}
 }
 
-settings_are_valid :: proc(settings: Settings) -> bool {
-	return settings.music_volume >= 0 && settings.music_volume <= 100 &&
-	       settings.sfx_volume >= 0 && settings.sfx_volume <= 100 &&
-	       int(settings.display_mode) >= 0 && int(settings.display_mode) < len(Display_Mode) &&
-	       settings.window_scale >= 1 && settings.window_scale <= 3 &&
-	       settings.screen_shake >= 0 && settings.screen_shake <= 100 &&
-	       int(settings.difficulty) >= 0 && int(settings.difficulty) < len(Difficulty_Profile) &&
-	       keyboard_bindings_are_valid(settings.bindings) &&
-	       controller_bindings_are_valid(settings.controller_bindings)
-}
-
 difficulty_label :: proc(profile: Difficulty_Profile) -> cstring {
 	if profile == .Assisted do return "ASSISTED"
 	return "STANDARD"

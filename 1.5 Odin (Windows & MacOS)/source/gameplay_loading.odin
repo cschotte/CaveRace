@@ -66,7 +66,6 @@ setup_level_state :: proc(gameplay: ^Gameplay) -> Level_Setup_Error {
 	gameplay.player.direction = .None
 	gameplay.enemies = enemies
 	gameplay.enemy_count = enemy_count
-	gameplay.initial_enemy_count = enemy_count
 	gameplay.treasure_total = treasure_total
 	gameplay.treasure_collected = 0
 	if !gameplay.level_tracking_active do begin_level_tracking(gameplay)

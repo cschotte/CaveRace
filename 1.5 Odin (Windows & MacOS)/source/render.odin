@@ -95,21 +95,17 @@ draw_game_pause :: proc(game: ^Game) {
 		confirm_buffer: [128]byte
 		confirm: cstring
 		if game.last_input_device == .Keyboard {
-			formatted := fmt.bprintf(
-				confirm_buffer[:len(confirm_buffer) - 1],
+			confirm = format_cstring(
+				confirm_buffer[:],
 				"%s: CONFIRM    ESC: CANCEL",
 				action_prompt(.Confirm, .Keyboard, game.settings.bindings),
 			)
-			confirm_buffer[len(formatted)] = 0
-			confirm = cstring(raw_data(confirm_buffer[:]))
 		} else {
-			formatted := fmt.bprintf(
-				confirm_buffer[:len(confirm_buffer) - 1],
+			confirm = format_cstring(
+				confirm_buffer[:],
 				"%s: CONFIRM    B: CANCEL",
 				action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
 			)
-			confirm_buffer[len(formatted)] = 0
-			confirm = cstring(raw_data(confirm_buffer[:]))
 		}
 		confirm_width := rl.MeasureText(confirm, 14)
 		rl.DrawText(confirm, (WINDOW_WIDTH - confirm_width) / 2, panel_y + 142, 14, rl.GOLD)
@@ -132,8 +128,8 @@ draw_game_pause :: proc(game: ^Game) {
 	footer_buffer: [160]byte
 	footer: cstring
 	if game.last_input_device == .Keyboard {
-		formatted := fmt.bprintf(
-			footer_buffer[:len(footer_buffer) - 1],
+		footer = format_cstring(
+			footer_buffer[:],
 			"ARROWS / %s/%s/%s/%s    %s SELECT    %s PAUSE",
 			keyboard_key_label(game.settings.bindings[.Move_Up]),
 			keyboard_key_label(game.settings.bindings[.Move_Left]),
@@ -142,17 +138,13 @@ draw_game_pause :: proc(game: ^Game) {
 			action_prompt(.Confirm, .Keyboard, game.settings.bindings),
 			action_prompt(.Pause, .Keyboard, game.settings.bindings),
 		)
-		footer_buffer[len(formatted)] = 0
-		footer = cstring(raw_data(footer_buffer[:]))
 	} else {
-		formatted := fmt.bprintf(
-			footer_buffer[:len(footer_buffer) - 1],
+		footer = format_cstring(
+			footer_buffer[:],
 			"LEFT STICK / MOVE BUTTONS    %s SELECT    %s PAUSE",
 			action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
 			action_prompt(.Pause, .Controller, game.settings.bindings, &game.settings.controller_bindings),
 		)
-		footer_buffer[len(formatted)] = 0
-		footer = cstring(raw_data(footer_buffer[:]))
 	}
 	footer_width := rl.MeasureText(footer, 13)
 	rl.DrawText(footer, (WINDOW_WIDTH - footer_width) / 2, panel_y + 286, 13, rl.LIGHTGRAY)
@@ -198,11 +190,17 @@ first_run_item_label :: proc(item: First_Run_Item) -> cstring {
 	return ""
 }
 
-draw_ui_format :: proc(x, y, size: i32, color: rl.Color, format: string, args: ..any) {
-	buffer: [256]byte
+// format_cstring writes formatted text into a caller-owned buffer and
+// null-terminates it, letting callers measure or center text before drawing.
+format_cstring :: proc(buffer: []byte, format: string, args: ..any) -> cstring {
 	formatted := fmt.bprintf(buffer[:len(buffer) - 1], format, ..args)
 	buffer[len(formatted)] = 0
-	rl.DrawText(cstring(raw_data(buffer[:])), x, y, size, color)
+	return cstring(raw_data(buffer[:]))
+}
+
+draw_ui_format :: proc(x, y, size: i32, color: rl.Color, format: string, args: ..any) {
+	buffer: [256]byte
+	rl.DrawText(format_cstring(buffer[:], format, ..args), x, y, size, color)
 }
 
 draw_menu_row :: proc(label: cstring, index, selected, y: int) {
@@ -275,8 +273,8 @@ draw_device_footer :: proc(game: ^Game, text_y: i32 = 372) {
 	buffer: [180]byte
 	footer: cstring
 	if game.last_input_device == .Keyboard {
-		formatted := fmt.bprintf(
-			buffer[:len(buffer) - 1],
+		footer = format_cstring(
+			buffer[:],
 			"ARROWS / %s/%s/%s/%s    %s: SELECT    ESC: BACK",
 			keyboard_key_label(game.settings.bindings[.Move_Up]),
 			keyboard_key_label(game.settings.bindings[.Move_Left]),
@@ -284,16 +282,12 @@ draw_device_footer :: proc(game: ^Game, text_y: i32 = 372) {
 			keyboard_key_label(game.settings.bindings[.Move_Right]),
 			action_prompt(.Confirm, .Keyboard, game.settings.bindings),
 		)
-		buffer[len(formatted)] = 0
-		footer = cstring(raw_data(buffer[:]))
 	} else {
-		formatted := fmt.bprintf(
-			buffer[:len(buffer) - 1],
+		footer = format_cstring(
+			buffer[:],
 			"LEFT STICK / MOVE BUTTONS    %s: SELECT    B: BACK",
 			action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
 		)
-		buffer[len(formatted)] = 0
-		footer = cstring(raw_data(buffer[:]))
 	}
 	width := rl.MeasureText(footer, 14)
 	rl.DrawText(footer, (WINDOW_WIDTH - width) / 2, text_y, 14, rl.LIGHTGRAY)
@@ -399,22 +393,18 @@ draw_story_prompt :: proc(game: ^Game) {
 	buffer: [160]byte
 	prompt: cstring
 	if game.last_input_device == .Controller {
-		formatted := fmt.bprintf(
-			buffer[:len(buffer) - 1],
+		prompt = format_cstring(
+			buffer[:],
 			"AUTO NEXT     %s: SKIP SLIDE     B: SKIP STORY",
 			action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
 		)
-		buffer[len(formatted)] = 0
-		prompt = cstring(raw_data(buffer[:]))
 	} else {
-		formatted := fmt.bprintf(
-			buffer[:len(buffer) - 1],
+		prompt = format_cstring(
+			buffer[:],
 			"AUTO NEXT     %s / %s: SKIP SLIDE     ESC: SKIP STORY",
 			action_prompt(.Bomb, .Keyboard, game.settings.bindings),
 			action_prompt(.Confirm, .Keyboard, game.settings.bindings),
 		)
-		buffer[len(formatted)] = 0
-		prompt = cstring(raw_data(buffer[:]))
 	}
 	width := rl.MeasureText(prompt, 14)
 	rl.DrawRectangle((WINDOW_WIDTH - width) / 2 - 8, 370, width + 16, 22, rl.Fade(rl.BLACK, 0.82))
@@ -478,39 +468,31 @@ draw_tutorial_prompt :: proc(game: ^Game) {
 	footer_buffer: [128]byte
 	footer: cstring
 	if game.last_input_device == .Keyboard {
-		formatted := fmt.bprintf(
-			footer_buffer[:len(footer_buffer) - 1],
+		footer = format_cstring(
+			footer_buffer[:],
 			"ESC: SKIP     %s: PAUSE",
 			action_prompt(.Pause, .Keyboard, game.settings.bindings),
 		)
-		footer_buffer[len(formatted)] = 0
-		footer = cstring(raw_data(footer_buffer[:]))
 	} else {
-		formatted := fmt.bprintf(
-			footer_buffer[:len(footer_buffer) - 1],
+		footer = format_cstring(
+			footer_buffer[:],
 			"B: SKIP     %s: PAUSE",
 			action_prompt(.Pause, .Controller, game.settings.bindings, &game.settings.controller_bindings),
 		)
-		footer_buffer[len(formatted)] = 0
-		footer = cstring(raw_data(footer_buffer[:]))
 	}
 	if game.tutorial.step == .Complete {
 		if game.last_input_device == .Keyboard {
-			formatted := fmt.bprintf(
-				footer_buffer[:len(footer_buffer) - 1],
+			footer = format_cstring(
+				footer_buffer[:],
 				"%s: START CAMPAIGN",
 				action_prompt(.Confirm, .Keyboard, game.settings.bindings),
 			)
-			footer_buffer[len(formatted)] = 0
-			footer = cstring(raw_data(footer_buffer[:]))
 		} else {
-			formatted := fmt.bprintf(
-				footer_buffer[:len(footer_buffer) - 1],
+			footer = format_cstring(
+				footer_buffer[:],
 				"%s: START CAMPAIGN",
 				action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
 			)
-			footer_buffer[len(formatted)] = 0
-			footer = cstring(raw_data(footer_buffer[:]))
 		}
 	}
 	footer_width := rl.MeasureText(footer, 13)
@@ -618,9 +600,7 @@ draw_gameplay_message :: proc(message: cstring) {
 
 draw_gameplay_message_format :: proc(format: string, args: ..any) {
 	buffer: [256]byte
-	formatted := fmt.bprintf(buffer[:len(buffer) - 1], format, ..args)
-	buffer[len(formatted)] = 0
-	draw_gameplay_message(cstring(raw_data(buffer[:])))
+	draw_gameplay_message(format_cstring(buffer[:], format, ..args))
 }
 
 // feedback_flash_color maps domain feedback kinds to raylib colors only at the

@@ -103,7 +103,6 @@ run_gameplay_ticks :: proc(
 		tick_state.accumulator_seconds -= GAMEPLAY_TICK_SECONDS
 		if tick_state.accumulator_seconds < 0 do tick_state.accumulator_seconds = 0
 		result.ticks_run += 1
-		gameplay.run_stats.elapsed_ticks += 1
 		gameplay.level_stats.elapsed_ticks += 1
 
 		apply_queued_cheats(gameplay, &result, cheats_enabled)

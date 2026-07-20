@@ -37,22 +37,6 @@ Game_Effects :: struct {
 	popups:    [MAX_SCORE_POPUPS]Score_Popup,
 }
 
-effect_particle_count :: proc(effects: ^Game_Effects) -> int {
-	count := 0
-	for particle in effects.particles {
-		if particle.active do count += 1
-	}
-	return count
-}
-
-score_popup_count :: proc(effects: ^Game_Effects) -> int {
-	count := 0
-	for popup in effects.popups {
-		if popup.active do count += 1
-	}
-	return count
-}
-
 effect_particle_slot :: proc(effects: ^Game_Effects) -> ^Effect_Particle {
 	oldest_index := 0
 	oldest_remaining := effects.particles[0].remaining_seconds
