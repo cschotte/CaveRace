@@ -11,8 +11,47 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 	case .Playing:
 		draw_gameplay(&game.gameplay, assets)
 	}
+	if game.screen == .Playing && game.paused {
+		draw_game_pause()
+	}
 
 	draw_game_feedback(game.feedback)
+}
+
+// draw_game_pause keeps the active cave visible beneath a high-contrast
+// overlay and advertises every input that can resume this deliberately small
+// C1 pause flow.
+draw_game_pause :: proc() {
+	panel_width: i32 = 430
+	panel_height: i32 = 120
+	panel_x := (WINDOW_WIDTH - panel_width) / 2
+	panel_y := (WINDOW_HEIGHT - panel_height) / 2
+
+	rl.DrawRectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, rl.Fade(rl.BLACK, 0.72))
+	rl.DrawRectangle(panel_x, panel_y, panel_width, panel_height, rl.BLACK)
+	rl.DrawRectangleLines(panel_x, panel_y, panel_width, panel_height, rl.GOLD)
+
+	title: cstring = "PAUSED"
+	title_size: i32 = 32
+	title_width := rl.MeasureText(title, title_size)
+	rl.DrawText(
+		title,
+		(WINDOW_WIDTH - title_width) / 2,
+		panel_y + 20,
+		title_size,
+		rl.GOLD,
+	)
+
+	prompt: cstring = "P / ESC / CONTROLLER START TO RESUME"
+	prompt_size: i32 = 16
+	prompt_width := rl.MeasureText(prompt, prompt_size)
+	rl.DrawText(
+		prompt,
+		(WINDOW_WIDTH - prompt_width) / 2,
+		panel_y + 76,
+		prompt_size,
+		rl.WHITE,
+	)
 }
 
 // draw_front_end displays the story, title, or controls image selected by the

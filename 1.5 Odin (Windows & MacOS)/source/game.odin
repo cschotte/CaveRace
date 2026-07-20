@@ -16,6 +16,7 @@ Game :: struct {
 	gameplay:        Gameplay,
 	feedback:        Game_Feedback,
 	cheats_enabled:  bool,
+	paused:          bool,
 }
 
 // Game_Update_Result carries transient effects and explicit I/O requests to the
@@ -40,6 +41,7 @@ init_game :: proc(game: ^Game, cheats_enabled := false) {
 // input on the main menu.
 start_new_game :: proc(game: ^Game) {
 	init_gameplay(&game.gameplay)
+	game.paused = false
 	game.screen = .Playing
 }
 
@@ -47,6 +49,7 @@ start_new_game :: proc(game: ^Game) {
 // presentation whenever play returns to the front end.
 show_main_menu :: proc(game: ^Game) {
 	begin_main_menu(&game.front_end)
+	game.paused = false
 	game.screen = .Main_Menu
 }
 
@@ -71,21 +74,25 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 		advance_main_menu(&game.front_end, frame_seconds)
 		if main_menu_start_requested(input) do start_new_game(game)
 	case .Playing:
-		result.gameplay = update_gameplay(
-			&game.gameplay,
-			input,
-			frame_seconds,
-			game.cheats_enabled,
-		)
-		if !result.gameplay.back_requested && previous_gameplay_state == .Load_Level {
-			result.load_level_requested = true
-		}
-		if result.gameplay.back_requested {
-			show_main_menu(game)
-		} else if (previous_gameplay_state == .Game_Over ||
-		           previous_gameplay_state == .Game_Won) &&
-		          main_menu_start_requested(input) {
-			show_main_menu(game)
+		if previous_gameplay_state == .Playing && input.pause_pressed {
+			toggle_game_pause(game)
+		} else if !game.paused {
+			result.gameplay = update_gameplay(
+				&game.gameplay,
+				input,
+				frame_seconds,
+				game.cheats_enabled,
+			)
+			if !result.gameplay.back_requested && previous_gameplay_state == .Load_Level {
+				result.load_level_requested = true
+			}
+			if result.gameplay.back_requested {
+				show_main_menu(game)
+			} else if (previous_gameplay_state == .Game_Over ||
+			           previous_gameplay_state == .Game_Won) &&
+			          main_menu_start_requested(input) {
+				show_main_menu(game)
+			}
 		}
 	}
 

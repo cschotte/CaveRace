@@ -8,6 +8,7 @@ Game_Input :: struct {
 	any_key_pressed: bool,
 	confirm:         bool,
 	back:            bool,
+	pause_pressed:   bool,
 	space_pressed:   bool,
 	move_down:       bool,
 	move_up:         bool,
@@ -23,6 +24,8 @@ poll_game_input :: proc() -> Game_Input {
 
 	input.confirm       = rl.IsKeyPressed(.ENTER)
 	input.back          = rl.IsKeyPressed(.ESCAPE)
+	input.pause_pressed = rl.IsKeyPressed(.P) || input.back ||
+	                      rl.IsGamepadButtonPressed(0, .MIDDLE_RIGHT)
 	input.space_pressed = rl.IsKeyPressed(.SPACE)
 
 	input.move_down  = rl.IsKeyDown(.DOWN)
