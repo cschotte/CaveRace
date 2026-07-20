@@ -11,7 +11,9 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 		draw_front_end(game.front_end, &assets.screens)
 		draw_story_prompt(game)
 	case .Main_Menu:
-		rl.DrawTexture(assets.screens.front_end[MAIN_MENU_FIRST_IMAGE], 0, 0, rl.WHITE)
+		background := assets.screens.front_end[MAIN_MENU_FIRST_IMAGE]
+		if game.menu.page == .Records do background = assets.screens.score
+		rl.DrawTexture(background, 0, 0, rl.WHITE)
 		draw_main_menu(game)
 	case .Tutorial:
 		draw_gameplay(game, assets)
@@ -158,6 +160,8 @@ draw_front_end :: proc(front_end: Front_End_State, screens: ^Screen_Assets) {
 main_menu_item_label :: proc(item: Main_Menu_Item) -> cstring {
 	switch item {
 	case .Start_Game:   return "START GAME"
+	case .Practice:     return "PRACTICE / LEVEL SELECT"
+	case .Records:      return "RECORDS"
 	case .Tutorial:     return "TUTORIAL"
 	case .How_To_Play:  return "HOW TO PLAY"
 	case .Settings:     return "SETTINGS"
@@ -165,6 +169,16 @@ main_menu_item_label :: proc(item: Main_Menu_Item) -> cstring {
 	case .Quit:         return "QUIT"
 	}
 	return ""
+}
+
+draw_duration :: proc(x, y, size: i32, color: rl.Color, ticks: int) {
+	if ticks <= 0 {
+		rl.DrawText("--:--.-", x, y, size, color)
+		return
+	}
+	total_seconds := ticks / GAMEPLAY_TICK_HZ
+	tenths := (ticks % GAMEPLAY_TICK_HZ) * 10 / GAMEPLAY_TICK_HZ
+	draw_ui_format(x, y, size, color, "%02d:%02d.%d", total_seconds / 60, total_seconds % 60, tenths)
 }
 
 first_run_item_label :: proc(item: First_Run_Item) -> cstring {
@@ -332,6 +346,59 @@ draw_how_to_play :: proc(game: ^Game) {
 	draw_device_footer(game, 374)
 }
 
+draw_level_select :: proc(game: ^Game) {
+	draw_menu_panel("PRACTICE / LEVEL SELECT", 320)
+	record := record_for_profile(&game.settings.records, game.settings.difficulty)
+	unlocked := unlocked_level_count(record)
+	for level_index in 0 ..< unlocked {
+		color := rl.LIGHTGRAY
+		prefix: cstring = "  "
+		if game.menu.selected == level_index {
+			color = rl.GOLD
+			prefix = "> "
+		}
+		y := i32(88 + level_index * 23)
+		rl.DrawText(prefix, 112, y, 15, color)
+		metadata := level_metadata(level_index)
+		draw_ui_format(136, y, 15, color, "%-8s  %-6s", metadata.name, medal_label(record.levels[level_index].best_medal))
+		draw_duration(385, y, 15, color, record.levels[level_index].best_time_ticks)
+	}
+	draw_menu_row("BACK", unlocked, game.menu.selected, 88 + unlocked * 23)
+	draw_ui_format(148, 346, 13, rl.GOLD, "%s PROFILE - PRACTICE NEVER CHANGES RECORDS", difficulty_label(game.settings.difficulty))
+	draw_device_footer(game, 378)
+}
+
+draw_records :: proc(game: ^Game) {
+	record := record_for_profile(&game.settings.records, game.settings.difficulty)
+	if game.menu.records_page == 0 {
+		draw_ui_format(157, 116, 15, rl.BLACK, "TOP RUN SCORES - %s", difficulty_label(game.settings.difficulty))
+		if record.run_score_count == 0 {
+			rl.DrawText("NO CAMPAIGN RUNS YET", 217, 178, 16, rl.BLACK)
+		} else {
+			for index in 0 ..< MAX_RUN_RECORDS {
+				y := i32(143 + index * 19)
+				if index < record.run_score_count {
+					draw_ui_format(211, y, 16, rl.BLACK, "%2d.  %08d", index + 1, record.run_scores[index])
+				} else {
+					draw_ui_format(211, y, 16, rl.DARKBROWN, "%2d.  --------", index + 1)
+				}
+			}
+		}
+		rl.DrawText("PAGE 1/2", 288, 339, 13, rl.DARKBROWN)
+	} else {
+		draw_ui_format(175, 116, 15, rl.BLACK, "CAVE BESTS - %s", difficulty_label(game.settings.difficulty))
+		for level_index in 0 ..< LEVEL_COUNT {
+			y := i32(143 + level_index * 19)
+			level_record := record.levels[level_index]
+			draw_ui_format(173, y, 15, rl.BLACK, "%2d  %-6s", level_index + 1, medal_label(level_record.best_medal))
+			draw_duration(376, y, 15, rl.BLACK, level_record.best_time_ticks)
+		}
+		rl.DrawText("PAGE 2/2", 288, 339, 13, rl.DARKBROWN)
+	}
+	rl.DrawText("LEFT / RIGHT / CONFIRM: PAGE", 205, 358, 13, rl.GOLD)
+	draw_device_footer(game, 378)
+}
+
 draw_story_prompt :: proc(game: ^Game) {
 	buffer: [160]byte
 	prompt: cstring
@@ -363,13 +430,15 @@ draw_main_menu :: proc(game: ^Game) {
 	case .Settings:    draw_settings_menu(game)
 	case .Bindings:    draw_bindings_menu(game)
 	case .How_To_Play: draw_how_to_play(game)
+	case .Level_Select: draw_level_select(game)
+	case .Records:      draw_records(game)
 	case .Main:
-		draw_menu_panel("CAVERACE", 308)
+		draw_menu_panel("CAVERACE", 320)
 		for item_index in 0 ..< len(Main_Menu_Item) {
-			draw_menu_row(main_menu_item_label(Main_Menu_Item(item_index)), item_index, game.menu.selected, 102 + item_index * 38)
+			draw_menu_row(main_menu_item_label(Main_Menu_Item(item_index)), item_index, game.menu.selected, 82 + item_index * 31)
 		}
 		draw_ui_format(175, 337, 14, rl.GOLD, "MODE: %s", difficulty_label(game.settings.difficulty))
-		draw_device_footer(game)
+		draw_device_footer(game, 378)
 	case .First_Run:
 		draw_menu_panel("CHOOSE YOUR START", 254)
 		rl.DrawText("LEARN MOVEMENT, BOMBS, PICKUPS AND SAFETY.", 161, 101, 14, rl.WHITE)
@@ -379,6 +448,38 @@ draw_main_menu :: proc(game: ^Game) {
 		draw_ui_format(172, 292, 14, rl.GOLD, "RULES: %s", difficulty_label(game.settings.difficulty))
 		draw_device_footer(game)
 	}
+}
+
+draw_level_result :: proc(game: ^Game) {
+	result := &game.gameplay.level_result
+	rl.DrawRectangle(38, 26, 564, 342, rl.Fade(rl.BLACK, 0.96))
+	rl.DrawRectangleLines(38, 26, 564, 342, rl.GOLD)
+	draw_ui_format(216, 40, 23, rl.GOLD, "CAVE %d COMPLETE", result.level_index + 1)
+	draw_ui_format(72, 73, 15, rl.WHITE, "TIME")
+	draw_duration(135, 73, 15, rl.WHITE, result.elapsed_ticks)
+	draw_ui_format(233, 73, 15, rl.LIGHTGRAY, "PAR")
+	draw_duration(276, 73, 15, rl.LIGHTGRAY, result.par_ticks)
+	draw_ui_format(402, 73, 15, rl.WHITE, "TREASURE %d/%d", result.treasure_collected, result.treasure_total)
+	draw_ui_format(72, 96, 14, rl.LIGHTGRAY, "HITS %d   DAMAGE %d   DEATHS %d", result.hits, result.damage_taken, result.deaths)
+
+	draw_ui_format(72, 126, 14, rl.WHITE, "ALIENS             %3d x %3d     +%4d", result.enemies_destroyed, gameplay_tuning(game.gameplay.difficulty).score_enemy_destroyed, result.enemy_points)
+	draw_ui_format(72, 147, 14, rl.WHITE, "TREASURE           %3d x %3d     +%4d", result.treasure_pickups, gameplay_tuning(game.gameplay.difficulty).score_treasure_pickup, result.treasure_points)
+	draw_ui_format(72, 168, 14, rl.WHITE, "ITEMS              %3d x %3d     +%4d", result.items_collected, gameplay_tuning(game.gameplay.difficulty).score_item_pickup, result.item_points)
+	draw_ui_format(72, 189, 14, rl.WHITE, "SALVAGED ITEMS     %3d x %3d     +%4d", result.items_salvaged, gameplay_tuning(game.gameplay.difficulty).score_capped_item_salvage, result.salvage_points)
+	draw_ui_format(72, 210, 14, rl.WHITE, "CAVE CLEAR                         +%4d", result.clear_bonus)
+	draw_ui_format(72, 231, 14, rl.WHITE, "ALL TREASURE                       +%4d", result.all_treasure_bonus)
+	draw_ui_format(72, 252, 14, rl.WHITE, "NO DAMAGE                          +%4d", result.no_damage_bonus)
+	draw_ui_format(72, 273, 14, rl.WHITE, "UNDER PAR                          +%4d", result.par_bonus)
+	if result.score_adjustment != 0 {
+		draw_ui_format(72, 294, 13, rl.RED, "SCORE ADJUSTMENT                    %+d", result.score_adjustment)
+	}
+	draw_ui_format(72, 314, 16, rl.GOLD, "TOTAL +%d     SCORE %08d     MEDAL %s", result.score_delta, result.final_score, medal_label(result.medal))
+	if result.new_best_time || result.new_best_medal {
+		rl.DrawText("NEW CAVE RECORD", 426, 334, 13, rl.GREEN)
+	}
+	footer: cstring = "CONTINUE"
+	if game.gameplay.mode == .Practice do footer = "RETURN TO MENU"
+	draw_ui_format(72, 348, 13, rl.LIGHTGRAY, "%s: %s", action_prompt(.Confirm, game.last_input_device, game.settings.bindings, &game.settings.controller_bindings), footer)
 }
 
 draw_tutorial_prompt :: proc(game: ^Game) {
@@ -498,17 +599,7 @@ draw_gameplay :: proc(game: ^Game, assets: ^Assets) {
 			)
 		}
 	case .Won:
-		if game.last_input_device == .Controller {
-			draw_gameplay_message_format(
-				"LEVEL COMPLETE - %s TO CONTINUE",
-				action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
-			)
-		} else {
-			draw_gameplay_message_format(
-				"LEVEL COMPLETE - %s TO CONTINUE",
-				action_prompt(.Confirm, .Keyboard, game.settings.bindings),
-			)
-		}
+		draw_level_result(game)
 	case .Game_Won, .Game_Over:
 	case .Load_Failed:
 		if game.last_input_device == .Controller {

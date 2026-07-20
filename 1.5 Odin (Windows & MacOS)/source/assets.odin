@@ -3,12 +3,13 @@ package caverace
 import "core:strings"
 import rl "vendor:raylib"
 
-// Screen_Assets owns the gameplay background and all nine front-end images for
-// the complete application asset lifetime.
+// Screen_Assets owns gameplay/outcome/records backgrounds and all nine
+// front-end images for the complete application asset lifetime.
 Screen_Assets :: struct {
 	game:      rl.Texture,
 	game_over: rl.Texture,
 	you_won:   rl.Texture,
+	score:     rl.Texture,
 	front_end: [FRONT_END_IMAGE_COUNT]rl.Texture,
 }
 
@@ -147,6 +148,7 @@ load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true) 
 	assets.screens.game         = load_resource_texture(resource_root, "screens/game_border.png")
 	assets.screens.game_over    = load_resource_texture(resource_root, "screens/game_over.png")
 	assets.screens.you_won      = load_resource_texture(resource_root, "screens/you_won.png")
+	assets.screens.score        = load_resource_texture(resource_root, "screens/Score.png")
 	for relative_path, image_index in FRONT_END_TEXTURE_PATHS {
 		assets.screens.front_end[image_index] =
 			load_resource_texture(resource_root, relative_path)
@@ -196,6 +198,7 @@ assets_are_valid :: proc(assets: ^Assets, require_audio := true) -> bool {
 	if !texture_has_size(assets.screens.game, WINDOW_WIDTH, WINDOW_HEIGHT)      do return false
 	if !texture_has_size(assets.screens.game_over, WINDOW_WIDTH, WINDOW_HEIGHT) do return false
 	if !texture_has_size(assets.screens.you_won, WINDOW_WIDTH, WINDOW_HEIGHT)   do return false
+	if !texture_has_size(assets.screens.score, WINDOW_WIDTH, WINDOW_HEIGHT)     do return false
 	for texture in assets.screens.front_end {
 		if !texture_has_size(texture, WINDOW_WIDTH, WINDOW_HEIGHT) do return false
 	}
@@ -257,6 +260,7 @@ unload_assets :: proc(assets: ^Assets) {
 	unload_texture(assets.screens.game)
 	unload_texture(assets.screens.game_over)
 	unload_texture(assets.screens.you_won)
+	unload_texture(assets.screens.score)
 	for texture in assets.screens.front_end {
 		unload_texture(texture)
 	}

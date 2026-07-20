@@ -201,6 +201,7 @@ Gameplay_State :: enum {
 // bounded active entities, fixed clock, and session random generator.
 Gameplay :: struct {
 	state:                    Gameplay_State,
+	mode:                     Run_Mode,
 	difficulty:               Difficulty_Profile,
 	level:                    Level,
 	level_index:              int,
@@ -211,6 +212,11 @@ Gameplay :: struct {
 	initial_enemy_count:      int,
 	treasure_total:           int,
 	treasure_collected:       int,
+	run_stats:                Run_Stats,
+	level_stats:              Level_Stats,
+	level_result:             Level_Result,
+	level_tracking_active:    bool,
+	run_record_submitted:     bool,
 	bombs:                    [MAX_BOMBS]Bomb_State,
 	explosions:               [MAX_BOMBS]Explosion_State,
 	bomb_occupancy:           Map_Grid,
@@ -226,6 +232,7 @@ Gameplay :: struct {
 // from update_gameplay.
 Gameplay_Frame_Result :: struct {
 	back_requested: bool,
+	practice_exit_requested: bool,
 	ticks:          Gameplay_Tick_Result,
 }
 
@@ -237,6 +244,7 @@ init_gameplay :: proc(
 ) {
 	gameplay^ = Gameplay {
 		state      = .Load_Level,
+		mode       = .Campaign,
 		difficulty = difficulty,
 		player     = new_player_state(difficulty),
 	}
@@ -270,8 +278,8 @@ new_player_state :: proc(
 	}
 }
 
-// reset_player_for_level_start preserves run-wide lives and score while restoring
-// energy and bomb upgrades before a retry or next-level load.
+// reset_player_for_level_start preserves run-wide lives and score while
+// restoring energy and base upgrades for Standard's death retry rule.
 reset_player_for_level_start :: proc(
 	player: ^Player_State,
 	difficulty: Difficulty_Profile = .Standard,

@@ -157,6 +157,7 @@ apply_active_explosions_to_entities :: proc(
 				gameplay.difficulty,
 			)
 			result.enemies_destroyed += 1
+			gameplay.level_stats.enemies_destroyed += 1
 			result.squish_requests += 1
 		}
 	}
@@ -169,6 +170,7 @@ apply_active_explosions_to_entities :: proc(
 	)
 	if ok && active_explosion_contains_cell(gameplay, player_position) {
 		tuning := gameplay_tuning(gameplay.difficulty)
+		energy_before := gameplay.player.energy
 		if tuning.blast_damage >= tuning.player_max_energy {
 			gameplay.player.energy = 0
 			result.player_damaged = true
@@ -183,6 +185,9 @@ apply_active_explosions_to_entities :: proc(
 				tuning.blast_grace_ticks,
 			)
 			result.player_damaged = true
+		}
+		if result.player_damaged && gameplay.player.energy < energy_before {
+			record_gameplay_damage(gameplay, energy_before - gameplay.player.energy)
 		}
 	}
 }

@@ -1,7 +1,7 @@
 package caverace
 
-// Difficulty_Profile is explicit from Milestone 1 onward even though the
-// shipped rules remain the single legacy-compatible Standard profile.
+// Difficulty_Profile separates rules and records for the legacy-compatible
+// Standard campaign and the more forgiving Assisted campaign.
 Difficulty_Profile :: enum {
 	Standard,
 	Assisted,
@@ -37,6 +37,9 @@ SCORE_CAPPED_ITEM_SALVAGE :: 25
 SCORE_ENEMY_DESTROYED :: 75
 SCORE_TREASURE_PICKUP :: 100
 SCORE_LEVEL_WON       :: 100
+SCORE_ALL_TREASURE    :: 250
+SCORE_NO_DAMAGE       :: 200
+SCORE_UNDER_PAR       :: 150
 SCORE_DEATH_PENALTY   :: 0
 
 Gameplay_Tuning :: struct {
@@ -61,6 +64,9 @@ Gameplay_Tuning :: struct {
 	score_enemy_destroyed:      int,
 	score_treasure_pickup:      int,
 	score_level_won:            int,
+	score_all_treasure:         int,
+	score_no_damage:            int,
+	score_under_par:            int,
 	score_death_penalty:        int,
 }
 
@@ -87,6 +93,9 @@ GAMEPLAY_TUNING :: [Difficulty_Profile]Gameplay_Tuning {
 		score_enemy_destroyed      = SCORE_ENEMY_DESTROYED,
 		score_treasure_pickup      = SCORE_TREASURE_PICKUP,
 		score_level_won            = SCORE_LEVEL_WON,
+		score_all_treasure         = SCORE_ALL_TREASURE,
+		score_no_damage            = SCORE_NO_DAMAGE,
+		score_under_par            = SCORE_UNDER_PAR,
 		score_death_penalty        = SCORE_DEATH_PENALTY,
 	},
 	.Assisted = {
@@ -111,6 +120,9 @@ GAMEPLAY_TUNING :: [Difficulty_Profile]Gameplay_Tuning {
 		score_enemy_destroyed      = SCORE_ENEMY_DESTROYED,
 		score_treasure_pickup      = SCORE_TREASURE_PICKUP,
 		score_level_won            = SCORE_LEVEL_WON,
+		score_all_treasure         = SCORE_ALL_TREASURE,
+		score_no_damage            = SCORE_NO_DAMAGE,
+		score_under_par            = SCORE_UNDER_PAR,
 		score_death_penalty        = SCORE_DEATH_PENALTY,
 	},
 }

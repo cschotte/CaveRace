@@ -1,20 +1,10 @@
 package caverace
 
-SETTINGS_VERSION :: 1
+SETTINGS_VERSION :: 2
 
 Display_Mode :: enum {
 	Windowed,
 	Borderless,
-}
-
-Profile_Record :: struct {
-	best_run_score: int,
-	best_cave:      int,
-}
-
-Local_Records :: struct {
-	standard: Profile_Record,
-	assisted: Profile_Record,
 }
 
 Settings :: struct {
@@ -58,14 +48,6 @@ settings_are_valid :: proc(settings: Settings) -> bool {
 	       int(settings.difficulty) >= 0 && int(settings.difficulty) < len(Difficulty_Profile) &&
 	       keyboard_bindings_are_valid(settings.bindings) &&
 	       controller_bindings_are_valid(settings.controller_bindings)
-}
-
-record_for_profile :: proc(records: ^Local_Records, profile: Difficulty_Profile) -> ^Profile_Record {
-	switch profile {
-	case .Standard: return &records.standard
-	case .Assisted: return &records.assisted
-	}
-	return &records.standard
 }
 
 difficulty_label :: proc(profile: Difficulty_Profile) -> cstring {

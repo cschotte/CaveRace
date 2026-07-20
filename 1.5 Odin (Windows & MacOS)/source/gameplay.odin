@@ -33,7 +33,11 @@ update_gameplay :: proc(
 
 	case .Won:
 		if input.confirm {
-			begin_next_level(gameplay)
+			if gameplay.mode == .Practice {
+				result.practice_exit_requested = true
+			} else {
+				begin_next_level(gameplay)
+			}
 		}
 
 	case .Game_Won, .Game_Over:

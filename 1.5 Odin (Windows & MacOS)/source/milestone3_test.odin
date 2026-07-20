@@ -142,8 +142,11 @@ settings_document_validates_sections_and_keeps_profile_namespaces_test :: proc(t
 
 	document.version = SETTINGS_VERSION - 1
 	old, old_ok := settings_from_document(document)
-	testing.expect(t, !old_ok)
-	testing.expect_value(t, old, default_settings())
+	testing.expect(t, old_ok)
+	testing.expect_value(t, old.difficulty, Difficulty_Profile.Assisted)
+	testing.expect_value(t, old.records.standard.best_run_score, 900)
+	testing.expect_value(t, old.records.standard.run_score_count, 1)
+	testing.expect_value(t, old.records.assisted.best_run_score, 700)
 }
 
 @(test)

@@ -74,6 +74,9 @@ finish_gameplay_action_interval :: proc(
 	if pickup.item_salvaged do result.items_salvaged += 1
 	if pickup.treasure_collected do result.treasures_collected += 1
 	if pickup.treasure_collected do gameplay.treasure_collected += 1
+	if pickup.item_collected do gameplay.level_stats.items_collected += 1
+	if pickup.item_salvaged do gameplay.level_stats.items_salvaged += 1
+	if pickup.treasure_collected do gameplay.level_stats.treasures_collected += 1
 	if pickup.item_collected || pickup.item_salvaged || pickup.treasure_collected {
 		result.item_sound_requests += 1
 	}
@@ -100,6 +103,8 @@ run_gameplay_ticks :: proc(
 		tick_state.accumulator_seconds -= GAMEPLAY_TICK_SECONDS
 		if tick_state.accumulator_seconds < 0 do tick_state.accumulator_seconds = 0
 		result.ticks_run += 1
+		gameplay.run_stats.elapsed_ticks += 1
+		gameplay.level_stats.elapsed_ticks += 1
 
 		apply_queued_cheats(gameplay, &result, cheats_enabled)
 		result.ticking_requests += advance_bomb_fuses(gameplay)
@@ -117,11 +122,13 @@ run_gameplay_ticks :: proc(
 		}
 		player_was_alive := gameplay.player.energy > 0
 		if gameplay.player.contact_grace_ticks == 0 && player_touches_enemy(gameplay) {
+			energy_before := gameplay.player.energy
 			result.player_damaged = apply_enemy_contact_damage(
 				&gameplay.player,
 				gameplay.difficulty,
 			)
 			if result.player_damaged {
+				record_gameplay_damage(gameplay, energy_before - gameplay.player.energy)
 				gameplay.player.contact_grace_ticks =
 					gameplay_tuning(gameplay.difficulty).contact_grace_ticks
 				result.contact_hit_requests += 1

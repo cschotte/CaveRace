@@ -6,10 +6,14 @@ Menu_Page :: enum {
 	How_To_Play,
 	Settings,
 	Bindings,
+	Level_Select,
+	Records,
 }
 
 Main_Menu_Item :: enum {
 	Start_Game,
+	Practice,
+	Records,
 	Tutorial,
 	How_To_Play,
 	Settings,
@@ -45,11 +49,14 @@ Menu_State :: struct {
 	binding_action:    Input_Action,
 	binding_device:    Input_Device,
 	binding_conflict_seconds: f64,
+	records_page:      int,
 }
 
 Menu_Update_Result :: struct {
 	start_campaign: bool,
 	start_tutorial: bool,
+	start_practice: bool,
+	practice_level: int,
 	replay_story:   bool,
 	quit_requested: bool,
 	settings_changed: bool,
@@ -66,7 +73,7 @@ menu_item_count :: proc(page: Menu_Page) -> int {
 	case .First_Run:   return len(First_Run_Item)
 	case .Settings:    return len(Settings_Menu_Item)
 	case .Bindings:    return len(Input_Action) + 1
-	case .How_To_Play: return 0
+	case .How_To_Play, .Level_Select, .Records: return 0
 	}
 	return 0
 }
@@ -153,6 +160,33 @@ update_menu :: proc(
 		}
 		return result
 	}
+	if menu.page == .Records {
+		if input.back {
+			open_menu_page(menu, .Main)
+		} else if input.menu_left_pressed || input.menu_right_pressed || input.confirm {
+			menu.records_page = (menu.records_page + 1) % 2
+		}
+		return result
+	}
+	if menu.page == .Level_Select {
+		record := record_for_profile(&settings.records, settings.difficulty)
+		count := unlocked_level_count(record) + 1
+		if input.back {
+			open_menu_page(menu, .Main)
+		} else if input.menu_up_pressed {
+			menu.selected = (menu.selected - 1 + count) % count
+		} else if input.menu_down_pressed {
+			menu.selected = (menu.selected + 1) % count
+		} else if input.confirm {
+			if menu.selected == count - 1 {
+				open_menu_page(menu, .Main)
+			} else {
+				result.start_practice = true
+				result.practice_level = menu.selected
+			}
+		}
+		return result
+	}
 
 	if menu.page == .Bindings && menu.binding_waiting {
 		if input.back {
@@ -191,7 +225,7 @@ update_menu :: proc(
 			open_menu_page(menu, .Main)
 		case .Bindings:
 			open_menu_page(menu, .Settings)
-		case .How_To_Play:
+		case .How_To_Play, .Level_Select, .Records:
 		}
 		return result
 	}
@@ -224,6 +258,10 @@ update_menu :: proc(
 			} else {
 				open_menu_page(menu, .First_Run)
 			}
+		case .Practice:     open_menu_page(menu, .Level_Select)
+		case .Records:
+			open_menu_page(menu, .Records)
+			menu.records_page = 0
 		case .Tutorial:     result.start_tutorial = true
 		case .How_To_Play:
 			open_menu_page(menu, .How_To_Play)
@@ -259,7 +297,7 @@ update_menu :: proc(
 			menu.binding_action = Input_Action(menu.selected)
 			menu.binding_waiting = true
 		}
-	case .How_To_Play:
+	case .How_To_Play, .Level_Select, .Records:
 	}
 	return result
 }

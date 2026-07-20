@@ -28,7 +28,7 @@ simultaneous_last_enemy_and_player_death_resolves_as_win_test :: proc(t: ^testin
 	testing.expect_value(
 		t,
 		gameplay.player.score,
-		10 + SCORE_ENEMY_DESTROYED + SCORE_LEVEL_WON,
+		10 + SCORE_ENEMY_DESTROYED + SCORE_LEVEL_WON + SCORE_UNDER_PAR,
 	)
 	testing.expect(t, !gameplay.level_completion_enabled)
 	testing.expect_value(t, gameplay.enemy_count, 0)
@@ -42,8 +42,8 @@ simultaneous_last_enemy_and_player_death_resolves_as_win_test :: proc(t: ^testin
 	testing.expect_value(t, gameplay.level_index, 1)
 	testing.expect_value(t, gameplay.player.lives, 2)
 	testing.expect_value(t, gameplay.player.energy, PLAYER_START_ENERGY)
-	testing.expect_value(t, gameplay.player.bomb_capacity, PLAYER_START_BOMB_CAPACITY)
-	testing.expect_value(t, gameplay.player.bomb_power, PLAYER_START_BOMB_POWER)
+	testing.expect_value(t, gameplay.player.bomb_capacity, 3)
+	testing.expect_value(t, gameplay.player.bomb_power, 4)
 	testing.expect_value(t, gameplay.player.score, score_after_win)
 }
 
@@ -223,26 +223,26 @@ ten_level_run_ends_in_game_won_without_wrapping_test :: proc(t: ^testing.T) {
 		gameplay.player.bomb_power = 8
 
 		update_gameplay(&gameplay, {}, 0)
-		expected_state := Gameplay_State.Won
-		if completed_level == LEVEL_COUNT - 1 do expected_state = .Game_Won
-		testing.expect_value(t, gameplay.state, expected_state)
+		testing.expect_value(t, gameplay.state, Gameplay_State.Won)
 		testing.expect_value(
 			t,
 			gameplay.player.score,
-			(completed_level + 1) * SCORE_LEVEL_WON,
+			(completed_level + 1) * (SCORE_LEVEL_WON + SCORE_NO_DAMAGE + SCORE_UNDER_PAR),
 		)
 		testing.expect(t, !gameplay.level_completion_enabled)
 		testing.expect_value(t, gameplay.enemy_count, 0)
 		testing.expect(t, !gameplay.bombs[0].active)
 		testing.expect(t, !gameplay.explosions[0].active)
 		testing.expect_value(t, gameplay.bomb_occupancy[1][1], u8(0))
+		update_gameplay(&gameplay, Game_Input {confirm = true}, 0)
 		if completed_level < LEVEL_COUNT - 1 {
-			update_gameplay(&gameplay, Game_Input {confirm = true}, 0)
 			testing.expect_value(t, gameplay.state, Gameplay_State.Load_Level)
 			testing.expect_value(t, gameplay.level_index, completed_level + 1)
 			testing.expect_value(t, gameplay.player.energy, PLAYER_START_ENERGY)
-			testing.expect_value(t, gameplay.player.bomb_capacity, PLAYER_START_BOMB_CAPACITY)
-			testing.expect_value(t, gameplay.player.bomb_power, PLAYER_START_BOMB_POWER)
+			testing.expect_value(t, gameplay.player.bomb_capacity, 4)
+			testing.expect_value(t, gameplay.player.bomb_power, 8)
+		} else {
+			testing.expect_value(t, gameplay.state, Gameplay_State.Game_Won)
 		}
 	}
 

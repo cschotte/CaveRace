@@ -69,7 +69,13 @@ cheats_require_powerblast_and_run_on_fixed_tick_test :: proc(t: ^testing.T) {
 	enabled_result := update_game(&enabled, input, GAMEPLAY_TICK_SECONDS)
 	testing.expect(t, enabled_result.gameplay.ticks.cheat_pressed[.F1])
 	testing.expect_value(t, enabled.gameplay.state, Gameplay_State.Won)
-	testing.expect_value(t, enabled.gameplay.player.score, SCORE_LEVEL_WON)
+	// The forced clear earns the visible clear, no-damage, and under-par
+	// bonuses; an empty treasure objective does not earn all-treasure.
+	testing.expect_value(
+		t,
+		enabled.gameplay.player.score,
+		SCORE_LEVEL_WON + SCORE_NO_DAMAGE + SCORE_UNDER_PAR,
+	)
 }
 
 // Protects damage-over-pickup flash priority and the expected non-blocking

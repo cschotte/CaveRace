@@ -8,6 +8,9 @@ Score_Event :: enum {
 	Enemy_Destroyed,
 	Treasure_Collected,
 	Level_Won,
+	All_Treasure,
+	No_Damage,
+	Under_Par,
 }
 
 // apply_score_event centralizes every Standard score mutation and is called by
@@ -29,5 +32,11 @@ apply_score_event :: proc(
 		player.score += tuning.score_treasure_pickup
 	case .Level_Won:
 		player.score += tuning.score_level_won
+	case .All_Treasure:
+		player.score += tuning.score_all_treasure
+	case .No_Damage:
+		player.score += tuning.score_no_damage
+	case .Under_Par:
+		player.score += tuning.score_under_par
 	}
 }

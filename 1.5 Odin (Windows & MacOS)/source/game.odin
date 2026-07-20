@@ -51,6 +51,15 @@ init_game :: proc(
 
 start_new_game :: proc(game: ^Game) {
 	init_gameplay(&game.gameplay, game.settings.difficulty)
+	game.gameplay.mode = .Campaign
+	game.pause = {}
+	game.screen = .Playing
+}
+
+start_practice_game :: proc(game: ^Game, level_index: int) {
+	init_gameplay(&game.gameplay, game.settings.difficulty)
+	game.gameplay.mode = .Practice
+	game.gameplay.level_index = clamp(level_index, 0, LEVEL_COUNT - 1)
 	game.pause = {}
 	game.screen = .Playing
 }
@@ -58,6 +67,7 @@ start_new_game :: proc(game: ^Game) {
 start_game_tutorial :: proc(game: ^Game) {
 	game.gameplay.difficulty = game.settings.difficulty
 	setup_tutorial_level(&game.gameplay, &game.tutorial)
+	game.gameplay.mode = .Tutorial
 	game.pause = {}
 	game.screen = .Tutorial
 }
@@ -76,18 +86,13 @@ complete_or_skip_tutorial :: proc(game: ^Game) -> bool {
 }
 
 update_local_record :: proc(game: ^Game) -> bool {
+	if game.cheats_enabled || game.gameplay.mode != .Campaign ||
+	   game.gameplay.run_record_submitted {
+		return false
+	}
 	record := record_for_profile(&game.settings.records, game.gameplay.difficulty)
-	changed := false
-	if game.gameplay.player.score > record.best_run_score {
-		record.best_run_score = game.gameplay.player.score
-		changed = true
-	}
-	cave_reached := clamp(game.gameplay.level_index + 1, 0, LEVEL_COUNT)
-	if cave_reached > record.best_cave {
-		record.best_cave = cave_reached
-		changed = true
-	}
-	return changed
+	game.gameplay.run_record_submitted = true
+	return submit_run_score(record, game.gameplay.player.score)
 }
 
 update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_Update_Result {
@@ -126,6 +131,9 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			result.load_level_requested = true
 		} else if menu_result.start_tutorial {
 			start_game_tutorial(game)
+		} else if menu_result.start_practice {
+			start_practice_game(game, menu_result.practice_level)
+			result.load_level_requested = true
 		} else if menu_result.replay_story {
 			begin_intro(&game.front_end)
 			game.screen = .Intro
@@ -199,11 +207,20 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			if !result.gameplay.back_requested && game.gameplay.state == .Load_Level {
 				result.load_level_requested = true
 			}
-			if result.gameplay.back_requested do show_main_menu(game)
+			if result.gameplay.back_requested || result.gameplay.practice_exit_requested {
+				show_main_menu(game)
+			}
 		}
 	}
 
 	request_gameplay_feedback(&game.feedback, &result.gameplay.ticks)
+	if previous_screen == .Playing && game.screen == .Playing &&
+	   previous_gameplay_state != .Won && game.gameplay.state == .Won &&
+	   game.gameplay.mode == .Campaign && !game.cheats_enabled {
+		record := record_for_profile(&game.settings.records, game.gameplay.difficulty)
+		result.settings_changed = update_level_record(record, &game.gameplay.level_result) ||
+			result.settings_changed
+	}
 	if previous_screen == .Playing && game.screen == .Playing &&
 	   previous_gameplay_state != game.gameplay.state &&
 	   (game.gameplay.state == .Game_Over || game.gameplay.state == .Game_Won) {

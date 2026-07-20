@@ -27,6 +27,14 @@ Persisted_Settings :: struct {
 	standard_best_cave:      int,
 	assisted_best_run_score: int,
 	assisted_best_cave:      int,
+	standard_run_scores:     [MAX_RUN_RECORDS]int,
+	standard_run_score_count: int,
+	standard_level_best_ticks: [LEVEL_COUNT]int,
+	standard_level_medals:     [LEVEL_COUNT]int,
+	assisted_run_scores:       [MAX_RUN_RECORDS]int,
+	assisted_run_score_count:  int,
+	assisted_level_best_ticks: [LEVEL_COUNT]int,
+	assisted_level_medals:     [LEVEL_COUNT]int,
 }
 
 settings_to_document :: proc(settings: Settings) -> Persisted_Settings {
@@ -53,7 +61,59 @@ settings_to_document :: proc(settings: Settings) -> Persisted_Settings {
 	for button, action_index in settings.controller_bindings {
 		document.controller_bindings[Input_Action(action_index)] = int(button)
 	}
+	document.standard_run_scores = settings.records.standard.run_scores
+	document.standard_run_score_count = settings.records.standard.run_score_count
+	document.assisted_run_scores = settings.records.assisted.run_scores
+	document.assisted_run_score_count = settings.records.assisted.run_score_count
+	for level_index in 0 ..< LEVEL_COUNT {
+		document.standard_level_best_ticks[level_index] =
+			settings.records.standard.levels[level_index].best_time_ticks
+		document.standard_level_medals[level_index] =
+			int(settings.records.standard.levels[level_index].best_medal)
+		document.assisted_level_best_ticks[level_index] =
+			settings.records.assisted.levels[level_index].best_time_ticks
+		document.assisted_level_medals[level_index] =
+			int(settings.records.assisted.levels[level_index].best_medal)
+	}
 	return document
+}
+
+profile_record_from_document :: proc(
+	best_run_score, best_cave: int,
+	run_scores: [MAX_RUN_RECORDS]int,
+	run_score_count: int,
+	level_best_ticks: [LEVEL_COUNT]int,
+	level_medals: [LEVEL_COUNT]int,
+	legacy: bool,
+) -> (Profile_Record, bool) {
+	record := Profile_Record {best_cave = best_cave}
+	if best_cave < 0 || best_cave > LEVEL_COUNT do return {}, false
+	if legacy {
+		if best_run_score < 0 do return {}, false
+		if best_run_score > 0 do _ = submit_run_score(&record, best_run_score)
+		return record, true
+	}
+	record.run_scores = run_scores
+	record.run_score_count = run_score_count
+	if !run_scores_are_valid(&record) do return {}, false
+	if record.run_score_count > 0 {
+		record.best_run_score = record.run_scores[0]
+	} else if best_run_score > 0 {
+		// Early version-2 development documents could contain the legacy best
+		// field without the new table. Preserve that record during migration.
+		_ = submit_run_score(&record, best_run_score)
+	}
+	for level_index in 0 ..< LEVEL_COUNT {
+		if level_best_ticks[level_index] < 0 ||
+		   level_medals[level_index] < 0 || level_medals[level_index] >= len(Medal) {
+			return {}, false
+		}
+		record.levels[level_index] = {
+			best_time_ticks = level_best_ticks[level_index],
+			best_medal      = Medal(level_medals[level_index]),
+		}
+	}
+	return record, true
 }
 
 // settings_from_document validates each section independently. A malformed
@@ -61,7 +121,7 @@ settings_to_document :: proc(settings: Settings) -> Persisted_Settings {
 // conflict-sensitive unit.
 settings_from_document :: proc(document: Persisted_Settings) -> (Settings, bool) {
 	settings := default_settings()
-	if document.version != SETTINGS_VERSION do return settings, false
+	if document.version < 1 || document.version > SETTINGS_VERSION do return settings, false
 
 	if document.music_volume >= 0 && document.music_volume <= 100 {
 		settings.music_volume = document.music_volume
@@ -99,20 +159,25 @@ settings_from_document :: proc(document: Persisted_Settings) -> (Settings, bool)
 	}
 
 	settings.tutorial_complete = document.tutorial_complete
-	if document.standard_best_run_score >= 0 &&
-	   document.standard_best_cave >= 0 && document.standard_best_cave <= LEVEL_COUNT {
-		settings.records.standard = {
-			best_run_score = document.standard_best_run_score,
-			best_cave      = document.standard_best_cave,
-		}
-	}
-	if document.assisted_best_run_score >= 0 &&
-	   document.assisted_best_cave >= 0 && document.assisted_best_cave <= LEVEL_COUNT {
-		settings.records.assisted = {
-			best_run_score = document.assisted_best_run_score,
-			best_cave      = document.assisted_best_cave,
-		}
-	}
+	legacy := document.version == 1
+	if record, valid := profile_record_from_document(
+		document.standard_best_run_score,
+		document.standard_best_cave,
+		document.standard_run_scores,
+		document.standard_run_score_count,
+		document.standard_level_best_ticks,
+		document.standard_level_medals,
+		legacy,
+	); valid do settings.records.standard = record
+	if record, valid := profile_record_from_document(
+		document.assisted_best_run_score,
+		document.assisted_best_cave,
+		document.assisted_run_scores,
+		document.assisted_run_score_count,
+		document.assisted_level_best_ticks,
+		document.assisted_level_medals,
+		legacy,
+	); valid do settings.records.assisted = record
 	return settings, true
 }
 
