@@ -272,18 +272,14 @@ draw_menu_panel :: proc(title: cstring, height: i32 = 310, width: i32 = 480, pan
 }
 
 // MENU_PANEL_CONTENT_TOP sits just below draw_menu_panel's fixed title band
-// (which ends at y=101) when panel_y keeps its default of 58, so row lists
-// never draw under the panel title on the Bindings and First-Run pages.
+// (which ends at y=101) when panel_y keeps its default of 58, so content
+// never draws under the panel title on the First-Run page.
 MENU_PANEL_CONTENT_TOP :: 106
 
 // MENU_PANEL_CONTENT_GAP is the same title-band clearance as
 // MENU_PANEL_CONTENT_TOP, expressed relative to panel_y instead of assuming
 // the default panel_y=58, for panels placed elsewhere on screen.
 MENU_PANEL_CONTENT_GAP :: 48
-
-// MENU_PANEL_VALUE_RIGHT is the shared right edge rows align their value to
-// on panels that keep the original fixed 480-wide layout.
-MENU_PANEL_VALUE_RIGHT :: 540
 
 // draw_menu_value_row draws a label flush left and its value right-aligned to
 // value_right_x, using raylib's proportional default font. Formatting the
@@ -401,45 +397,47 @@ draw_device_footer :: proc(game: ^Game, text_y: i32 = 372) {
 	rl.DrawText(footer, (WINDOW_WIDTH - width) / 2, text_y, 14, rl.LIGHTGRAY)
 }
 
-SETTINGS_PANEL_WIDTH    :: 340
-SETTINGS_ROW_SPACING    :: 20
-SETTINGS_ROW_HEIGHT     :: 19
-SETTINGS_BOTTOM_MARGIN  :: 12
-SETTINGS_SIDE_INSET     :: 20
-SETTINGS_GLOW_INSET     :: 12
+// Shared geometry for the narrow, bottom-anchored, value-aligned menu panels
+// (Settings, Bindings) so both stay visually consistent and the art behind
+// them stays as visible as possible.
+MENU_NARROW_PANEL_WIDTH :: 340
+MENU_ROW_SPACING        :: 20
+MENU_ROW_HEIGHT         :: 19
+MENU_PANEL_BOTTOM_MARGIN :: 12
+MENU_SIDE_INSET         :: 20
+MENU_GLOW_INSET         :: 12
 
-// settings_panel_height sizes the panel to exactly fit its row list (there is
-// no separate control-hint footer any more), so resizing the row count or
-// spacing keeps the panel correctly fitted automatically.
-settings_panel_height :: proc() -> i32 {
-	last_index := len(Settings_Menu_Item) - 1
-	last_offset := MENU_PANEL_CONTENT_GAP + i32(last_index) * SETTINGS_ROW_SPACING
-	return last_offset + SETTINGS_ROW_HEIGHT + 14
+// menu_narrow_panel_height sizes a narrow panel to exactly fit row_count rows
+// at MENU_ROW_SPACING, with no separate control-hint footer, so it stays
+// correctly fitted if the row count or spacing ever changes.
+menu_narrow_panel_height :: proc(row_count: int) -> i32 {
+	last_offset := MENU_PANEL_CONTENT_GAP + i32(row_count - 1) * MENU_ROW_SPACING
+	return last_offset + MENU_ROW_HEIGHT + 14
 }
 
 // draw_settings_menu anchors its panel to the bottom of the screen with a
 // small margin and keeps it narrower than the other menu panels, so the
 // title art stays visible above and beside it.
 draw_settings_menu :: proc(game: ^Game) {
-	height := settings_panel_height()
-	panel_y := WINDOW_HEIGHT - height - SETTINGS_BOTTOM_MARGIN
-	panel_x := draw_menu_panel("SETTINGS", height, SETTINGS_PANEL_WIDTH, panel_y)
+	height := menu_narrow_panel_height(len(Settings_Menu_Item))
+	panel_y := WINDOW_HEIGHT - height - MENU_PANEL_BOTTOM_MARGIN
+	panel_x := draw_menu_panel("SETTINGS", height, MENU_NARROW_PANEL_WIDTH, panel_y)
 	settings := &game.settings
 	pulse := ui_pulse(game.ui_clock, 1.6)
 
-	prefix_x := panel_x + SETTINGS_SIDE_INSET
-	label_x := panel_x + SETTINGS_SIDE_INSET + 16
-	value_right := panel_x + SETTINGS_PANEL_WIDTH - SETTINGS_SIDE_INSET
-	glow_x := panel_x + SETTINGS_GLOW_INSET
-	glow_width: i32 = SETTINGS_PANEL_WIDTH - SETTINGS_GLOW_INSET * 2
+	prefix_x := panel_x + MENU_SIDE_INSET
+	label_x := panel_x + MENU_SIDE_INSET + 16
+	value_right := panel_x + MENU_NARROW_PANEL_WIDTH - MENU_SIDE_INSET
+	glow_x := panel_x + MENU_GLOW_INSET
+	glow_width: i32 = MENU_NARROW_PANEL_WIDTH - MENU_GLOW_INSET * 2
 
 	for item_index in 0 ..< len(Settings_Menu_Item) {
 		item := Settings_Menu_Item(item_index)
 		color := rl.LIGHTGRAY
 		prefix: cstring = "  "
-		y := panel_y + MENU_PANEL_CONTENT_GAP + i32(item_index) * SETTINGS_ROW_SPACING
+		y := panel_y + MENU_PANEL_CONTENT_GAP + i32(item_index) * MENU_ROW_SPACING
 		if game.menu.selected == item_index {
-			draw_selection_glow(glow_x, y - 2, glow_width, SETTINGS_ROW_HEIGHT, pulse)
+			draw_selection_glow(glow_x, y - 2, glow_width, MENU_ROW_HEIGHT, pulse)
 			color = rl.GOLD
 			prefix = "> "
 		}
@@ -464,40 +462,66 @@ draw_settings_menu :: proc(game: ^Game) {
 	}
 }
 
+// draw_bindings_menu shares the Settings panel's narrow, bottom-anchored,
+// value-aligned layout so the two panels read as one consistent family.
 draw_bindings_menu :: proc(game: ^Game) {
-	title: cstring = "KEYBOARD BINDINGS"
-	if game.menu.binding_device == .Controller do title = "CONTROLLER BINDINGS"
-	draw_menu_panel(title, 328)
+	title: cstring = "< KEYBOARD BINDINGS >"
+	if game.menu.binding_device == .Controller do title = "< CONTROLLER BINDINGS >"
+	row_count := len(Input_Action) + 1
+	height := menu_narrow_panel_height(row_count)
+	panel_y := WINDOW_HEIGHT - height - MENU_PANEL_BOTTOM_MARGIN
+	panel_x := draw_menu_panel(title, height, MENU_NARROW_PANEL_WIDTH, panel_y)
 	pulse := ui_pulse(game.ui_clock, 1.6)
+
+	prefix_x := panel_x + MENU_SIDE_INSET
+	label_x := panel_x + MENU_SIDE_INSET + 16
+	value_right := panel_x + MENU_NARROW_PANEL_WIDTH - MENU_SIDE_INSET
+	glow_x := panel_x + MENU_GLOW_INSET
+	glow_width: i32 = MENU_NARROW_PANEL_WIDTH - MENU_GLOW_INSET * 2
+
 	for action_index in 0 ..< len(Input_Action) {
 		action := Input_Action(action_index)
 		color := rl.LIGHTGRAY
 		prefix: cstring = "  "
-		y := i32(MENU_PANEL_CONTENT_TOP + action_index * 29)
+		y := panel_y + MENU_PANEL_CONTENT_GAP + i32(action_index) * MENU_ROW_SPACING
 		if game.menu.selected == action_index {
-			draw_selection_glow(167, y - 4, 400, 26, pulse)
+			draw_selection_glow(glow_x, y - 2, glow_width, MENU_ROW_HEIGHT, pulse)
 			color = rl.GOLD
 			prefix = "> "
 		}
-		rl.DrawText(prefix, 167, y, 16, color)
+		rl.DrawText(prefix, prefix_x, y, 16, color)
 		if game.menu.binding_device == .Keyboard {
-			draw_menu_value_row(191, MENU_PANEL_VALUE_RIGHT, y, 16, color, input_action_label(action), "%s", keyboard_key_label(game.settings.bindings[action]))
+			draw_menu_value_row(label_x, value_right, y, 16, color, input_action_label(action), "%s", keyboard_key_label(game.settings.bindings[action]))
 		} else {
-			draw_menu_value_row(191, MENU_PANEL_VALUE_RIGHT, y, 16, color, input_action_label(action), "%s", controller_action_label(action, game.settings.controller_bindings))
+			draw_menu_value_row(label_x, value_right, y, 16, color, input_action_label(action), "%s", controller_action_label(action, game.settings.controller_bindings))
 		}
 	}
-	draw_menu_row("BACK", len(Input_Action), game.menu.selected, MENU_PANEL_CONTENT_TOP + len(Input_Action) * 29, pulse)
+
+	back_index := len(Input_Action)
+	back_y := panel_y + MENU_PANEL_CONTENT_GAP + i32(back_index) * MENU_ROW_SPACING
+	back_color := rl.LIGHTGRAY
+	back_prefix: cstring = "  "
+	if game.menu.selected == back_index {
+		draw_selection_glow(glow_x, back_y - 2, glow_width, MENU_ROW_HEIGHT, pulse)
+		back_color = rl.GOLD
+		back_prefix = "> "
+	}
+	rl.DrawText(back_prefix, prefix_x, back_y, 16, back_color)
+	rl.DrawText("BACK", label_x, back_y, 16, back_color)
+
+	info_y := panel_y + 100
 	if game.menu.binding_waiting {
-		rl.DrawRectangle(153, 164, 334, 70, rl.BLACK)
-		rl.DrawRectangleLines(153, 164, 334, 70, rl.GOLD)
+		rl.DrawRectangle(153, info_y, 334, 70, rl.BLACK)
+		rl.DrawRectangleLines(153, info_y, 334, 70, rl.GOLD)
 		waiting := "PRESS A KEY FOR %s"
 		if game.menu.binding_device == .Controller do waiting = "PRESS A BUTTON FOR %s"
-		draw_ui_format(174, 180, 18, rl.WHITE, waiting, input_action_label(game.menu.binding_action))
-		rl.DrawText("ESC CANCELS", 254, 210, 14, rl.LIGHTGRAY)
+		draw_ui_format(174, info_y + 16, 18, rl.WHITE, waiting, input_action_label(game.menu.binding_action))
+		rl.DrawText("ESC CANCELS", 254, info_y + 46, 14, rl.LIGHTGRAY)
 	} else if game.menu.binding_conflict_seconds > 0 {
-		rl.DrawText("KEY ALREADY USED", 236, 342, 16, rl.RED)
+		msg: cstring = "KEY ALREADY USED"
+		msg_width := rl.MeasureText(msg, 16)
+		rl.DrawText(msg, (WINDOW_WIDTH - msg_width) / 2, info_y + 28, 16, rl.RED)
 	}
-	rl.DrawText("LEFT / RIGHT: SWITCH DEVICE", 203, 365, 14, rl.LIGHTGRAY)
 }
 
 draw_how_to_play :: proc(game: ^Game) {
