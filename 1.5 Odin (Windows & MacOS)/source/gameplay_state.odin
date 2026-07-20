@@ -91,11 +91,8 @@ Gameplay_Tick_State :: struct {
 // all fixed ticks processed during one render-frame update.
 Gameplay_Tick_Result :: struct {
 	ticks_run:               int,
-	action_decisions:        int,
 	last_action:             Gameplay_Action,
-	bomb_action_started:     bool,
 	bomb_placed:             bool,
-	bombs_expired:           int,
 	ticking_requests:        int,
 	contact_hit_requests:    int,
 	player_damaged:          bool,
@@ -111,7 +108,6 @@ Gameplay_Tick_Result :: struct {
 	items_salvaged:          int,
 	treasures_collected:     int,
 	item_sound_requests:     int,
-	cheat_pressed:           [Cheat_Key]bool,
 }
 
 // Player_State owns run-wide resources together with current level position,

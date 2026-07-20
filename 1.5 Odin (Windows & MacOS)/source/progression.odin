@@ -25,7 +25,6 @@ Level_Stats :: struct {
 }
 
 Level_Result :: struct {
-	valid:              bool,
 	level_index:        int,
 	elapsed_ticks:      int,
 	par_ticks:          int,
@@ -96,7 +95,6 @@ finalize_level_result :: proc(gameplay: ^Gameplay) {
 	tuning := gameplay_tuning(gameplay.difficulty)
 	stats := gameplay.level_stats
 	gameplay.level_result = {
-		valid                = true,
 		level_index          = gameplay.level_index,
 		elapsed_ticks        = stats.elapsed_ticks,
 		par_ticks            = par_ticks,

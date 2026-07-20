@@ -40,7 +40,6 @@ apply_queued_cheats :: proc(
 
 		gameplay.tick_state.input.cheat_pending[cheat] = false
 		if cheats_enabled {
-			result.cheat_pressed[cheat] = true
 			apply_gameplay_cheat(gameplay, cheat)
 		}
 	}
@@ -54,12 +53,10 @@ begin_gameplay_action_interval :: proc(
 ) {
 	if gameplay.tick_state.input.bomb_pending {
 		gameplay.tick_state.input.bomb_pending = false
-		result.bomb_action_started = true
 		result.bomb_placed = try_place_bomb(gameplay)
 		if result.bomb_placed do result.ticking_requests += 1
 	}
 	result.last_action = select_gameplay_action(&gameplay.tick_state.input)
-	result.action_decisions += 1
 	begin_enemy_actions(gameplay)
 	begin_player_action(gameplay, result.last_action)
 }
@@ -137,7 +134,7 @@ run_gameplay_ticks :: proc(
 		apply_active_explosions_to_entities(gameplay, &result)
 		if player_was_alive && gameplay.player.energy == 0 {
 			result.player_died = true
-			result.bombs_expired += advance_explosion_ages(gameplay)
+			advance_explosion_ages(gameplay)
 			break
 		}
 
@@ -146,7 +143,7 @@ run_gameplay_ticks :: proc(
 			tick_state.action_step + 1,
 		)
 		advance_enemy_action_steps(gameplay, tick_state.action_step + 1)
-		result.bombs_expired += advance_explosion_ages(gameplay)
+		advance_explosion_ages(gameplay)
 
 		if tick_state.action_step + 1 == MOVEMENT_STEPS_PER_TILE {
 			finish_gameplay_action_interval(gameplay, &result)

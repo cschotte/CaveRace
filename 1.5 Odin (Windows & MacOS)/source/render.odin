@@ -53,6 +53,16 @@ pause_menu_item_label :: proc(item: Pause_Menu_Item) -> cstring {
 	return ""
 }
 
+// Pause panel geometry: narrow and bottom-anchored like Settings/Bindings, so
+// as much of the frozen gameplay behind it stays visible as possible. Its
+// title isn't drawn by the shared draw_menu_panel band (this panel keeps its
+// own fade-in animation independent of that helper), so it uses its own
+// title/content clearances tuned for the larger size-20/32 pause text.
+PAUSE_TITLE_TOP    :: 16
+PAUSE_CONTENT_TOP  :: 60
+PAUSE_ROW_SPACING  :: 32
+PAUSE_ROW_HEIGHT   :: 26
+
 // draw_game_pause renders the keyboard/controller pause menu and destructive
 // action confirmation without mutating gameplay.
 draw_game_pause :: proc(game: ^Game) {
@@ -65,10 +75,11 @@ draw_game_pause :: proc(game: ^Game) {
 		draw_bindings_menu(game)
 		return
 	}
-	panel_width: i32 = 430
-	panel_height: i32 = 320
+	panel_width := i32(MENU_NARROW_PANEL_WIDTH)
+	last_row_offset := PAUSE_CONTENT_TOP + i32(len(Pause_Menu_Item) - 1) * PAUSE_ROW_SPACING
+	panel_height := last_row_offset + PAUSE_ROW_HEIGHT + 14
 	panel_x := (WINDOW_WIDTH - panel_width) / 2
-	panel_y := (WINDOW_HEIGHT - panel_height) / 2
+	panel_y := WINDOW_HEIGHT - panel_height - MENU_PANEL_BOTTOM_MARGIN
 	ease := f32(clamp(game.pause.elapsed_seconds / 0.15, 0, 1))
 
 	rl.DrawRectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, rl.Fade(rl.BLACK, 0.72 * ease))
@@ -81,7 +92,7 @@ draw_game_pause :: proc(game: ^Game) {
 	rl.DrawText(
 		title,
 		(WINDOW_WIDTH - title_width) / 2,
-		panel_y + 20,
+		panel_y + PAUSE_TITLE_TOP,
 		title_size,
 		rl.Fade(rl.GOLD, ease),
 	)
@@ -92,7 +103,7 @@ draw_game_pause :: proc(game: ^Game) {
 			prompt = "ABANDON RUN FOR MAIN MENU?"
 		}
 		prompt_width := rl.MeasureText(prompt, 18)
-		rl.DrawText(prompt, (WINDOW_WIDTH - prompt_width) / 2, panel_y + 92, 18, rl.WHITE)
+		rl.DrawText(prompt, (WINDOW_WIDTH - prompt_width) / 2, panel_y + 70, 18, rl.WHITE)
 		confirm_buffer: [128]byte
 		confirm: cstring
 		if game.last_input_device == .Keyboard {
@@ -109,9 +120,14 @@ draw_game_pause :: proc(game: ^Game) {
 			)
 		}
 		confirm_width := rl.MeasureText(confirm, 14)
-		rl.DrawText(confirm, (WINDOW_WIDTH - confirm_width) / 2, panel_y + 142, 14, rl.GOLD)
+		rl.DrawText(confirm, (WINDOW_WIDTH - confirm_width) / 2, panel_y + 120, 14, rl.GOLD)
 		return
 	}
+
+	prefix_x := panel_x + MENU_SIDE_INSET
+	label_x := panel_x + MENU_SIDE_INSET + 16
+	glow_x := panel_x + MENU_GLOW_INSET
+	glow_width := panel_width - MENU_GLOW_INSET * 2
 
 	pulse := ui_pulse(game.ui_clock, 1.6)
 	for item_index in 0 ..< len(Pause_Menu_Item) {
@@ -119,38 +135,15 @@ draw_game_pause :: proc(game: ^Game) {
 		label := pause_menu_item_label(item)
 		color := rl.WHITE
 		prefix: cstring = "  "
-		y := panel_y + 72 + i32(item_index) * 38
+		y := panel_y + PAUSE_CONTENT_TOP + i32(item_index) * PAUSE_ROW_SPACING
 		if pause.selected == item {
-			draw_selection_glow(panel_x + 90, y - 5, panel_width - 80, 30, pulse * ease)
+			draw_selection_glow(glow_x, y - 3, glow_width, PAUSE_ROW_HEIGHT, pulse * ease)
 			color = rl.GOLD
 			prefix = "> "
 		}
-		rl.DrawText(prefix, panel_x + 100, y, 20, rl.Fade(color, ease))
-		rl.DrawText(label, panel_x + 130, y, 20, rl.Fade(color, ease))
+		rl.DrawText(prefix, prefix_x, y, 20, rl.Fade(color, ease))
+		rl.DrawText(label, label_x, y, 20, rl.Fade(color, ease))
 	}
-	footer_buffer: [160]byte
-	footer: cstring
-	if game.last_input_device == .Keyboard {
-		footer = format_cstring(
-			footer_buffer[:],
-			"ARROWS / %s/%s/%s/%s    %s SELECT    %s PAUSE",
-			keyboard_key_label(game.settings.bindings[.Move_Up]),
-			keyboard_key_label(game.settings.bindings[.Move_Left]),
-			keyboard_key_label(game.settings.bindings[.Move_Down]),
-			keyboard_key_label(game.settings.bindings[.Move_Right]),
-			action_prompt(.Confirm, .Keyboard, game.settings.bindings),
-			action_prompt(.Pause, .Keyboard, game.settings.bindings),
-		)
-	} else {
-		footer = format_cstring(
-			footer_buffer[:],
-			"LEFT STICK / MOVE BUTTONS    %s SELECT    %s PAUSE",
-			action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
-			action_prompt(.Pause, .Controller, game.settings.bindings, &game.settings.controller_bindings),
-		)
-	}
-	footer_width := rl.MeasureText(footer, 13)
-	rl.DrawText(footer, (WINDOW_WIDTH - footer_width) / 2, panel_y + 286, 13, rl.Fade(rl.LIGHTGRAY, ease))
 }
 
 // draw_ken_burns_texture draws a full-canvas texture with a slow, subtle zoom
@@ -408,11 +401,11 @@ MENU_SIDE_INSET         :: 20
 MENU_GLOW_INSET         :: 12
 
 // menu_narrow_panel_height sizes a narrow panel to exactly fit row_count rows
-// at MENU_ROW_SPACING, with no separate control-hint footer, so it stays
+// at the given spacing, with no separate control-hint footer, so it stays
 // correctly fitted if the row count or spacing ever changes.
-menu_narrow_panel_height :: proc(row_count: int) -> i32 {
-	last_offset := MENU_PANEL_CONTENT_GAP + i32(row_count - 1) * MENU_ROW_SPACING
-	return last_offset + MENU_ROW_HEIGHT + 14
+menu_narrow_panel_height :: proc(row_count: int, row_spacing: i32 = MENU_ROW_SPACING, row_height: i32 = MENU_ROW_HEIGHT) -> i32 {
+	last_offset := MENU_PANEL_CONTENT_GAP + i32(row_count - 1) * row_spacing
+	return last_offset + row_height + 14
 }
 
 // draw_settings_menu anchors its panel to the bottom of the screen with a
@@ -465,8 +458,8 @@ draw_settings_menu :: proc(game: ^Game) {
 // draw_bindings_menu shares the Settings panel's narrow, bottom-anchored,
 // value-aligned layout so the two panels read as one consistent family.
 draw_bindings_menu :: proc(game: ^Game) {
-	title: cstring = "< KEYBOARD BINDINGS >"
-	if game.menu.binding_device == .Controller do title = "< CONTROLLER BINDINGS >"
+	title: cstring = "KEYBOARD BINDINGS ->"
+	if game.menu.binding_device == .Controller do title = "CONTROLLER BINDINGS ->"
 	row_count := len(Input_Action) + 1
 	height := menu_narrow_panel_height(row_count)
 	panel_y := WINDOW_HEIGHT - height - MENU_PANEL_BOTTOM_MARGIN

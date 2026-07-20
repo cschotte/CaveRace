@@ -37,39 +37,25 @@ TOOLS_BOMB_SPRITE   :: 3
 #assert(TOOLS_BOMB_SPRITE < TOOLS_SPRITE_COUNT)
 
 Gameplay_Hud_State :: struct {
-	level:            int,
-	aliens_remaining: int,
-	treasure_collected: int,
-	treasure_total:     int,
-	lives:              int,
-	energy:             int,
-	max_energy:         int,
-	available_bombs:    int,
-	bomb_capacity:      int,
-	bomb_power:         int,
-	score:              int,
+	lives:           int,
+	energy:          int,
+	available_bombs: int,
+	bomb_power:      int,
+	score:           int,
 }
 
 gameplay_hud_state :: proc(gameplay: ^Gameplay) -> Gameplay_Hud_State {
-	tuning := gameplay_tuning(gameplay.difficulty)
 	return {
-		level              = gameplay.level_index + 1,
-		aliens_remaining   = active_enemy_count(gameplay),
-		treasure_collected = gameplay.treasure_collected,
-		treasure_total     = gameplay.treasure_total,
-		lives              = gameplay.player.lives,
-		energy             = gameplay.player.energy,
-		max_energy         = tuning.player_max_energy,
-		available_bombs    = available_bomb_count(gameplay),
-		bomb_capacity      = gameplay.player.bomb_capacity,
-		bomb_power         = gameplay.player.bomb_power,
-		score              = gameplay.player.score,
+		lives           = gameplay.player.lives,
+		energy          = gameplay.player.energy,
+		available_bombs = available_bomb_count(gameplay),
+		bomb_power      = gameplay.player.bomb_power,
+		score           = gameplay.player.score,
 	}
 }
 
-// draw_gameplay_hud deliberately restores the version 1.3 presentation. The
-// complete modern HUD snapshot remains available to tests and other screens,
-// but active play draws only the original bottom-frame icons and score.
+// draw_gameplay_hud deliberately restores the version 1.3 presentation: only
+// the original bottom-frame icons and score.
 draw_gameplay_hud :: proc(gameplay: ^Gameplay, tools: rl.Texture) {
 	hud := gameplay_hud_state(gameplay)
 	for icon_index in 0 ..< hud.lives {
