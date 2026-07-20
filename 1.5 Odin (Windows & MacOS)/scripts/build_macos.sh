@@ -33,8 +33,9 @@ cp -R "$SOURCE_DIRECTORY/media" "$CONTENTS_DIRECTORY/Resources/media"
 cp -R "$SOURCE_DIRECTORY/levels" "$CONTENTS_DIRECTORY/Resources/levels"
 
 test -x "$CONTENTS_DIRECTORY/MacOS/CaveRace"
-test -f "$CONTENTS_DIRECTORY/Resources/media/screens/game_border.png"
-test -f "$CONTENTS_DIRECTORY/Resources/media/screens/Score.png"
+test -f "$CONTENTS_DIRECTORY/Resources/media/screens/border.png"
+test -f "$CONTENTS_DIRECTORY/Resources/media/intro/00_branding.png"
+test -f "$CONTENTS_DIRECTORY/Resources/media/intro/00_branding.ogg"
 test -f "$CONTENTS_DIRECTORY/Resources/levels/10.bin"
 
 SIGN_IDENTITY="${CAVERACE_SIGN_IDENTITY:-}"

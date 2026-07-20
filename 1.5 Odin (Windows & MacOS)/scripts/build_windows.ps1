@@ -36,8 +36,9 @@ Copy-Item -Recurse (Join-Path $SourceDirectory "levels") (Join-Path $DistDirecto
 
 $RequiredFiles = @(
     $ExecutablePath,
-    (Join-Path $DistDirectory "media/screens/game_border.png"),
-    (Join-Path $DistDirectory "media/screens/Score.png"),
+    (Join-Path $DistDirectory "media/screens/border.png"),
+    (Join-Path $DistDirectory "media/intro/00_branding.png"),
+    (Join-Path $DistDirectory "media/intro/00_branding.ogg"),
     (Join-Path $DistDirectory "levels/10.bin")
 )
 foreach ($RequiredFile in $RequiredFiles) {

@@ -6,16 +6,17 @@ MAIN_MENU_FIRST_IMAGE   :: 7
 MAIN_MENU_LAST_IMAGE    :: 8
 FRONT_END_IMAGE_COUNT   :: 9
 FRONT_END_TRANSITION_SECONDS :: 0.5
+BRANDING_FALLBACK_SECONDS    :: 3.84
 
 // Each story panel remains visible for the length of its matching music track.
 INTRO_IMAGE_SECONDS :: [INTRO_LAST_IMAGE - INTRO_FIRST_IMAGE + 1]f64 {
-	59.3,
-	48.992,
-	44.928,
-	53.68,
-	43.4226666666667,
-	39.3093333333333,
-	40.0866666666667,
+	8.222063,
+	10.444218,
+	11.110884,
+	7.481315,
+	10.221995,
+	14.81449,
+	10.370159,
 }
 
 // skip_intro_image advances immediately to the next story panel. Skipping the

@@ -36,8 +36,8 @@ Game_Input :: struct {
 	keyboard_activity: bool,
 	controller_activity: bool,
 	controller_connected: bool,
-	intro_music_controls_timing: bool,
-	intro_music_finished: bool,
+	presentation_music_controls_timing: bool,
+	presentation_music_finished: bool,
 	debug_toggle_pressed: bool,
 	cheat_pressed:   [Cheat_Key]bool,
 }

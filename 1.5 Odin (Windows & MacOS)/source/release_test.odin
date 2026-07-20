@@ -1,62 +1,41 @@
 package caverace
 
-import "core:bytes"
 import "core:os"
 import "core:path/filepath"
 import "core:testing"
 
 @(test)
-packaged_intro_music_matches_soundtrack_cues_one_through_seven_test :: proc(
+packaged_presentation_music_manifest_uses_current_media_names_test :: proc(
 	t: ^testing.T,
 ) {
 	resource_root, root_ok := resolve_resource_root()
 	if !testing.expect(t, root_ok) do return
 	defer delete(resource_root)
 
-	soundtrack_filenames := [7]string {
-		"01_intro_space.ogg",
-		"02_intro_eldora.ogg",
-		"03_intro_mining.ogg",
-		"04_intro_aliens.ogg",
-		"05_intro_defense.ogg",
-		"06_intro_hero.ogg",
-		"07_intro_bombs.ogg",
+	expected_paths := [Music_Cue]string {
+		.Branding       = "intro/00_branding.ogg",
+		.Intro_Eldora   = "intro/01_intro_eldora.ogg",
+		.Intro_Mining   = "intro/02_intro_mining.ogg",
+		.Intro_Aliens   = "intro/03_intro_aliens.ogg",
+		.Intro_Defense  = "intro/04_intro_defense.ogg",
+		.Intro_Hero     = "intro/05_intro_hero.ogg",
+		.Intro_Bombs    = "intro/06_intro_bombs.ogg",
+		.Intro_Protect  = "intro/07_intro_protect.ogg",
+		.Menu           = "music/menu.ogg",
+		.Level_Complete = "music/level_complete.ogg",
+		.You_Won        = "music/you_won.ogg",
+		.Game_Over      = "music/game_over.ogg",
 	}
 	music_paths := MUSIC_PATHS
-	for soundtrack_filename, intro_index in soundtrack_filenames {
-		cue := Music_Cue(int(Music_Cue.Intro_Space) + intro_index)
+	for expected_path, cue in expected_paths {
+		testing.expect_value(t, music_paths[cue], expected_path)
 		packaged_path, packaged_ok := resource_path(
 			resource_root,
 			{RESOURCE_MEDIA_DIRECTORY, music_paths[cue]},
 		)
 		if !testing.expect(t, packaged_ok) do continue
 		defer delete(packaged_path)
-
-		soundtrack_path, soundtrack_error := filepath.join({
-			resource_root,
-			"..",
-			"soundtrack",
-			"renders",
-			"ogg",
-			soundtrack_filename,
-		})
-		if !testing.expect(t, soundtrack_error == nil) do continue
-		defer delete(soundtrack_path)
-
-		packaged_data, packaged_error := os.read_entire_file_from_path(
-			packaged_path,
-			context.allocator,
-		)
-		if !testing.expect(t, packaged_error == nil) do continue
-		defer delete(packaged_data)
-		soundtrack_data, soundtrack_read_error := os.read_entire_file_from_path(
-			soundtrack_path,
-			context.allocator,
-		)
-		if !testing.expect(t, soundtrack_read_error == nil) do continue
-		defer delete(soundtrack_data)
-
-		testing.expect(t, bytes.equal(packaged_data, soundtrack_data))
+		testing.expect(t, os.is_file(packaged_path))
 	}
 }
 
@@ -99,7 +78,7 @@ resource_root_finds_packaged_and_development_layouts_test :: proc(t: ^testing.T)
 	if !testing.expect(t, os.make_directory_all(build) == nil) do return
 	if !testing.expect(t, os.make_directory_all(source_media) == nil) do return
 	if !testing.expect(t, os.make_directory_all(working) == nil) do return
-	source_marker, source_marker_error := filepath.join({source_media, "game_border.png"})
+	source_marker, source_marker_error := filepath.join({source_media, "border.png"})
 	if !testing.expect(t, source_marker_error == nil) do return
 	defer delete(source_marker)
 	if !testing.expect(t, os.write_entire_file(source_marker, "") == nil) do return
@@ -116,7 +95,7 @@ resource_root_finds_packaged_and_development_layouts_test :: proc(t: ^testing.T)
 	if !testing.expect(t, packaged_media_error == nil) do return
 	defer delete(packaged_media)
 	if !testing.expect(t, os.make_directory_all(packaged_media) == nil) do return
-	packaged_marker, packaged_marker_error := filepath.join({packaged_media, "game_border.png"})
+	packaged_marker, packaged_marker_error := filepath.join({packaged_media, "border.png"})
 	if !testing.expect(t, packaged_marker_error == nil) do return
 	defer delete(packaged_marker)
 	if !testing.expect(t, os.write_entire_file(packaged_marker, "") == nil) do return
@@ -164,7 +143,7 @@ resource_root_finds_macos_bundle_layout_test :: proc(t: ^testing.T) {
 	if !testing.expect(t, os.make_directory_all(resource_screens) == nil) do return
 	if !testing.expect(t, os.make_directory_all(working_directory) == nil) do return
 
-	marker, marker_error := filepath.join({resource_screens, "game_border.png"})
+	marker, marker_error := filepath.join({resource_screens, "border.png"})
 	if !testing.expect(t, marker_error == nil) do return
 	defer delete(marker)
 	if !testing.expect(t, os.write_entire_file(marker, "") == nil) do return
@@ -314,6 +293,7 @@ game_update_requests_level_load_at_application_boundary_test :: proc(t: ^testing
 	app := Application {resource_root = resource_root}
 	init_game(&app.game)
 	app.game.settings.tutorial_complete = true
+	update_game(&app.game, Game_Input {presentation_music_finished = true}, 0)
 	update_game(&app.game, Game_Input {back = true}, 0)
 	update_game(&app.game, Game_Input {confirm = true}, 0)
 
@@ -337,6 +317,8 @@ deterministic_complete_run_smoke_test :: proc(t: ^testing.T) {
 	init_game(&app.game)
 	app.game.settings.tutorial_complete = true
 	game := &app.game
+	testing.expect_value(t, game.screen, App_Screen.Branding)
+	update_application(&app, Game_Input {presentation_music_finished = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Intro)
 	update_application(&app, Game_Input {back = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Main_Menu)

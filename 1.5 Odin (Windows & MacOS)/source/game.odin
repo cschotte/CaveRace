@@ -1,6 +1,7 @@
 package caverace
 
 App_Screen :: enum {
+	Branding,
 	Intro,
 	Main_Menu,
 	Tutorial,
@@ -30,6 +31,7 @@ Game :: struct {
 	cheats_enabled:        bool,
 	pause:                 Pause_State,
 	debug_overlay_visible: bool,
+	branding_elapsed_seconds: f64,
 }
 
 Game_Update_Result :: struct {
@@ -39,7 +41,6 @@ Game_Update_Result :: struct {
 	display_changed:      bool,
 	quit_requested:       bool,
 	menu_sound_requests:  int,
-	record_sound_requests: int,
 	victory_started:      bool,
 	rumble:               Rumble_Event,
 }
@@ -58,7 +59,7 @@ init_game :: proc(
 	settings := default_settings()
 	if loaded_settings != nil do settings = loaded_settings^
 	game^ = Game {
-		screen         = .Intro,
+		screen         = .Branding,
 		cheats_enabled = cheats_enabled,
 		settings       = settings,
 	}
@@ -108,16 +109,6 @@ complete_or_skip_tutorial :: proc(game: ^Game) -> bool {
 	return true
 }
 
-update_local_record :: proc(game: ^Game) -> bool {
-	if game.cheats_enabled || game.gameplay.mode != .Campaign ||
-	   game.gameplay.run_record_submitted {
-		return false
-	}
-	record := record_for_profile(&game.settings.records, game.gameplay.difficulty)
-	game.gameplay.run_record_submitted = true
-	return submit_run_score(record, game.gameplay.player.score)
-}
-
 update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_Update_Result {
 	result: Game_Update_Result
 	game.last_input_device = resolve_last_input_device(
@@ -140,6 +131,14 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 	menu_audio_context := previous_screen == .Main_Menu || game.pause.open
 
 	switch game.screen {
+	case .Branding:
+		game.branding_elapsed_seconds += clamp(frame_seconds, 0, MAX_FRAME_DELTA_SECONDS)
+		if input.presentation_music_finished ||
+		   (!input.presentation_music_controls_timing &&
+		    game.branding_elapsed_seconds >= BRANDING_FALLBACK_SECONDS) {
+			begin_intro(&game.front_end)
+			game.screen = .Intro
+		}
 	case .Intro:
 		if input.back {
 			show_main_menu(game)
@@ -148,8 +147,8 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 		} else if advance_intro(
 			&game.front_end,
 			frame_seconds,
-			input.intro_music_finished,
-			input.intro_music_controls_timing,
+			input.presentation_music_finished,
+			input.presentation_music_controls_timing,
 		) {
 			show_main_menu(game)
 		}
@@ -249,23 +248,6 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 		result.menu_sound_requests = 1
 	}
 	if !previous_pause_open && game.pause.open do result.menu_sound_requests = 1
-	if previous_screen == .Playing && game.screen == .Playing &&
-	   previous_gameplay_state != .Won && game.gameplay.state == .Won &&
-	   game.gameplay.mode == .Campaign && !game.cheats_enabled {
-		record := record_for_profile(&game.settings.records, game.gameplay.difficulty)
-		if update_level_record(record, &game.gameplay.level_result) {
-			result.settings_changed = true
-			result.record_sound_requests = 1
-		}
-	}
-	if previous_screen == .Playing && game.screen == .Playing &&
-	   previous_gameplay_state != game.gameplay.state &&
-	   (game.gameplay.state == .Game_Over || game.gameplay.state == .Game_Won) {
-		if update_local_record(game) {
-			result.settings_changed = true
-			result.record_sound_requests = 1
-		}
-	}
 	result.victory_started = previous_screen == .Playing && game.screen == .Playing &&
 		previous_gameplay_state != .Game_Won && game.gameplay.state == .Game_Won
 	if result.victory_started {

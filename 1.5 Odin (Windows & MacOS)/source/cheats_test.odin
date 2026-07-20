@@ -126,6 +126,7 @@ reduced_flashes_suppresses_screen_damage_flash_but_keeps_local_blink_test :: pro
 visual_transitions_do_not_block_game_input_test :: proc(t: ^testing.T) {
 	game: Game
 	init_game(&game)
+	update_game(&game, Game_Input {presentation_music_finished = true}, 0)
 	update_game(&game, Game_Input {back = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
 	game.settings.tutorial_complete = true

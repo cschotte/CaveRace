@@ -7,14 +7,14 @@ import rl "vendor:raylib"
 // overlays at the end of every render frame.
 draw_game :: proc(game: ^Game, assets: ^Assets) {
 	switch game.screen {
+	case .Branding:
+		rl.DrawTexture(assets.screens.branding, 0, 0, rl.WHITE)
 	case .Intro:
 		draw_front_end(game.front_end, &assets.screens)
 		draw_story_effects(game.front_end, game.settings.reduced_flashes)
 		draw_story_prompt(game)
 	case .Main_Menu:
-		background := assets.screens.front_end[MAIN_MENU_FIRST_IMAGE]
-		if game.menu.page == .Records do background = assets.screens.score
-		rl.DrawTexture(background, 0, 0, rl.WHITE)
+		rl.DrawTexture(assets.screens.front_end[MAIN_MENU_FIRST_IMAGE], 0, 0, rl.WHITE)
 		draw_main_menu(game)
 	case .Tutorial:
 		draw_gameplay(game, assets)
@@ -168,7 +168,6 @@ main_menu_item_label :: proc(item: Main_Menu_Item) -> cstring {
 	switch item {
 	case .Start_Game:   return "START GAME"
 	case .Practice:     return "PRACTICE / LEVEL SELECT"
-	case .Records:      return "RECORDS"
 	case .Tutorial:     return "TUTORIAL"
 	case .How_To_Play:  return "HOW TO PLAY"
 	case .Settings:     return "SETTINGS"
@@ -356,9 +355,7 @@ draw_how_to_play :: proc(game: ^Game) {
 
 draw_level_select :: proc(game: ^Game) {
 	draw_menu_panel("PRACTICE / LEVEL SELECT", 320)
-	record := record_for_profile(&game.settings.records, game.settings.difficulty)
-	unlocked := unlocked_level_count(record)
-	for level_index in 0 ..< unlocked {
+	for level_index in 0 ..< LEVEL_COUNT {
 		color := rl.LIGHTGRAY
 		prefix: cstring = "  "
 		if game.menu.selected == level_index {
@@ -368,42 +365,10 @@ draw_level_select :: proc(game: ^Game) {
 		y := i32(88 + level_index * 23)
 		rl.DrawText(prefix, 112, y, 15, color)
 		metadata := level_metadata(level_index)
-		draw_ui_format(136, y, 15, color, "%-8s  %-6s", metadata.name, medal_label(record.levels[level_index].best_medal))
-		draw_duration(385, y, 15, color, record.levels[level_index].best_time_ticks)
+		draw_ui_format(136, y, 15, color, "%2d  %-12s  PAR %3.0fs", level_index + 1, metadata.name, metadata.par_seconds)
 	}
-	draw_menu_row("BACK", unlocked, game.menu.selected, 88 + unlocked * 23)
-	draw_ui_format(148, 346, 13, rl.GOLD, "%s PROFILE - PRACTICE NEVER CHANGES RECORDS", difficulty_label(game.settings.difficulty))
-	draw_device_footer(game, 378)
-}
-
-draw_records :: proc(game: ^Game) {
-	record := record_for_profile(&game.settings.records, game.settings.difficulty)
-	if game.menu.records_page == 0 {
-		draw_ui_format(157, 116, 15, rl.BLACK, "TOP RUN SCORES - %s", difficulty_label(game.settings.difficulty))
-		if record.run_score_count == 0 {
-			rl.DrawText("NO CAMPAIGN RUNS YET", 217, 178, 16, rl.BLACK)
-		} else {
-			for index in 0 ..< MAX_RUN_RECORDS {
-				y := i32(143 + index * 19)
-				if index < record.run_score_count {
-					draw_ui_format(211, y, 16, rl.BLACK, "%2d.  %08d", index + 1, record.run_scores[index])
-				} else {
-					draw_ui_format(211, y, 16, rl.DARKBROWN, "%2d.  --------", index + 1)
-				}
-			}
-		}
-		rl.DrawText("PAGE 1/2", 288, 339, 13, rl.DARKBROWN)
-	} else {
-		draw_ui_format(175, 116, 15, rl.BLACK, "CAVE BESTS - %s", difficulty_label(game.settings.difficulty))
-		for level_index in 0 ..< LEVEL_COUNT {
-			y := i32(143 + level_index * 19)
-			level_record := record.levels[level_index]
-			draw_ui_format(173, y, 15, rl.BLACK, "%2d  %-6s", level_index + 1, medal_label(level_record.best_medal))
-			draw_duration(376, y, 15, rl.BLACK, level_record.best_time_ticks)
-		}
-		rl.DrawText("PAGE 2/2", 288, 339, 13, rl.DARKBROWN)
-	}
-	rl.DrawText("LEFT / RIGHT / CONFIRM: PAGE", 205, 358, 13, rl.GOLD)
+	draw_menu_row("BACK", LEVEL_COUNT, game.menu.selected, 88 + LEVEL_COUNT * 23)
+	draw_ui_format(205, 346, 13, rl.GOLD, "%s PRACTICE", difficulty_label(game.settings.difficulty))
 	draw_device_footer(game, 378)
 }
 
@@ -439,7 +404,6 @@ draw_main_menu :: proc(game: ^Game) {
 	case .Bindings:    draw_bindings_menu(game)
 	case .How_To_Play: draw_how_to_play(game)
 	case .Level_Select: draw_level_select(game)
-	case .Records:      draw_records(game)
 	case .Main:
 		draw_menu_panel("CAVERACE", 320)
 		for item_index in 0 ..< len(Main_Menu_Item) {
@@ -482,9 +446,6 @@ draw_level_result :: proc(game: ^Game) {
 		draw_ui_format(72, 294, 13, rl.RED, "SCORE ADJUSTMENT                    %+d", result.score_adjustment)
 	}
 	draw_ui_format(72, 314, 16, rl.GOLD, "TOTAL +%d     SCORE %08d     MEDAL %s", result.score_delta, result.final_score, medal_label(result.medal))
-	if result.new_best_time || result.new_best_medal {
-		rl.DrawText("NEW CAVE RECORD", 426, 334, 13, rl.GREEN)
-	}
 	footer: cstring = "CONTINUE"
 	if game.gameplay.mode == .Practice do footer = "RETURN TO MENU"
 	draw_ui_format(72, 348, 13, rl.LIGHTGRAY, "%s: %s", action_prompt(.Confirm, game.last_input_device, game.settings.bindings, &game.settings.controller_bindings), footer)
@@ -575,7 +536,7 @@ draw_gameplay :: proc(game: ^Game, assets: ^Assets) {
 		return
 	}
 
-	rl.DrawTexture(assets.screens.game, 0, 0, rl.WHITE)
+	rl.DrawTexture(assets.screens.border, 0, 0, rl.WHITE)
 
 	switch gameplay.state {
 	case .Playing, .Dead, .Won:

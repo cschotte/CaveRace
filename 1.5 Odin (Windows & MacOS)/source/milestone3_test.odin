@@ -121,12 +121,10 @@ first_run_tutorial_can_be_started_skipped_and_replayed_test :: proc(t: ^testing.
 }
 
 @(test)
-settings_document_validates_sections_and_keeps_profile_namespaces_test :: proc(t: ^testing.T) {
+settings_document_validates_sections_without_score_persistence_test :: proc(t: ^testing.T) {
 	settings := default_settings()
 	settings.music_volume = 35
 	settings.difficulty = .Assisted
-	settings.records.standard = {best_run_score = 900, best_cave = 4}
-	settings.records.assisted = {best_run_score = 700, best_cave = 6}
 	document := settings_to_document(settings)
 	document.music_volume = 500
 	document.bindings[.Bomb] = document.bindings[.Move_Up]
@@ -135,18 +133,11 @@ settings_document_validates_sections_and_keeps_profile_namespaces_test :: proc(t
 	testing.expect_value(t, loaded.music_volume, default_settings().music_volume)
 	testing.expect_value(t, loaded.difficulty, Difficulty_Profile.Assisted)
 	testing.expect_value(t, loaded.bindings, default_keyboard_bindings())
-	testing.expect_value(t, loaded.records.standard.best_run_score, 900)
-	testing.expect_value(t, loaded.records.assisted.best_run_score, 700)
-	testing.expect(t, record_for_profile(&loaded.records, .Standard) !=
-	                  record_for_profile(&loaded.records, .Assisted))
 
 	document.version = SETTINGS_VERSION - 1
 	old, old_ok := settings_from_document(document)
 	testing.expect(t, old_ok)
 	testing.expect_value(t, old.difficulty, Difficulty_Profile.Assisted)
-	testing.expect_value(t, old.records.standard.best_run_score, 900)
-	testing.expect_value(t, old.records.standard.run_score_count, 1)
-	testing.expect_value(t, old.records.assisted.best_run_score, 700)
 }
 
 @(test)

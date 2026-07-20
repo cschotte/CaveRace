@@ -1,6 +1,6 @@
 package caverace
 
-// Difficulty_Profile separates rules and records for the legacy-compatible
+// Difficulty_Profile separates the legacy-compatible and assisted rules
 // Standard campaign and the more forgiving Assisted campaign.
 Difficulty_Profile :: enum {
 	Standard,

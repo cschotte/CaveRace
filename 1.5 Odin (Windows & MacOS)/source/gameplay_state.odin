@@ -218,7 +218,6 @@ Gameplay :: struct {
 	level_stats:              Level_Stats,
 	level_result:             Level_Result,
 	level_tracking_active:    bool,
-	run_record_submitted:     bool,
 	bombs:                    [MAX_BOMBS]Bomb_State,
 	explosions:               [MAX_BOMBS]Explosion_State,
 	bomb_occupancy:           Map_Grid,

@@ -104,8 +104,8 @@ run_application :: proc(options: Launch_Options) -> bool {
 			frame_seconds,
 			rl.IsWindowFocused(),
 		)
-		input.intro_music_controls_timing = app.audio_ready
-		input.intro_music_finished = intro_music_stream_finished(&app)
+		input.presentation_music_controls_timing = app.audio_ready
+		input.presentation_music_finished = presentation_music_stream_finished(&app)
 		previous_input_device := app.game.last_input_device
 		update_result := update_application(&app, input, frame_seconds)
 		if app.game.last_input_device != previous_input_device {
@@ -162,19 +162,20 @@ draw_application_frame :: proc(app: ^Application) {
 	rl.EndDrawing()
 }
 
-// music_cue_for_game maps the current platform-independent state to one active
-// streamed track. Intro panels use matching tracks, cave music rotates by
-// level, and completing the tenth level receives the victory cue.
-music_cue_for_game :: proc(game: ^Game) -> Music_Cue {
+// music_cue_for_game maps presentation/menu/outcome states to streamed audio.
+// Active cave and tutorial play intentionally have no music.
+music_cue_for_game :: proc(game: ^Game) -> Maybe(Music_Cue) {
 	switch game.screen {
+	case .Branding:
+		return .Branding
 	case .Intro:
 		assert(game.front_end.image_index >= INTRO_FIRST_IMAGE)
 		assert(game.front_end.image_index <= INTRO_LAST_IMAGE)
-		return Music_Cue(int(Music_Cue.Intro_Space) + game.front_end.image_index)
+		return Music_Cue(int(Music_Cue.Intro_Eldora) + game.front_end.image_index)
 	case .Main_Menu:
-		return .Main_Menu
+		return .Menu
 	case .Tutorial:
-		return .Cave_A
+		return {}
 	case .Playing:
 		switch game.gameplay.state {
 		case .Won:
@@ -184,24 +185,20 @@ music_cue_for_game :: proc(game: ^Game) -> Music_Cue {
 		case .Game_Over:
 			return .Game_Over
 		case .Load_Level, .Playing, .Dead, .Load_Failed:
-			switch level_metadata(game.gameplay.level_index).music_band {
-			case .A: return .Cave_A
-			case .B: return .Cave_B
-			case .C: return .Cave_C
-			}
+			return {}
 		}
 	}
-	return .Main_Menu
+	return {}
 }
 
 // music_cue_loops distinguishes ambient screen/gameplay songs from finite
 // story and outcome cues.
 music_cue_loops :: proc(cue: Music_Cue) -> bool {
 	switch cue {
-	case .Main_Menu, .Cave_A, .Cave_B, .Cave_C:
+	case .Menu:
 		return true
-	case .Intro_Space, .Intro_Eldora, .Intro_Mining, .Intro_Aliens,
-	     .Intro_Defense, .Intro_Hero, .Intro_Bombs, .Level_Complete,
+	case .Branding, .Intro_Eldora, .Intro_Mining, .Intro_Aliens,
+	     .Intro_Defense, .Intro_Hero, .Intro_Bombs, .Intro_Protect, .Level_Complete,
 	     .You_Won, .Game_Over:
 		return false
 	}
@@ -218,56 +215,59 @@ music_crossfade_gains :: proc(elapsed_seconds: f64) -> (incoming, outgoing: f32)
 	return progress, 1 - progress
 }
 
-// intro_music_stream_finished reports a natural end only after the expected
+// presentation_music_stream_finished reports a natural end only after the expected
 // finite cue has actually been started. This prevents the first frame, cue
 // changes, and silent startup from being mistaken for completed playback.
-intro_music_stream_finished :: proc(app: ^Application) -> bool {
-	if !app.audio_ready || app.game.screen != .Intro ||
-	   app.game.front_end.transition_active {
+presentation_music_stream_finished :: proc(app: ^Application) -> bool {
+	if !app.audio_ready ||
+	   (app.game.screen != .Branding && app.game.screen != .Intro) ||
+	   (app.game.screen == .Intro && app.game.front_end.transition_active) {
 		return false
 	}
 	active, active_ok := app.active_music.?
-	if !active_ok || active != music_cue_for_game(&app.game) do return false
+	desired, desired_ok := music_cue_for_game(&app.game).?
+	if !active_ok || !desired_ok || active != desired do return false
 	return !rl.IsMusicStreamPlaying(app.assets.music[active])
 }
 
 // update_game_music switches tracks only when the requested cue changes and
 // services the active raylib stream every frame.
 update_game_music :: proc(app: ^Application, frame_seconds: f64) {
-	desired := music_cue_for_game(&app.game)
-	if active, ok := app.active_music.?; ok {
-		if active != desired {
-			if outgoing, outgoing_ok := app.outgoing_music.?; outgoing_ok {
-				rl.StopMusicStream(app.assets.music[outgoing])
-			}
-			app.outgoing_music = active
-			app.music_fade_elapsed = 0
-			app.assets.music[desired].looping = music_cue_loops(desired)
-			rl.SetMusicVolume(app.assets.music[desired], 0)
-			rl.PlayMusicStream(app.assets.music[desired])
-			app.active_music = desired
+	desired, desired_ok := music_cue_for_game(&app.game).?
+	active, active_ok := app.active_music.?
+	if active_ok && (!desired_ok || active != desired) {
+		if outgoing, outgoing_ok := app.outgoing_music.?; outgoing_ok {
+			rl.StopMusicStream(app.assets.music[outgoing])
 		}
-	} else {
+		app.outgoing_music = active
+		app.active_music = {}
+		app.music_fade_elapsed = 0
+		active_ok = false
+	}
+	if desired_ok && (!active_ok || active != desired) {
 		app.assets.music[desired].looping = music_cue_loops(desired)
+		rl.SetMusicVolume(app.assets.music[desired], 0)
 		rl.PlayMusicStream(app.assets.music[desired])
 		app.active_music = desired
 	}
 
-	active, _ := app.active_music.?
 	base_gain := music_gain_for_game(&app.game) *
 		f32(clamp(app.game.settings.music_volume, 0, 100)) / 100
-	if outgoing, ok := app.outgoing_music.?; ok {
+	active, active_ok = app.active_music.?
+	if outgoing, outgoing_ok := app.outgoing_music.?; outgoing_ok {
 		app.music_fade_elapsed += clamp(frame_seconds, 0, MAX_FRAME_DELTA_SECONDS)
 		incoming_gain, outgoing_gain := music_crossfade_gains(app.music_fade_elapsed)
-		rl.SetMusicVolume(app.assets.music[active], base_gain * incoming_gain)
+		if active_ok {
+			rl.SetMusicVolume(app.assets.music[active], base_gain * incoming_gain)
+			rl.UpdateMusicStream(app.assets.music[active])
+		}
 		rl.SetMusicVolume(app.assets.music[outgoing], base_gain * outgoing_gain)
-		rl.UpdateMusicStream(app.assets.music[active])
 		rl.UpdateMusicStream(app.assets.music[outgoing])
 		if app.music_fade_elapsed >= MUSIC_CROSSFADE_SECONDS {
 			rl.StopMusicStream(app.assets.music[outgoing])
 			app.outgoing_music = {}
 		}
-	} else {
+	} else if active_ok {
 		rl.SetMusicVolume(app.assets.music[active], base_gain)
 		rl.UpdateMusicStream(app.assets.music[active])
 	}
@@ -353,7 +353,6 @@ apply_sfx_volume :: proc(assets: ^Assets, volume_percent: int) {
 	rl.SetSoundVolume(assets.sounds.squish, volume)
 	rl.SetSoundVolume(assets.sounds.ticking, volume)
 	rl.SetSoundVolume(assets.sounds.menu, volume)
-	rl.SetSoundVolume(assets.sounds.record, volume)
 }
 
 limited_audio_request_count :: proc(requested, maximum: int) -> int {
@@ -388,10 +387,6 @@ play_frame_audio :: proc(assets: ^Assets, result: ^Game_Update_Result) {
 	}
 	if result.menu_sound_requests > 0 && !rl.IsSoundPlaying(assets.sounds.menu) {
 		rl.PlaySound(assets.sounds.menu)
-	}
-	if result.record_sound_requests > 0 {
-		rl.StopSound(assets.sounds.record)
-		rl.PlaySound(assets.sounds.record)
 	}
 }
 

@@ -1,5 +1,6 @@
 package caverace
 
+import "core:encoding/json"
 import "core:testing"
 
 @(test)
@@ -61,57 +62,6 @@ non_event_score_changes_are_explicitly_balanced_in_results_test :: proc(t: ^test
 }
 
 @(test)
-top_ten_scores_are_descending_tie_stable_and_bounded_test :: proc(t: ^testing.T) {
-	record: Profile_Record
-	scores := [12]int{50, 100, 20, 80, 80, 10, 70, 60, 40, 30, 90, 110}
-	for score in scores {
-		_ = submit_run_score(&record, score)
-	}
-	expected := [MAX_RUN_RECORDS]int{110, 100, 90, 80, 80, 70, 60, 50, 40, 30}
-	testing.expect_value(t, record.run_score_count, MAX_RUN_RECORDS)
-	testing.expect_value(t, record.run_scores, expected)
-	testing.expect_value(t, record.best_run_score, 110)
-	testing.expect(t, run_scores_are_valid(&record))
-	testing.expect(t, !submit_run_score(&record, 29))
-	testing.expect_value(t, record.run_scores, expected)
-}
-
-@(test)
-level_records_unlock_reached_caves_without_medal_gates_test :: proc(t: ^testing.T) {
-	record: Profile_Record
-	testing.expect_value(t, unlocked_level_count(&record), 1)
-	bronze := Level_Result {
-		valid = true,
-		level_index = 0,
-		elapsed_ticks = 600,
-		medal = .Bronze,
-	}
-	testing.expect(t, update_level_record(&record, &bronze))
-	testing.expect_value(t, record.best_cave, 2)
-	testing.expect_value(t, unlocked_level_count(&record), 2)
-	testing.expect_value(t, record.levels[0].best_time_ticks, 600)
-	testing.expect_value(t, record.levels[0].best_medal, Medal.Bronze)
-
-	slower_gold := Level_Result {
-		valid = true,
-		level_index = 0,
-		elapsed_ticks = 900,
-		medal = .Gold,
-	}
-	testing.expect(t, update_level_record(&record, &slower_gold))
-	testing.expect(t, !slower_gold.new_best_time)
-	testing.expect(t, slower_gold.new_best_medal)
-	testing.expect_value(t, record.levels[0].best_time_ticks, 600)
-	testing.expect_value(t, unlocked_level_count(&record), 2)
-}
-
-@(test)
-version_one_reached_cave_semantics_do_not_unlock_an_extra_cave_test :: proc(t: ^testing.T) {
-	legacy_record := Profile_Record {best_cave = 4}
-	testing.expect_value(t, unlocked_level_count(&legacy_record), 4)
-}
-
-@(test)
 active_timer_excludes_pause_loading_and_results_test :: proc(t: ^testing.T) {
 	game: Game
 	init_game(&game)
@@ -138,7 +88,7 @@ active_timer_excludes_pause_loading_and_results_test :: proc(t: ^testing.T) {
 }
 
 @(test)
-practice_exit_and_record_submission_are_isolated_test :: proc(t: ^testing.T) {
+practice_result_returns_to_menu_without_persistence_request_test :: proc(t: ^testing.T) {
 	game: Game
 	init_game(&game)
 	game.screen = .Playing
@@ -146,80 +96,48 @@ practice_exit_and_record_submission_are_isolated_test :: proc(t: ^testing.T) {
 	game.gameplay.state = .Won
 	game.gameplay.player.score = 9999
 	game.gameplay.level_result = {valid = true, level_index = 0, elapsed_ticks = 120}
-	testing.expect(t, !update_local_record(&game))
-	update_game(&game, Game_Input {confirm = true}, 0)
+	result := update_game(&game, Game_Input {confirm = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
-	testing.expect_value(t, game.settings.records.standard.run_score_count, 0)
-	testing.expect_value(t, game.settings.records.standard.best_cave, 0)
-
-	campaign: Game
-	init_game(&campaign)
-	campaign.gameplay.mode = .Campaign
-	campaign.gameplay.player.score = 9999
-	testing.expect(t, update_local_record(&campaign))
-	testing.expect_value(t, campaign.settings.records.standard.run_scores[0], 9999)
-	testing.expect(t, !update_local_record(&campaign))
-
-	cheat_game: Game
-	init_game(&cheat_game, true)
-	cheat_game.gameplay.player.score = 999999
-	testing.expect(t, !update_local_record(&cheat_game))
-	testing.expect_value(t, cheat_game.settings.records.standard.run_score_count, 0)
+	testing.expect(t, !result.settings_changed)
 }
 
 @(test)
-practice_menu_lists_only_reached_levels_and_launches_selection_test :: proc(t: ^testing.T) {
+practice_menu_lists_all_levels_and_launches_selection_test :: proc(t: ^testing.T) {
 	game: Game
 	init_game(&game)
 	show_main_menu(&game)
 	game.settings.tutorial_complete = true
-	game.settings.records.standard.best_cave = 3
 	game.menu.selected = int(Main_Menu_Item.Practice)
 	update_game(&game, Game_Input {confirm = true}, 0)
 	testing.expect_value(t, game.menu.page, Menu_Page.Level_Select)
 
-	// Three caves are available (initial plus two reached); the fourth row is Back.
-	for _ in 0 ..< 2 do update_game(&game, Game_Input {menu_down_pressed = true}, 0)
-	testing.expect_value(t, game.menu.selected, 2)
+	for _ in 0 ..< LEVEL_COUNT - 1 do update_game(&game, Game_Input {menu_down_pressed = true}, 0)
+	testing.expect_value(t, game.menu.selected, LEVEL_COUNT - 1)
 	result := update_game(&game, Game_Input {confirm = true}, 0)
 	testing.expect(t, result.load_level_requested)
 	testing.expect_value(t, game.screen, App_Screen.Playing)
 	testing.expect_value(t, game.gameplay.mode, Run_Mode.Practice)
-	testing.expect_value(t, game.gameplay.level_index, 2)
+	testing.expect_value(t, game.gameplay.level_index, LEVEL_COUNT - 1)
 }
 
 @(test)
-record_persistence_round_trip_migration_and_namespace_corruption_test :: proc(t: ^testing.T) {
+legacy_settings_versions_load_without_score_or_time_data_test :: proc(t: ^testing.T) {
 	settings := default_settings()
 	settings.difficulty = .Assisted
-	_ = submit_run_score(&settings.records.standard, 500)
-	_ = submit_run_score(&settings.records.standard, 900)
-	settings.records.standard.best_cave = 3
-	settings.records.standard.levels[2] = {best_time_ticks = 1234, best_medal = .Silver}
-	_ = submit_run_score(&settings.records.assisted, 700)
 	document := settings_to_document(settings)
-	loaded, ok := settings_from_document(document)
-	testing.expect(t, ok)
-	testing.expect_value(t, loaded.records, settings.records)
-
-	legacy := document
-	legacy.version = 1
-	legacy.standard_run_scores = {}
-	legacy.standard_run_score_count = 0
-	legacy.standard_level_best_ticks = {}
-	legacy.standard_level_medals = {}
-	migrated, migrated_ok := settings_from_document(legacy)
+	document.version = 1
+	migrated, migrated_ok := settings_from_document(document)
 	testing.expect(t, migrated_ok)
-	testing.expect_value(t, migrated.records.standard.run_score_count, 1)
-	testing.expect_value(t, migrated.records.standard.run_scores[0], 900)
-	testing.expect_value(t, migrated.records.standard.best_cave, 3)
+	testing.expect_value(t, migrated.difficulty, Difficulty_Profile.Assisted)
 
-	corrupt := document
-	corrupt.standard_run_score_count = MAX_RUN_RECORDS + 1
-	partial, partial_ok := settings_from_document(corrupt)
-	testing.expect(t, partial_ok)
-	testing.expect_value(t, partial.records.standard, Profile_Record{})
-	testing.expect_value(t, partial.records.assisted, settings.records.assisted)
+	// Existing version-3 files may still contain the removed record namespace.
+	// Those obsolete keys must not prevent the remaining settings from loading.
+	legacy_json := `{"version":3,"music_volume":42,"standard_best_run_score":9999,"standard_best_cave":8}`
+	legacy_document: Persisted_Settings
+	testing.expect(t, json.unmarshal(transmute([]byte)legacy_json, &legacy_document) == nil)
+	from_json, json_ok := settings_from_document(legacy_document)
+	testing.expect(t, json_ok)
+	testing.expect_value(t, from_json.music_volume, 42)
 }
 
 @(test)

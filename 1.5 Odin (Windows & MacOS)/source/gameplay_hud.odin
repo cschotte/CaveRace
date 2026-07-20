@@ -4,7 +4,7 @@ import "core:strconv"
 import rl "vendor:raylib"
 
 // These coordinates are the original CaveRace 1.3 HUD compartments baked into
-// game_border.png. Keep gameplay information inside that lower frame so the
+// border.png. Keep gameplay information inside that lower frame so the
 // 19x11 playfield remains completely unobstructed.
 HUD_LIVES_X       :: 16
 HUD_LIVES_Y       :: 374

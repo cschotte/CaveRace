@@ -3,37 +3,34 @@ package caverace
 import "core:strings"
 import rl "vendor:raylib"
 
-// Screen_Assets owns gameplay/outcome/records backgrounds and all nine
+// Screen_Assets owns branding, gameplay/outcome backgrounds, and all
 // front-end images for the complete application asset lifetime.
 Screen_Assets :: struct {
-	game:      rl.Texture,
+	border:    rl.Texture,
 	game_over: rl.Texture,
 	you_won:   rl.Texture,
-	score:     rl.Texture,
+	branding:  rl.Texture,
 	front_end: [FRONT_END_IMAGE_COUNT]rl.Texture,
 }
 
-// Music_Cue names every track used by the intro, menu, gameplay, and terminal
-// screens.
+// Music_Cue names every track used by the intro, menu, gameplay, and terminal screens.
 Music_Cue :: enum {
-	Intro_Space,
+	Branding,
 	Intro_Eldora,
 	Intro_Mining,
 	Intro_Aliens,
 	Intro_Defense,
 	Intro_Hero,
 	Intro_Bombs,
-	Main_Menu,
-	Cave_A,
-	Cave_B,
-	Cave_C,
+	Intro_Protect,
+	Menu,
 	Level_Complete,
 	You_Won,
 	Game_Over,
 }
 
-#assert(len(Music_Cue) == 14)
-#assert(int(Music_Cue.Intro_Bombs) - int(Music_Cue.Intro_Space) + 1 == INTRO_LAST_IMAGE - INTRO_FIRST_IMAGE + 1)
+#assert(len(Music_Cue) == 12)
+#assert(int(Music_Cue.Intro_Protect) - int(Music_Cue.Intro_Eldora) + 1 == INTRO_LAST_IMAGE - INTRO_FIRST_IMAGE + 1)
 
 // Resource manifests keep array indices and enum values as the single mapping
 // between domain-facing asset slots and packaged filenames.
@@ -50,27 +47,25 @@ FRONT_END_TEXTURE_PATHS :: [FRONT_END_IMAGE_COUNT]string {
 }
 
 BOMB_SOUND_PATHS :: [BOMB_SOUND_COUNT]string {
-	"sounds/bomb01.wav",
-	"sounds/bomb02.wav",
-	"sounds/bomb03.wav",
-	"sounds/bomb04.wav",
+	"sounds/bomb01.ogg",
+	"sounds/bomb02.ogg",
+	"sounds/bomb03.ogg",
+	"sounds/bomb04.ogg",
 }
 
 MUSIC_PATHS :: [Music_Cue]string {
-	.Intro_Space    = "music/01_intro_space.ogg",
-	.Intro_Eldora   = "music/02_intro_eldora.ogg",
-	.Intro_Mining   = "music/03_intro_mining.ogg",
-	.Intro_Aliens   = "music/04_intro_aliens.ogg",
-	.Intro_Defense  = "music/05_intro_defense.ogg",
-	.Intro_Hero     = "music/06_intro_hero.ogg",
-	.Intro_Bombs    = "music/07_intro_bombs.ogg",
-	.Main_Menu      = "music/08_main_menu.ogg",
-	.Cave_A         = "music/09_gameplay_a.ogg",
-	.Cave_B         = "music/10_gameplay_b.ogg",
-	.Cave_C         = "music/11_gameplay_c.ogg",
-	.Level_Complete = "music/12_level_complete.ogg",
-	.You_Won        = "music/13_you_won.ogg",
-	.Game_Over      = "music/14_game_over.ogg",
+	.Branding       = "intro/00_branding.ogg",
+	.Intro_Eldora   = "intro/01_intro_eldora.ogg",
+	.Intro_Mining   = "intro/02_intro_mining.ogg",
+	.Intro_Aliens   = "intro/03_intro_aliens.ogg",
+	.Intro_Defense  = "intro/04_intro_defense.ogg",
+	.Intro_Hero     = "intro/05_intro_hero.ogg",
+	.Intro_Bombs    = "intro/06_intro_bombs.ogg",
+	.Intro_Protect  = "intro/07_intro_protect.ogg",
+	.Menu           = "music/menu.ogg",
+	.Level_Complete = "music/level_complete.ogg",
+	.You_Won        = "music/you_won.ogg",
+	.Game_Over      = "music/game_over.ogg",
 }
 
 // Sound_Assets owns all raylib sound handles used when frame events request
@@ -82,7 +77,6 @@ Sound_Assets :: struct {
 	squish:  rl.Sound,
 	ticking: rl.Sound,
 	menu:    rl.Sound,
-	record:  rl.Sound,
 }
 
 // Sprite_Assets groups the vertical sprite sheets consumed by level, actor,
@@ -147,10 +141,10 @@ load_resource_music :: proc(root, relative_path: string) -> rl.Music {
 // partial resources and leaves the bundle empty.
 load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true) -> bool {
 	assets^ = {}
-	assets.screens.game         = load_resource_texture(resource_root, "screens/game_border.png")
+	assets.screens.border       = load_resource_texture(resource_root, "screens/border.png")
 	assets.screens.game_over    = load_resource_texture(resource_root, "screens/game_over.png")
 	assets.screens.you_won      = load_resource_texture(resource_root, "screens/you_won.png")
-	assets.screens.score        = load_resource_texture(resource_root, "screens/Score.png")
+	assets.screens.branding     = load_resource_texture(resource_root, "intro/00_branding.png")
 	for relative_path, image_index in FRONT_END_TEXTURE_PATHS {
 		assets.screens.front_end[image_index] =
 			load_resource_texture(resource_root, relative_path)
@@ -161,17 +155,13 @@ load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true) 
 			assets.sounds.bomb[sound_index] =
 				load_resource_sound(resource_root, relative_path)
 		}
-		assets.sounds.item    = load_resource_sound(resource_root, "sounds/item.wav")
-		assets.sounds.hit     = load_resource_sound(resource_root, "sounds/item.wav")
-		assets.sounds.squish  = load_resource_sound(resource_root, "sounds/squish.wav")
-		assets.sounds.ticking = load_resource_sound(resource_root, "sounds/ticking.wav")
-		assets.sounds.menu    = load_resource_sound(resource_root, "sounds/menu.wav")
-		assets.sounds.record  = load_resource_sound(resource_root, "sounds/menu.wav")
+		assets.sounds.item    = load_resource_sound(resource_root, "sounds/item.ogg")
+		assets.sounds.hit     = load_resource_sound(resource_root, "sounds/item.ogg")
+		assets.sounds.squish  = load_resource_sound(resource_root, "sounds/squish.ogg")
+		assets.sounds.ticking = load_resource_sound(resource_root, "sounds/ticking.ogg")
+		assets.sounds.menu    = load_resource_sound(resource_root, "sounds/menu.ogg")
 		if rl.IsSoundValid(assets.sounds.hit) {
 			rl.SetSoundPitch(assets.sounds.hit, 0.55)
-		}
-		if rl.IsSoundValid(assets.sounds.record) {
-			rl.SetSoundPitch(assets.sounds.record, 1.35)
 		}
 
 		for relative_path, cue in MUSIC_PATHS {
@@ -202,10 +192,10 @@ load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true) 
 // assets_are_valid checks dimensions and raylib handles after loading so bad
 // packages fail early instead of producing invalid texture accesses later.
 assets_are_valid :: proc(assets: ^Assets, require_audio := true) -> bool {
-	if !texture_has_size(assets.screens.game, WINDOW_WIDTH, WINDOW_HEIGHT)      do return false
+	if !texture_has_size(assets.screens.border, WINDOW_WIDTH, WINDOW_HEIGHT)      do return false
 	if !texture_has_size(assets.screens.game_over, WINDOW_WIDTH, WINDOW_HEIGHT) do return false
 	if !texture_has_size(assets.screens.you_won, WINDOW_WIDTH, WINDOW_HEIGHT)   do return false
-	if !texture_has_size(assets.screens.score, WINDOW_WIDTH, WINDOW_HEIGHT)     do return false
+	if !texture_has_size(assets.screens.branding, WINDOW_WIDTH, WINDOW_HEIGHT) do return false
 	for texture in assets.screens.front_end {
 		if !texture_has_size(texture, WINDOW_WIDTH, WINDOW_HEIGHT) do return false
 	}
@@ -219,7 +209,6 @@ assets_are_valid :: proc(assets: ^Assets, require_audio := true) -> bool {
 		if !rl.IsSoundValid(assets.sounds.squish)  do return false
 		if !rl.IsSoundValid(assets.sounds.ticking) do return false
 		if !rl.IsSoundValid(assets.sounds.menu)    do return false
-		if !rl.IsSoundValid(assets.sounds.record)  do return false
 		for music in assets.music {
 			if !rl.IsMusicValid(music) do return false
 		}
@@ -266,10 +255,10 @@ vertical_sheet_dimensions_are_valid :: proc(width, height, sprite_count: int) ->
 // unload_assets releases every application-owned raylib resource during
 // shutdown or failed startup, then clears the handles to make cleanup idempotent.
 unload_assets :: proc(assets: ^Assets) {
-	unload_texture(assets.screens.game)
+	unload_texture(assets.screens.border)
 	unload_texture(assets.screens.game_over)
 	unload_texture(assets.screens.you_won)
-	unload_texture(assets.screens.score)
+	unload_texture(assets.screens.branding)
 	for texture in assets.screens.front_end {
 		unload_texture(texture)
 	}
@@ -282,7 +271,6 @@ unload_assets :: proc(assets: ^Assets) {
 	unload_sound(assets.sounds.squish)
 	unload_sound(assets.sounds.ticking)
 	unload_sound(assets.sounds.menu)
-	unload_sound(assets.sounds.record)
 	for music in assets.music {
 		unload_music(music)
 	}

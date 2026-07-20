@@ -1,7 +1,5 @@
 package caverace
 
-MAX_RUN_RECORDS :: 10
-
 Run_Mode :: enum {
 	Campaign,
 	Practice,
@@ -59,88 +57,6 @@ Level_Result :: struct {
 	score_delta:        int,
 	final_score:        int,
 	medal:              Medal,
-	new_best_time:      bool,
-	new_best_medal:     bool,
-}
-
-Level_Record :: struct {
-	best_time_ticks: int,
-	best_medal:      Medal,
-}
-
-Profile_Record :: struct {
-	best_run_score: int,
-	best_cave:      int,
-	run_scores:     [MAX_RUN_RECORDS]int,
-	run_score_count: int,
-	levels:         [LEVEL_COUNT]Level_Record,
-}
-
-Local_Records :: struct {
-	standard: Profile_Record,
-	assisted: Profile_Record,
-}
-
-record_for_profile :: proc(records: ^Local_Records, profile: Difficulty_Profile) -> ^Profile_Record {
-	switch profile {
-	case .Standard: return &records.standard
-	case .Assisted: return &records.assisted
-	}
-	return &records.standard
-}
-
-unlocked_level_count :: proc(record: ^Profile_Record) -> int {
-	// best_cave retains the version-1 meaning: highest cave number reached.
-	return clamp(max(record.best_cave, 1), 1, LEVEL_COUNT)
-}
-
-run_scores_are_valid :: proc(record: ^Profile_Record) -> bool {
-	if record.run_score_count < 0 || record.run_score_count > MAX_RUN_RECORDS do return false
-	for index in 0 ..< record.run_score_count {
-		if record.run_scores[index] < 0 do return false
-		if index > 0 && record.run_scores[index] > record.run_scores[index - 1] do return false
-	}
-	return true
-}
-
-submit_run_score :: proc(record: ^Profile_Record, score: int) -> bool {
-	if score < 0 do return false
-	insert_at := record.run_score_count
-	for index in 0 ..< record.run_score_count {
-		if score > record.run_scores[index] {
-			insert_at = index
-			break
-		}
-	}
-	if insert_at >= MAX_RUN_RECORDS do return false
-	last := min(record.run_score_count, MAX_RUN_RECORDS - 1)
-	for index := last; index > insert_at; index -= 1 {
-		record.run_scores[index] = record.run_scores[index - 1]
-	}
-	record.run_scores[insert_at] = score
-	record.run_score_count = min(record.run_score_count + 1, MAX_RUN_RECORDS)
-	record.best_run_score = record.run_scores[0]
-	return true
-}
-
-update_level_record :: proc(record: ^Profile_Record, result: ^Level_Result) -> bool {
-	if !result.valid || result.level_index < 0 || result.level_index >= LEVEL_COUNT do return false
-	changed := false
-	previous_best_cave := record.best_cave
-	level := &record.levels[result.level_index]
-	if result.elapsed_ticks > 0 &&
-	   (level.best_time_ticks == 0 || result.elapsed_ticks < level.best_time_ticks) {
-		level.best_time_ticks = result.elapsed_ticks
-		result.new_best_time = true
-		changed = true
-	}
-	if result.medal > level.best_medal {
-		level.best_medal = result.medal
-		result.new_best_medal = true
-		changed = true
-	}
-	record.best_cave = max(record.best_cave, min(result.level_index + 2, LEVEL_COUNT))
-	return changed || record.best_cave != previous_best_cave
 }
 
 medal_for_conditions :: proc(all_treasure, under_par: bool) -> Medal {

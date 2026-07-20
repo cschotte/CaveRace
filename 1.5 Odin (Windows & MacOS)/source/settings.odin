@@ -1,6 +1,6 @@
 package caverace
 
-SETTINGS_VERSION :: 3
+SETTINGS_VERSION :: 4
 
 Display_Mode :: enum {
 	Windowed,
@@ -21,7 +21,6 @@ Settings :: struct {
 	bindings:           Keyboard_Bindings,
 	controller_bindings: Controller_Bindings,
 	tutorial_complete:  bool,
-	records:            Local_Records,
 }
 
 default_settings :: proc() -> Settings {

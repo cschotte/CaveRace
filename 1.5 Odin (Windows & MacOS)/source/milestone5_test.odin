@@ -116,30 +116,29 @@ late_cave_pursuit_is_walkable_profiled_and_metadata_bounded_test :: proc(t: ^tes
 }
 
 @(test)
-menu_record_victory_audio_and_effect_requests_follow_committed_transitions_test :: proc(t: ^testing.T) {
+menu_audio_and_victory_effect_requests_follow_committed_transitions_test :: proc(t: ^testing.T) {
 	menu_game: Game
 	init_game(&menu_game)
 	show_main_menu(&menu_game)
 	menu_result := update_game(&menu_game, Game_Input {menu_down_pressed = true}, 0)
 	testing.expect_value(t, menu_result.menu_sound_requests, 1)
 
-	record_game: Game
-	init_game(&record_game)
-	record_game.screen = .Playing
-	record_game.gameplay = open_gameplay_at({1, 1})
-	record_game.gameplay.level_completion_enabled = true
-	record_game.gameplay.level_tracking_active = true
-	record_game.gameplay.enemy_count = 0
-	record_result := update_game(&record_game, {}, 0)
-	testing.expect_value(t, record_game.gameplay.state, Gameplay_State.Won)
-	testing.expect_value(t, record_result.record_sound_requests, 1)
+	game: Game
+	init_game(&game)
+	game.screen = .Playing
+	game.gameplay = open_gameplay_at({1, 1})
+	game.gameplay.level_completion_enabled = true
+	game.gameplay.level_tracking_active = true
+	game.gameplay.enemy_count = 0
+	update_game(&game, {}, 0)
+	testing.expect_value(t, game.gameplay.state, Gameplay_State.Won)
 
-	record_game.gameplay.level_index = LEVEL_COUNT - 1
-	victory_result := update_game(&record_game, Game_Input {confirm = true}, 0)
+	game.gameplay.level_index = LEVEL_COUNT - 1
+	victory_result := update_game(&game, Game_Input {confirm = true}, 0)
 	testing.expect(t, victory_result.victory_started)
 	testing.expect_value(t, victory_result.rumble, Rumble_Event.Victory)
-	testing.expect_value(t, record_game.gameplay.state, Gameplay_State.Game_Won)
-	testing.expect(t, effect_particle_count(&record_game.effects) > 0)
+	testing.expect_value(t, game.gameplay.state, Gameplay_State.Game_Won)
+	testing.expect(t, effect_particle_count(&game.effects) > 0)
 }
 
 @(test)
