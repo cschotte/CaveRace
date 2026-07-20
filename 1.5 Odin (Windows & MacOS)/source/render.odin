@@ -255,32 +255,42 @@ draw_menu_row :: proc(label: cstring, index, selected, y: int, pulse: f32 = 0) {
 	rl.DrawText(label, 203, i32(y), 18, color)
 }
 
-draw_menu_panel :: proc(title: cstring, height: i32 = 310) {
-	panel_x: i32 = 80
-	panel_y: i32 = 58
+// draw_menu_panel draws a horizontally centered panel and returns its
+// resolved left edge so callers can place rows relative to its actual width
+// and position instead of assuming the original fixed 480-wide layout.
+draw_menu_panel :: proc(title: cstring, height: i32 = 310, width: i32 = 480, panel_y: i32 = 58) -> i32 {
+	panel_x := (WINDOW_WIDTH - width) / 2
 	rl.DrawRectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, rl.Fade(rl.BLACK, 0.12))
-	rl.DrawRectangle(panel_x + 5, panel_y + 6, 480, height, rl.Fade(rl.BLACK, 0.55))
-	rl.DrawRectangle(panel_x, panel_y, 480, height, rl.Fade(rl.BLACK, 0.84))
-	rl.DrawRectangle(panel_x + 1, panel_y + 1, 478, 42, rl.Fade(rl.DARKBROWN, 0.42))
-	rl.DrawRectangleLines(panel_x, panel_y, 480, height, rl.GOLD)
-	rl.DrawRectangleLines(panel_x + 3, panel_y + 3, 474, height - 6, rl.Fade(rl.GOLD, 0.28))
+	rl.DrawRectangle(panel_x + 5, panel_y + 6, width, height, rl.Fade(rl.BLACK, 0.55))
+	rl.DrawRectangle(panel_x, panel_y, width, height, rl.Fade(rl.BLACK, 0.84))
+	rl.DrawRectangle(panel_x + 1, panel_y + 1, width - 2, 42, rl.Fade(rl.DARKBROWN, 0.42))
+	rl.DrawRectangleLines(panel_x, panel_y, width, height, rl.GOLD)
+	rl.DrawRectangleLines(panel_x + 3, panel_y + 3, width - 6, height - 6, rl.Fade(rl.GOLD, 0.28))
 	title_width := rl.MeasureText(title, 24)
 	rl.DrawText(title, (WINDOW_WIDTH - title_width) / 2, panel_y + 14, 24, rl.GOLD)
+	return panel_x
 }
 
 // MENU_PANEL_CONTENT_TOP sits just below draw_menu_panel's fixed title band
-// (which ends at y=101), so row lists never draw under the panel title.
+// (which ends at y=101) when panel_y keeps its default of 58, so row lists
+// never draw under the panel title on the Bindings and First-Run pages.
 MENU_PANEL_CONTENT_TOP :: 106
 
-// MENU_PANEL_VALUE_RIGHT is the shared right edge rows align their value to.
+// MENU_PANEL_CONTENT_GAP is the same title-band clearance as
+// MENU_PANEL_CONTENT_TOP, expressed relative to panel_y instead of assuming
+// the default panel_y=58, for panels placed elsewhere on screen.
+MENU_PANEL_CONTENT_GAP :: 48
+
+// MENU_PANEL_VALUE_RIGHT is the shared right edge rows align their value to
+// on panels that keep the original fixed 480-wide layout.
 MENU_PANEL_VALUE_RIGHT :: 540
 
 // draw_menu_value_row draws a label flush left and its value right-aligned to
-// a shared column, using raylib's proportional default font. Formatting the
+// value_right_x, using raylib's proportional default font. Formatting the
 // two independently keeps values lined up regardless of label length, which
 // embedding literal spaces in one string cannot guarantee.
 draw_menu_value_row :: proc(
-	label_x, y, size: i32,
+	label_x, value_right_x, y, size: i32,
 	color: rl.Color,
 	label: cstring,
 	value_format: string,
@@ -290,7 +300,7 @@ draw_menu_value_row :: proc(
 	value_buffer: [32]byte
 	value := format_cstring(value_buffer[:], value_format, ..args)
 	value_width := rl.MeasureText(value, size)
-	rl.DrawText(value, MENU_PANEL_VALUE_RIGHT - value_width, y, size, color)
+	rl.DrawText(value, value_right_x - value_width, y, size, color)
 }
 
 // main_menu_item_gap adds breathing room between the primary, secondary, and
@@ -391,40 +401,67 @@ draw_device_footer :: proc(game: ^Game, text_y: i32 = 372) {
 	rl.DrawText(footer, (WINDOW_WIDTH - width) / 2, text_y, 14, rl.LIGHTGRAY)
 }
 
+SETTINGS_PANEL_WIDTH    :: 340
+SETTINGS_ROW_SPACING    :: 20
+SETTINGS_ROW_HEIGHT     :: 19
+SETTINGS_BOTTOM_MARGIN  :: 12
+SETTINGS_SIDE_INSET     :: 20
+SETTINGS_GLOW_INSET     :: 12
+
+// settings_panel_height sizes the panel to exactly fit its row list (there is
+// no separate control-hint footer any more), so resizing the row count or
+// spacing keeps the panel correctly fitted automatically.
+settings_panel_height :: proc() -> i32 {
+	last_index := len(Settings_Menu_Item) - 1
+	last_offset := MENU_PANEL_CONTENT_GAP + i32(last_index) * SETTINGS_ROW_SPACING
+	return last_offset + SETTINGS_ROW_HEIGHT + 14
+}
+
+// draw_settings_menu anchors its panel to the bottom of the screen with a
+// small margin and keeps it narrower than the other menu panels, so the
+// title art stays visible above and beside it.
 draw_settings_menu :: proc(game: ^Game) {
-	draw_menu_panel("SETTINGS", 334)
+	height := settings_panel_height()
+	panel_y := WINDOW_HEIGHT - height - SETTINGS_BOTTOM_MARGIN
+	panel_x := draw_menu_panel("SETTINGS", height, SETTINGS_PANEL_WIDTH, panel_y)
 	settings := &game.settings
 	pulse := ui_pulse(game.ui_clock, 1.6)
+
+	prefix_x := panel_x + SETTINGS_SIDE_INSET
+	label_x := panel_x + SETTINGS_SIDE_INSET + 16
+	value_right := panel_x + SETTINGS_PANEL_WIDTH - SETTINGS_SIDE_INSET
+	glow_x := panel_x + SETTINGS_GLOW_INSET
+	glow_width: i32 = SETTINGS_PANEL_WIDTH - SETTINGS_GLOW_INSET * 2
+
 	for item_index in 0 ..< len(Settings_Menu_Item) {
 		item := Settings_Menu_Item(item_index)
 		color := rl.LIGHTGRAY
 		prefix: cstring = "  "
-		y := i32(MENU_PANEL_CONTENT_TOP + item_index * 22)
+		y := panel_y + MENU_PANEL_CONTENT_GAP + i32(item_index) * SETTINGS_ROW_SPACING
 		if game.menu.selected == item_index {
-			draw_selection_glow(163, y - 3, 400, 22, pulse)
+			draw_selection_glow(glow_x, y - 2, glow_width, SETTINGS_ROW_HEIGHT, pulse)
 			color = rl.GOLD
 			prefix = "> "
 		}
-		rl.DrawText(prefix, 163, y, 16, color)
+		rl.DrawText(prefix, prefix_x, y, 16, color)
 		switch item {
-		case .Music:             draw_menu_value_row(187, y, 16, color, "MUSIC", "%d%%", settings.music_volume)
-		case .Sfx:               draw_menu_value_row(187, y, 16, color, "SFX", "%d%%", settings.sfx_volume)
+		case .Music:             draw_menu_value_row(label_x, value_right, y, 16, color, "MUSIC", "%d%%", settings.music_volume)
+		case .Sfx:               draw_menu_value_row(label_x, value_right, y, 16, color, "SFX", "%d%%", settings.sfx_volume)
 		case .Display_Mode:
 			mode: cstring = "WINDOWED"
 			if settings.display_mode == .Borderless do mode = "BORDERLESS"
-			draw_menu_value_row(187, y, 16, color, "DISPLAY", "%s", mode)
-		case .Window_Scale:       draw_menu_value_row(187, y, 16, color, "WINDOW SCALE", "%dx", settings.window_scale)
-		case .Reduced_Flashes:    draw_menu_value_row(187, y, 16, color, "REDUCED FLASHES", "%s", "ON" if settings.reduced_flashes else "OFF")
-		case .Screen_Shake:       draw_menu_value_row(187, y, 16, color, "SCREEN SHAKE", "%d%%", settings.screen_shake)
-		case .Controller_Rumble:  draw_menu_value_row(187, y, 16, color, "CONTROLLER RUMBLE", "%s", "ON" if settings.controller_rumble else "OFF")
-		case .High_Contrast:      draw_menu_value_row(187, y, 16, color, "DANGER HATCHING", "%s", "ON" if settings.high_contrast_preview else "OFF")
-		case .Pause_On_Focus_Loss: draw_menu_value_row(187, y, 16, color, "FOCUS PAUSE", "%s", "ON" if settings.pause_on_focus_loss else "OFF")
-		case .Difficulty:         draw_menu_value_row(187, y, 16, color, "DIFFICULTY", "%s", difficulty_label(settings.difficulty))
-		case .Bindings:           rl.DrawText("REMAP CONTROLS", 187, y, 16, color)
-		case .Back:               rl.DrawText("BACK", 187, y, 16, color)
+			draw_menu_value_row(label_x, value_right, y, 16, color, "DISPLAY", "%s", mode)
+		case .Window_Scale:       draw_menu_value_row(label_x, value_right, y, 16, color, "WINDOW SCALE", "%dx", settings.window_scale)
+		case .Reduced_Flashes:    draw_menu_value_row(label_x, value_right, y, 16, color, "REDUCED FLASHES", "%s", "ON" if settings.reduced_flashes else "OFF")
+		case .Screen_Shake:       draw_menu_value_row(label_x, value_right, y, 16, color, "SCREEN SHAKE", "%d%%", settings.screen_shake)
+		case .Controller_Rumble:  draw_menu_value_row(label_x, value_right, y, 16, color, "CONTROLLER RUMBLE", "%s", "ON" if settings.controller_rumble else "OFF")
+		case .High_Contrast:      draw_menu_value_row(label_x, value_right, y, 16, color, "DANGER HATCHING", "%s", "ON" if settings.high_contrast_preview else "OFF")
+		case .Pause_On_Focus_Loss: draw_menu_value_row(label_x, value_right, y, 16, color, "FOCUS PAUSE", "%s", "ON" if settings.pause_on_focus_loss else "OFF")
+		case .Difficulty:         draw_menu_value_row(label_x, value_right, y, 16, color, "DIFFICULTY", "%s", difficulty_label(settings.difficulty))
+		case .Bindings:           rl.DrawText("REMAP CONTROLS", label_x, y, 16, color)
+		case .Back:               rl.DrawText("BACK", label_x, y, 16, color)
 		}
 	}
-	draw_device_footer(game, 378)
 }
 
 draw_bindings_menu :: proc(game: ^Game) {
@@ -444,9 +481,9 @@ draw_bindings_menu :: proc(game: ^Game) {
 		}
 		rl.DrawText(prefix, 167, y, 16, color)
 		if game.menu.binding_device == .Keyboard {
-			draw_menu_value_row(191, y, 16, color, input_action_label(action), "%s", keyboard_key_label(game.settings.bindings[action]))
+			draw_menu_value_row(191, MENU_PANEL_VALUE_RIGHT, y, 16, color, input_action_label(action), "%s", keyboard_key_label(game.settings.bindings[action]))
 		} else {
-			draw_menu_value_row(191, y, 16, color, input_action_label(action), "%s", controller_action_label(action, game.settings.controller_bindings))
+			draw_menu_value_row(191, MENU_PANEL_VALUE_RIGHT, y, 16, color, input_action_label(action), "%s", controller_action_label(action, game.settings.controller_bindings))
 		}
 	}
 	draw_menu_row("BACK", len(Input_Action), game.menu.selected, MENU_PANEL_CONTENT_TOP + len(Input_Action) * 29, pulse)
