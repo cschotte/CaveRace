@@ -18,21 +18,25 @@ PLAYER_MAX_BOMB_CAPACITY   :: 4
 PLAYER_START_BOMB_POWER    :: 1
 PLAYER_MAX_BOMB_POWER      :: 10
 
-ENEMY_CONTACT_DAMAGE :: 2
-BOMB_FUSE_ACTIONS    :: 12
+ENEMY_CONTACT_DAMAGE       :: 2
+CONTACT_GRACE_TICKS        :: 45
+BOMB_FUSE_TICKS            :: 180
+BOMB_DANGER_PREVIEW_TICKS  :: 36
 
 WALKABLE_TERRAIN_LIMIT :: 25
 PASSABLE_ITEM_LIMIT     :: 4
 
-MOVEMENT_STEPS_PER_TILE  :: 16
-MOVEMENT_PIXELS_PER_STEP :: 2
+// The 12-tick Standard cadence is the selected Milestone 2 response target:
+// one tile in 0.20 seconds at the fixed 60 Hz simulation rate.
+MOVEMENT_STEPS_PER_TILE :: 12
 
-SCORE_BOMB_COST       :: 5
+SCORE_BOMB_COST       :: 0
 SCORE_ITEM_PICKUP     :: 50
+SCORE_CAPPED_ITEM_SALVAGE :: 25
 SCORE_ENEMY_DESTROYED :: 75
 SCORE_TREASURE_PICKUP :: 100
 SCORE_LEVEL_WON       :: 100
-SCORE_DEATH_PENALTY   :: 50
+SCORE_DEATH_PENALTY   :: 0
 
 Gameplay_Tuning :: struct {
 	player_start_lives:         int,
@@ -43,10 +47,14 @@ Gameplay_Tuning :: struct {
 	player_max_bomb_capacity:   int,
 	player_start_bomb_power:    int,
 	player_max_bomb_power:      int,
+	movement_ticks_per_tile:    int,
 	enemy_contact_damage:       int,
-	bomb_fuse_actions:          int,
+	contact_grace_ticks:        int,
+	bomb_fuse_ticks:            int,
+	bomb_danger_preview_ticks:  int,
 	score_bomb_cost:            int,
 	score_item_pickup:          int,
+	score_capped_item_salvage:  int,
 	score_enemy_destroyed:      int,
 	score_treasure_pickup:      int,
 	score_level_won:            int,
@@ -63,10 +71,14 @@ GAMEPLAY_TUNING :: [Difficulty_Profile]Gameplay_Tuning {
 		player_max_bomb_capacity   = PLAYER_MAX_BOMB_CAPACITY,
 		player_start_bomb_power    = PLAYER_START_BOMB_POWER,
 		player_max_bomb_power      = PLAYER_MAX_BOMB_POWER,
+		movement_ticks_per_tile    = MOVEMENT_STEPS_PER_TILE,
 		enemy_contact_damage       = ENEMY_CONTACT_DAMAGE,
-		bomb_fuse_actions          = BOMB_FUSE_ACTIONS,
+		contact_grace_ticks        = CONTACT_GRACE_TICKS,
+		bomb_fuse_ticks            = BOMB_FUSE_TICKS,
+		bomb_danger_preview_ticks  = BOMB_DANGER_PREVIEW_TICKS,
 		score_bomb_cost            = SCORE_BOMB_COST,
 		score_item_pickup          = SCORE_ITEM_PICKUP,
+		score_capped_item_salvage  = SCORE_CAPPED_ITEM_SALVAGE,
 		score_enemy_destroyed      = SCORE_ENEMY_DESTROYED,
 		score_treasure_pickup      = SCORE_TREASURE_PICKUP,
 		score_level_won            = SCORE_LEVEL_WON,

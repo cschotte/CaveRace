@@ -101,6 +101,19 @@ feedback_flash_priority_and_timing_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, transition_fade_alpha(feedback), f32(0))
 }
 
+@(test)
+reduced_flashes_suppresses_screen_damage_flash_but_keeps_local_blink_test :: proc(
+	t: ^testing.T,
+) {
+	feedback := Game_Feedback {reduced_flashes = true}
+	result := Gameplay_Tick_Result {player_damaged = true}
+	request_gameplay_feedback(&feedback, &result)
+	testing.expect_value(t, feedback.flash, Feedback_Flash.None)
+	testing.expect_value(t, feedback_flash_alpha(feedback), f32(0))
+	testing.expect(t, !contact_grace_player_visible(CONTACT_GRACE_TICKS))
+	testing.expect(t, contact_grace_player_visible(CONTACT_GRACE_TICKS - 4))
+}
+
 // Verifies that screen fades remain visual-only and never suppress immediate
 // back input or routing.
 @(test)

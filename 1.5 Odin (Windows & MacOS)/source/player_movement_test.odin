@@ -104,12 +104,12 @@ movement_subtile_and_screen_positions_are_equivalent_test :: proc(t: ^testing.T)
 			testing.expect_value(
 				t,
 				screen_x,
-				i32(MAP_OFFSET_X + subtile.x * MOVEMENT_PIXELS_PER_STEP),
+				i32(MAP_OFFSET_X + subtile.x * MAP_TILE_SIZE / MOVEMENT_STEPS_PER_TILE),
 			)
 			testing.expect_value(
 				t,
 				screen_y,
-				i32(MAP_OFFSET_Y + subtile.y * MOVEMENT_PIXELS_PER_STEP),
+				i32(MAP_OFFSET_Y + subtile.y * MAP_TILE_SIZE / MOVEMENT_STEPS_PER_TILE),
 			)
 
 			grid_from_movement, movement_ok := movement_grid_position(
@@ -124,10 +124,10 @@ movement_subtile_and_screen_positions_are_equivalent_test :: proc(t: ^testing.T)
 	}
 }
 
-// Confirms player movement interpolates over exactly sixteen steps, commits one
+// Confirms player movement interpolates over exactly twelve steps, commits one
 // tile, and starts the next queued direction only at the boundary.
 @(test)
-player_moves_one_tile_in_sixteen_steps_test :: proc(t: ^testing.T) {
+player_moves_one_tile_in_twelve_steps_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({1, 1})
 	right_input := Game_Input {move_right = true}
 
@@ -137,7 +137,11 @@ player_moves_one_tile_in_sixteen_steps_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, gameplay.player.move_to, Grid_Position {2, 1})
 	testing.expect_value(t, gameplay.player.movement_step, 1)
 	x, y := player_screen_position(&gameplay.player)
-	testing.expect_value(t, x, i32(MAP_OFFSET_X + MAP_TILE_SIZE + MOVEMENT_PIXELS_PER_STEP))
+	testing.expect_value(
+		t,
+		x,
+		i32(MAP_OFFSET_X + MAP_TILE_SIZE + MAP_TILE_SIZE / MOVEMENT_STEPS_PER_TILE),
+	)
 	testing.expect_value(t, y, i32(MAP_OFFSET_Y + MAP_TILE_SIZE))
 
 	up_input := Game_Input {move_up = true}
@@ -159,7 +163,12 @@ player_moves_one_tile_in_sixteen_steps_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, gameplay.player.move_to, Grid_Position {2, 0})
 	x, y = player_screen_position(&gameplay.player)
 	testing.expect_value(t, x, i32(MAP_OFFSET_X + 2 * MAP_TILE_SIZE))
-	testing.expect_value(t, y, i32(MAP_OFFSET_Y + MAP_TILE_SIZE - MOVEMENT_PIXELS_PER_STEP))
+	testing.expect_value(
+		t,
+		y,
+		i32(MAP_OFFSET_Y +
+			(MOVEMENT_STEPS_PER_TILE - 1) * MAP_TILE_SIZE / MOVEMENT_STEPS_PER_TILE),
+	)
 }
 
 // Verifies blocked actions keep player position and interpolation endpoints on

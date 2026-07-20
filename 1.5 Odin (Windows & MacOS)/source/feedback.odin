@@ -19,6 +19,13 @@ Game_Feedback :: struct {
 	transition_remaining: f64,
 	flash_remaining:      f64,
 	flash:                Feedback_Flash,
+	reduced_flashes:      bool,
+}
+
+// contact_grace_player_visible drives a local, non-color-only blink that
+// remains available when full-screen flashes are reduced.
+contact_grace_player_visible :: proc(contact_grace_ticks: int) -> bool {
+	return contact_grace_ticks <= 0 || (contact_grace_ticks / 4) % 2 == 0
 }
 
 // start_transition_fade restarts the non-blocking black overlay whenever the
@@ -42,6 +49,9 @@ request_gameplay_feedback :: proc(
 		flash = .Treasure
 	} else if result.items_collected > 0 {
 		flash = .Item
+	}
+	if flash == .Damage && feedback.reduced_flashes {
+		flash = .None
 	}
 	if flash != .None {
 		feedback.flash = flash

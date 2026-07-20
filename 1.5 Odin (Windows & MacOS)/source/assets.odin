@@ -77,6 +77,7 @@ MUSIC_PATHS :: [Music_Cue]string {
 Sound_Assets :: struct {
 	bomb:    [BOMB_SOUND_COUNT]rl.Sound,
 	item:    rl.Sound,
+	hit:     rl.Sound,
 	squish:  rl.Sound,
 	ticking: rl.Sound,
 }
@@ -157,8 +158,12 @@ load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true) 
 				load_resource_sound(resource_root, relative_path)
 		}
 		assets.sounds.item    = load_resource_sound(resource_root, "sounds/item.wav")
+		assets.sounds.hit     = load_resource_sound(resource_root, "sounds/item.wav")
 		assets.sounds.squish  = load_resource_sound(resource_root, "sounds/squish.wav")
 		assets.sounds.ticking = load_resource_sound(resource_root, "sounds/ticking.wav")
+		if rl.IsSoundValid(assets.sounds.hit) {
+			rl.SetSoundPitch(assets.sounds.hit, 0.55)
+		}
 
 		for relative_path, cue in MUSIC_PATHS {
 			assets.music[cue] = load_resource_music(resource_root, relative_path)
@@ -200,6 +205,7 @@ assets_are_valid :: proc(assets: ^Assets, require_audio := true) -> bool {
 			if !rl.IsSoundValid(sound) do return false
 		}
 		if !rl.IsSoundValid(assets.sounds.item)    do return false
+		if !rl.IsSoundValid(assets.sounds.hit)     do return false
 		if !rl.IsSoundValid(assets.sounds.squish)  do return false
 		if !rl.IsSoundValid(assets.sounds.ticking) do return false
 		for music in assets.music {
@@ -259,6 +265,7 @@ unload_assets :: proc(assets: ^Assets) {
 		unload_sound(sound)
 	}
 	unload_sound(assets.sounds.item)
+	unload_sound(assets.sounds.hit)
 	unload_sound(assets.sounds.squish)
 	unload_sound(assets.sounds.ticking)
 	for music in assets.music {

@@ -12,13 +12,20 @@ clear_level_state :: proc(gameplay: ^Gameplay) {
 	gameplay.level_completion_enabled = false
 }
 
-// begin_level_retry applies the death penalty, restores per-level player
-// values, and schedules the same level to load after Enter is confirmed.
+// begin_level_retry restores per-level player values and schedules the same
+// level to load. Standard no longer applies an opaque retry score penalty.
 begin_level_retry :: proc(gameplay: ^Gameplay) {
 	assert(gameplay.state == .Dead)
 	assert(gameplay.player.lives > 0)
-	apply_score_event(&gameplay.player, .Death_Retry, gameplay.difficulty)
-	apply_score_event(&gameplay.player, .Action_Floor, gameplay.difficulty)
+	reset_player_for_level_start(&gameplay.player, gameplay.difficulty)
+	clear_level_state(gameplay)
+	gameplay.state = .Load_Level
+}
+
+// begin_level_restart is the pause-menu restart path. It preserves run-wide
+// lives and score, restores level-start resources, and reloads the same cave.
+begin_level_restart :: proc(gameplay: ^Gameplay) {
+	assert(gameplay.state == .Playing)
 	reset_player_for_level_start(&gameplay.player, gameplay.difficulty)
 	clear_level_state(gameplay)
 	gameplay.state = .Load_Level
@@ -60,7 +67,6 @@ resolve_gameplay_outcome :: proc(
 		return
 	}
 
-	apply_score_event(&gameplay.player, .Action_Floor, gameplay.difficulty)
 	clear_level_state(gameplay)
 	gameplay.state = .Game_Over
 }

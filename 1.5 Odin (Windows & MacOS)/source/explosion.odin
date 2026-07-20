@@ -91,14 +91,14 @@ apply_explosion_to_level :: proc(gameplay: ^Gameplay, explosion: ^Explosion_Stat
 chain_bombs_in_explosion :: proc(gameplay: ^Gameplay, explosion: ^Explosion_State) {
 	for bomb_index in 0 ..< MAX_BOMBS {
 		bomb := &gameplay.bombs[bomb_index]
-		if !bomb.active || bomb.fuse_actions <= 1 do continue
+		if !bomb.active || bomb.fuse_ticks <= 0 do continue
 		if explosion_contains_cell(explosion, bomb.position) {
-			bomb.fuse_actions = 1
+			bomb.fuse_ticks = 0
 		}
 	}
 }
 
-// start_ready_explosions settles every bomb ready at the action boundary,
+// start_ready_explosions settles every bomb ready on the current fixed tick,
 // rescanning fixed slots until chains stop. Iteration avoids recursive mutation
 // and keeps score, sounds, and tests repeatable.
 start_ready_explosions :: proc(
@@ -110,10 +110,13 @@ start_ready_explosions :: proc(
 		found_ready := false
 		for bomb_index in 0 ..< MAX_BOMBS {
 			bomb := &gameplay.bombs[bomb_index]
-			if !bomb.active || bomb.fuse_actions != 1 do continue
+			if !bomb.active || bomb.fuse_ticks != 0 do continue
 			if gameplay.explosions[bomb_index].active do continue
 
 			gameplay.explosions[bomb_index] = build_explosion_state(bomb)
+			if is_in_map(bomb.position) {
+				gameplay.bomb_occupancy[bomb.position.x][bomb.position.y] = 0
+			}
 			explosion := &gameplay.explosions[bomb_index]
 			apply_explosion_to_level(gameplay, explosion)
 			chain_bombs_in_explosion(gameplay, explosion)
@@ -170,24 +173,29 @@ apply_active_explosions_to_entities :: proc(
 	}
 }
 
-// advance_explosion_ages advances active blast animations after effects have
-// been applied for the current gameplay tick.
-advance_explosion_ages :: proc(gameplay: ^Gameplay) {
+// advance_explosion_ages advances active blast animations and releases the
+// paired bomb slot exactly after the fixed visual/damage lifetime.
+advance_explosion_ages :: proc(gameplay: ^Gameplay) -> (expired_count: int) {
 	for explosion_index in 0 ..< MAX_BOMBS {
 		explosion := &gameplay.explosions[explosion_index]
 		if !explosion.active do continue
 		explosion.age_step = min(explosion.age_step + 1, EXPLOSION_STEPS)
+		if explosion.age_step == EXPLOSION_STEPS {
+			clear_bomb_slot(gameplay, explosion_index)
+			expired_count += 1
+		}
 	}
+	return
 }
 
 // explosion_animation_set selects the legacy expand-contract frame group from
 // an explosion's age and is called while deriving its sprite index.
 explosion_animation_set :: proc(age_step: int) -> int {
 	step := clamp(age_step, 1, EXPLOSION_STEPS)
-	if step <= 3  do return 0
-	if step <= 6  do return 1
-	if step <= 10 do return 2
-	if step <= 13 do return 1
+	if step <= 2  do return 0
+	if step <= 5  do return 1
+	if step <= 8  do return 2
+	if step <= 10 do return 1
 	return 0
 }
 

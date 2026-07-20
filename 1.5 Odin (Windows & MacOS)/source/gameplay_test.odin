@@ -207,7 +207,7 @@ spawn_extraction_clears_stale_level_state_test :: proc(t: ^testing.T) {
 	gameplay.bombs[0] = Bomb_State {
 		active       = true,
 		position     = {1, 1},
-		fuse_actions = 3,
+		fuse_ticks = 3,
 		power        = 2,
 	}
 	gameplay.explosions[0] = Explosion_State {
@@ -262,20 +262,20 @@ grid_position_helpers_test :: proc(t: ^testing.T) {
 gameplay_ticks_are_render_rate_independent_test :: proc(t: ^testing.T) {
 	at_30_fps := run_held_direction_scenario(30, 4)
 	at_60_fps := run_held_direction_scenario(60, 4)
-	at_240_fps := run_held_direction_scenario(240, 4)
+	at_144_fps := run_held_direction_scenario(144, 4)
 
 	testing.expect_value(t, at_30_fps, at_60_fps)
-	testing.expect_value(t, at_60_fps, at_240_fps)
+	testing.expect_value(t, at_60_fps, at_144_fps)
 	testing.expect_value(t, at_60_fps.ticks, 4 * GAMEPLAY_TICK_HZ)
-	testing.expect_value(t, at_60_fps.action_decisions, 15)
-	testing.expect_value(t, at_60_fps.movement_decisions, 15)
-	testing.expect_value(t, at_60_fps.player_position, Grid_Position {15, 0})
+	testing.expect_value(t, at_60_fps.action_decisions, 20)
+	testing.expect_value(t, at_60_fps.movement_decisions, 20)
+	testing.expect_value(t, at_60_fps.player_position, Grid_Position {18, 0})
 }
 
-// Confirms the original action priority remains bomb, down, up, right, then left
-// when several inputs are available at one boundary.
+// Confirms movement priority remains down, up, right, then left while the bomb
+// edge stays independently latched for the boundary handler.
 @(test)
-legacy_action_priority_test :: proc(t: ^testing.T) {
+movement_action_priority_is_independent_from_bomb_edge_test :: proc(t: ^testing.T) {
 	input := Gameplay_Input_Buffer {
 		move_down   = true,
 		move_up     = true,
@@ -284,9 +284,8 @@ legacy_action_priority_test :: proc(t: ^testing.T) {
 		bomb_pending = true,
 	}
 
-	testing.expect_value(t, select_gameplay_action(&input), Gameplay_Action.Place_Bomb)
-	testing.expect(t, !input.bomb_pending)
 	testing.expect_value(t, select_gameplay_action(&input), Gameplay_Action.Move_Down)
+	testing.expect(t, input.bomb_pending)
 	input.move_down = false
 	testing.expect_value(t, select_gameplay_action(&input), Gameplay_Action.Move_Up)
 	input.move_up = false
@@ -301,8 +300,13 @@ legacy_action_priority_test :: proc(t: ^testing.T) {
 // action boundary rather than being lost between render frames.
 @(test)
 bomb_press_is_latched_until_action_boundary_test :: proc(t: ^testing.T) {
-	gameplay := Gameplay {tick_state = {action_step = 1}}
-	queue_gameplay_input(&gameplay.tick_state, Game_Input {space_pressed = true})
+	gameplay := open_gameplay_at({1, 1})
+	gameplay.tick_state.action_step = 1
+	gameplay.player.bomb_capacity = 1
+	queue_gameplay_input(
+		&gameplay.tick_state,
+		Game_Input {space_pressed = true, move_right = true},
+	)
 
 	before_step := run_gameplay_ticks(&gameplay, 1.0 / 240.0)
 	testing.expect_value(t, before_step.ticks_run, 0)
@@ -318,8 +322,9 @@ bomb_press_is_latched_until_action_boundary_test :: proc(t: ^testing.T) {
 
 	at_boundary := run_gameplay_ticks(&gameplay, GAMEPLAY_TICK_SECONDS)
 	testing.expect_value(t, at_boundary.action_decisions, 1)
-	testing.expect_value(t, at_boundary.last_action, Gameplay_Action.Place_Bomb)
+	testing.expect_value(t, at_boundary.last_action, Gameplay_Action.Move_Right)
 	testing.expect(t, at_boundary.bomb_action_started)
+	testing.expect(t, at_boundary.bomb_placed)
 	testing.expect(t, !gameplay.tick_state.input.bomb_pending)
 }
 
@@ -342,7 +347,7 @@ edge_input_and_tick_limits_test :: proc(t: ^testing.T) {
 
 	clamped := run_gameplay_ticks(&gameplay, 1.0)
 	testing.expect_value(t, clamped.ticks_run, MAX_GAMEPLAY_TICKS_PER_FRAME)
-	testing.expect(t, MAX_GAMEPLAY_TICKS_PER_FRAME < MOVEMENT_STEPS_PER_TILE)
+	testing.expect(t, MAX_GAMEPLAY_TICKS_PER_FRAME >= MOVEMENT_STEPS_PER_TILE)
 }
 
 // Confirms slow rendering does not change gameplay frequency.

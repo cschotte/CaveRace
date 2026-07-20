@@ -4,6 +4,7 @@ package caverace
 // tick result can aggregate score feedback and audio requests.
 Pickup_Result :: struct {
 	item_collected:     bool,
+	item_salvaged:      bool,
 	treasure_collected: bool,
 }
 
@@ -52,6 +53,14 @@ collect_player_cell :: proc(gameplay: ^Gameplay) -> Pickup_Result {
 				gameplay.difficulty,
 			)
 			result.item_collected = true
+		} else if item^ >= ITEM_POWER && item^ <= ITEM_LIFE {
+			item^ = 0
+			apply_score_event(
+				&gameplay.player,
+				.Capped_Item_Salvaged,
+				gameplay.difficulty,
+			)
+			result.item_salvaged = true
 		}
 		return result
 	}

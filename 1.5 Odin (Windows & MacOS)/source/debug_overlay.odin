@@ -63,7 +63,7 @@ draw_debug_overlay :: proc(game: ^Game) {
 			4 + DEBUG_OVERLAY_LINE_HEIGHT,
 			"state %v paused %v | level %d %s | seed %d",
 			gameplay.state,
-			game.paused,
+			game_is_paused(game),
 			gameplay.level_index + 1,
 			metadata.name,
 			gameplay.run_seed,
@@ -81,19 +81,20 @@ draw_debug_overlay :: proc(game: ^Game) {
 		)
 		draw_debug_line(
 			4 + DEBUG_OVERLAY_LINE_HEIGHT * 3,
-			"action %d/%d accumulator %.4f | contact charged %v",
+			"action %d/%d accumulator %.4f | grace %d ticks",
 			gameplay.tick_state.action_step,
 			MOVEMENT_STEPS_PER_TILE,
 			gameplay.tick_state.accumulator_seconds,
-			gameplay.tick_state.contact_damage_applied,
+			gameplay.player.contact_grace_ticks,
 		)
 		draw_debug_line(
 			4 + DEBUG_OVERLAY_LINE_HEIGHT * 4,
-			"speed %d px/tick %.3f sec/tile | energy %d/%d grace n/a",
-			MOVEMENT_PIXELS_PER_STEP,
+			"tile %d px %.3f sec/tile | energy %d/%d grace %d ticks",
+			MAP_TILE_SIZE,
 			f64(MOVEMENT_STEPS_PER_TILE) / f64(GAMEPLAY_TICK_HZ),
 			gameplay.player.energy,
 			tuning.player_max_energy,
+			gameplay.player.contact_grace_ticks,
 		)
 		draw_debug_line(
 			4 + DEBUG_OVERLAY_LINE_HEIGHT * 5,
@@ -108,11 +109,11 @@ draw_debug_overlay :: proc(game: ^Game) {
 		)
 		draw_debug_line(
 			4 + DEBUG_OVERLAY_LINE_HEIGHT * 6,
-			"fuses [%d %d %d %d] | explosion ages [%d %d %d %d]",
-			gameplay.bombs[0].fuse_actions,
-			gameplay.bombs[1].fuse_actions,
-			gameplay.bombs[2].fuse_actions,
-			gameplay.bombs[3].fuse_actions,
+			"fuse ticks [%d %d %d %d] | explosion ages [%d %d %d %d]",
+			gameplay.bombs[0].fuse_ticks,
+			gameplay.bombs[1].fuse_ticks,
+			gameplay.bombs[2].fuse_ticks,
+			gameplay.bombs[3].fuse_ticks,
 			gameplay.explosions[0].age_step,
 			gameplay.explosions[1].age_step,
 			gameplay.explosions[2].age_step,

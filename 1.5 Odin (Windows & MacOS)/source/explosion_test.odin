@@ -33,16 +33,47 @@ explosion_cells_are_clipped_and_unique_at_every_map_edge_test :: proc(t: ^testin
 	}
 }
 
+// Proves every rendered danger cell is a future damage cell and vice versa for
+// every supported power and map position, including all clipped edges.
+@(test)
+bomb_danger_preview_exactly_matches_damage_footprint_test :: proc(t: ^testing.T) {
+	for power in 1 ..= PLAYER_MAX_BOMB_POWER {
+		for grid_y in 0 ..< MAP_HEIGHT {
+			for grid_x in 0 ..< MAP_WIDTH {
+				bomb := Bomb_State {
+					active     = true,
+					position   = {grid_x, grid_y},
+					fuse_ticks = BOMB_DANGER_PREVIEW_TICKS,
+					power      = power,
+				}
+				preview, visible := bomb_danger_footprint(&bomb)
+				testing.expect(t, visible)
+				damage := build_explosion_state(&bomb)
+				for cell_y in 0 ..< MAP_HEIGHT {
+					for cell_x in 0 ..< MAP_WIDTH {
+						position := Grid_Position {cell_x, cell_y}
+						testing.expect_value(
+							t,
+							explosion_contains_cell(&preview, position),
+							explosion_contains_cell(&damage, position),
+						)
+					}
+				}
+			}
+		}
+	}
+}
+
 // Protects the legacy expand-contract animation sequence and directional sprite
 // row mapping for every explosion age.
 @(test)
 explosion_animation_uses_legacy_directional_sprite_sets_test :: proc(t: ^testing.T) {
 	expected_sets := [EXPLOSION_STEPS]int {
-		0, 0, 0,
+		0, 0,
 		1, 1, 1,
-		2, 2, 2, 2,
-		1, 1, 1,
-		0, 0, 0,
+		2, 2, 2,
+		1, 1,
+		0, 0,
 	}
 	first_sprites := [3]int {
 		EXPLOSION_SET_1_FIRST_SPRITE,
@@ -107,10 +138,10 @@ explosion_preserves_legacy_object_and_treasure_rules_test :: proc(t: ^testing.T)
 explosion_chain_settles_once_without_recursion_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
 	seed_gameplay_random(&gameplay, 0xC0FFEE)
-	gameplay.bombs[0] = {active = true, position = {7, 5}, fuse_actions = 8, power = 2}
-	gameplay.bombs[1] = {active = true, position = {9, 5}, fuse_actions = 8, power = 2}
-	gameplay.bombs[2] = {active = true, position = {5, 5}, fuse_actions = 1, power = 2}
-	gameplay.bombs[3] = {active = true, position = {15, 5}, fuse_actions = 8, power = 2}
+	gameplay.bombs[0] = {active = true, position = {7, 5}, fuse_ticks = 80, power = 2}
+	gameplay.bombs[1] = {active = true, position = {9, 5}, fuse_ticks = 80, power = 2}
+	gameplay.bombs[2] = {active = true, position = {5, 5}, fuse_ticks = 0, power = 2}
+	gameplay.bombs[3] = {active = true, position = {15, 5}, fuse_ticks = 80, power = 2}
 
 	result: Gameplay_Tick_Result
 	start_ready_explosions(&gameplay, &result)
@@ -118,10 +149,10 @@ explosion_chain_settles_once_without_recursion_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, result.explosion_sound_count, 3)
 	for bomb_index in 0 ..< 3 {
 		testing.expect(t, gameplay.explosions[bomb_index].active)
-		testing.expect_value(t, gameplay.bombs[bomb_index].fuse_actions, 1)
+		testing.expect_value(t, gameplay.bombs[bomb_index].fuse_ticks, 0)
 	}
 	testing.expect(t, !gameplay.explosions[3].active)
-	testing.expect_value(t, gameplay.bombs[3].fuse_actions, 8)
+	testing.expect_value(t, gameplay.bombs[3].fuse_ticks, 80)
 	for sound_index in 0 ..< result.explosion_sound_count {
 		testing.expect(t, result.explosion_sound_indices[sound_index] < BOMB_SOUND_COUNT)
 	}
@@ -171,7 +202,7 @@ explosion_hit_sets_player_energy_to_zero_and_transitions_dead_test :: proc(t: ^t
 	gameplay := open_gameplay_at({5, 6})
 	gameplay.player.lives = 2
 	gameplay.player.energy = PLAYER_START_ENERGY
-	gameplay.bombs[0] = {active = true, position = {5, 5}, fuse_actions = 2, power = 1}
+	gameplay.bombs[0] = {active = true, position = {5, 5}, fuse_ticks = 1, power = 1}
 	gameplay.bomb_occupancy[5][5] = BOMB_TICKING_SPRITE
 	seed_gameplay_random(&gameplay, 17)
 
@@ -193,11 +224,12 @@ explosion_hit_sets_player_energy_to_zero_and_transitions_dead_test :: proc(t: ^t
 expired_bomb_releases_its_explosion_and_occupancy_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
 	position := Grid_Position {3, 3}
-	gameplay.bombs[0] = {active = true, position = position, fuse_actions = 1, power = 3}
+	gameplay.bombs[0] = {active = true, position = position, fuse_ticks = 0, power = 3}
 	gameplay.explosions[0] = build_explosion_state(&gameplay.bombs[0])
+	gameplay.explosions[0].age_step = EXPLOSION_STEPS - 1
 	gameplay.bomb_occupancy[position.x][position.y] = BOMB_TICKING_SPRITE
 
-	testing.expect_value(t, advance_bomb_fuses(&gameplay), 1)
+	testing.expect_value(t, advance_explosion_ages(&gameplay), 1)
 	testing.expect(t, !gameplay.bombs[0].active)
 	testing.expect(t, !gameplay.explosions[0].active)
 	testing.expect_value(t, gameplay.bomb_occupancy[position.x][position.y], u8(0))

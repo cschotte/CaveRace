@@ -125,12 +125,18 @@ music_cue_loops :: proc(cue: Music_Cue) -> bool {
 	return false
 }
 
+music_gain_for_game :: proc(game: ^Game) -> f32 {
+	if game_is_paused(game) do return 0.5
+	return 1
+}
+
 // update_game_music switches tracks only when the requested cue changes and
 // services the active raylib stream every frame.
 update_game_music :: proc(app: ^Application) {
 	desired := music_cue_for_game(&app.game)
 	if active, ok := app.active_music.?; ok {
 		if active == desired {
+			rl.SetMusicVolume(app.assets.music[active], music_gain_for_game(&app.game))
 			rl.UpdateMusicStream(app.assets.music[active])
 			return
 		}
@@ -138,6 +144,7 @@ update_game_music :: proc(app: ^Application) {
 	}
 
 	app.assets.music[desired].looping = music_cue_loops(desired)
+	rl.SetMusicVolume(app.assets.music[desired], music_gain_for_game(&app.game))
 	rl.PlayMusicStream(app.assets.music[desired])
 	app.active_music = desired
 	rl.UpdateMusicStream(app.assets.music[desired])
@@ -163,8 +170,8 @@ process_game_requests :: proc(app: ^Application, result: ^Game_Update_Result) {
 	}
 }
 
-// prepare_application_frame suppresses input and elapsed time while focus is
-// lost so returning to the window cannot replay queued actions or catch up.
+// prepare_application_frame opens the gameplay pause overlay on focus loss and
+// suppresses input/time so recovery cannot replay actions or catch up.
 prepare_application_frame :: proc(
 	game: ^Game,
 	input: Game_Input,
@@ -172,7 +179,7 @@ prepare_application_frame :: proc(
 	window_focused: bool,
 ) -> (Game_Input, f64) {
 	if window_focused do return input, frame_seconds
-	// Stop held and queued actions while preserving the current gameplay state.
+	open_game_pause(game)
 	game.gameplay.tick_state.input = {}
 	return {}, 0
 }
@@ -180,8 +187,11 @@ prepare_application_frame :: proc(
 // play_frame_audio translates gameplay events from the latest update into
 // raylib sound calls after game state has advanced.
 play_frame_audio :: proc(assets: ^Assets, result: ^Game_Update_Result) {
-	if result.gameplay.ticks.ticking_requested {
+	for _ in 0 ..< result.gameplay.ticks.ticking_requests {
 		rl.PlaySound(assets.sounds.ticking)
+	}
+	for _ in 0 ..< result.gameplay.ticks.contact_hit_requests {
+		rl.PlaySound(assets.sounds.hit)
 	}
 	for sound_index in 0 ..< result.gameplay.ticks.explosion_sound_count {
 		bomb_sound := result.gameplay.ticks.explosion_sound_indices[sound_index]

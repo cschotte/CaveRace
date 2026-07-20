@@ -9,6 +9,9 @@ Game_Input :: struct {
 	confirm:         bool,
 	back:            bool,
 	pause_pressed:   bool,
+	restart_pressed: bool,
+	menu_up_pressed: bool,
+	menu_down_pressed: bool,
 	space_pressed:   bool,
 	move_down:       bool,
 	move_up:         bool,
@@ -23,10 +26,17 @@ Game_Input :: struct {
 poll_game_input :: proc() -> Game_Input {
 	input: Game_Input
 
-	input.confirm       = rl.IsKeyPressed(.ENTER)
-	input.back          = rl.IsKeyPressed(.ESCAPE)
+	input.confirm       = rl.IsKeyPressed(.ENTER) ||
+	                      rl.IsGamepadButtonPressed(0, .RIGHT_FACE_DOWN)
+	input.back          = rl.IsKeyPressed(.ESCAPE) ||
+	                      rl.IsGamepadButtonPressed(0, .RIGHT_FACE_RIGHT)
 	input.pause_pressed = rl.IsKeyPressed(.P) ||
 	                      rl.IsGamepadButtonPressed(0, .MIDDLE_RIGHT)
+	input.restart_pressed = rl.IsKeyPressed(.R)
+	input.menu_up_pressed = rl.IsKeyPressed(.UP) ||
+	                        rl.IsGamepadButtonPressed(0, .LEFT_FACE_UP)
+	input.menu_down_pressed = rl.IsKeyPressed(.DOWN) ||
+	                          rl.IsGamepadButtonPressed(0, .LEFT_FACE_DOWN)
 	input.space_pressed = rl.IsKeyPressed(.SPACE)
 
 	input.move_down  = rl.IsKeyDown(.DOWN)

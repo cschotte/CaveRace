@@ -252,6 +252,8 @@ missing_and_invalid_level_files_do_not_replace_valid_state_test :: proc(t: ^test
 focus_loss_is_non_destructive_test :: proc(t: ^testing.T) {
 	game: Game
 	init_game(&game)
+	start_new_game(&game)
+	game.gameplay.state = .Playing
 	game.gameplay.tick_state.input = {
 		move_right   = true,
 		bomb_pending = true,
@@ -269,6 +271,15 @@ focus_loss_is_non_destructive_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, unfocused_input, Game_Input {})
 	testing.expect_value(t, unfocused_seconds, f64(0))
 	testing.expect_value(t, game.gameplay.tick_state.input, Gameplay_Input_Buffer {})
+	testing.expect(t, game_is_paused(&game))
+
+	game.pause.selected = .Main_Menu
+	expected_gameplay := game.gameplay
+	second_input, second_seconds := prepare_application_frame(&game, input, 1.0, false)
+	testing.expect_value(t, second_input, Game_Input {})
+	testing.expect_value(t, second_seconds, f64(0))
+	testing.expect_value(t, game.gameplay, expected_gameplay)
+	testing.expect_value(t, game.pause.selected, Pause_Menu_Item.Main_Menu)
 
 	focused_input, focused_seconds := prepare_application_frame(&game, input, 0.2, true)
 	testing.expect_value(t, focused_input, input)

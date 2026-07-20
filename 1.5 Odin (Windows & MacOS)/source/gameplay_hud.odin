@@ -75,6 +75,13 @@ draw_gameplay_hud :: proc(gameplay: ^Gameplay, tools: rl.Texture) {
 			HUD_ENERGY_Y,
 		)
 	}
+	if gameplay.player.contact_grace_ticks > 0 {
+		pulse_color := rl.RED
+		if (gameplay.player.contact_grace_ticks / 4) % 2 == 0 {
+			pulse_color = rl.YELLOW
+		}
+		rl.DrawRectangleLines(HUD_ENERGY_X - 3, HUD_ENERGY_Y - 3, 85, 37, pulse_color)
+	}
 	for icon_index in 0 ..< hud.available_bombs {
 		draw_vertical_sprite(
 			tools,

@@ -11,8 +11,8 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 	case .Playing:
 		draw_gameplay(&game.gameplay, assets)
 	}
-	if game.screen == .Playing && game.paused {
-		draw_game_pause()
+	if game.screen == .Playing && game.pause.open {
+		draw_game_pause(&game.pause)
 	}
 
 	draw_game_feedback(game.feedback)
@@ -23,12 +23,20 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 	}
 }
 
-// draw_game_pause keeps the active cave visible beneath a high-contrast
-// overlay and advertises every input that can resume this deliberately small
-// C1 pause flow.
-draw_game_pause :: proc() {
+pause_menu_item_label :: proc(item: Pause_Menu_Item) -> cstring {
+	switch item {
+	case .Resume:        return "RESUME"
+	case .Restart_Level: return "RESTART LEVEL"
+	case .Main_Menu:     return "MAIN MENU"
+	}
+	return ""
+}
+
+// draw_game_pause renders the keyboard/controller pause menu and destructive
+// action confirmation without mutating gameplay.
+draw_game_pause :: proc(pause: ^Pause_State) {
 	panel_width: i32 = 430
-	panel_height: i32 = 120
+	panel_height: i32 = 250
 	panel_x := (WINDOW_WIDTH - panel_width) / 2
 	panel_y := (WINDOW_HEIGHT - panel_height) / 2
 
@@ -47,16 +55,35 @@ draw_game_pause :: proc() {
 		rl.GOLD,
 	)
 
-	prompt: cstring = "P / CONTROLLER START TO RESUME"
-	prompt_size: i32 = 16
-	prompt_width := rl.MeasureText(prompt, prompt_size)
-	rl.DrawText(
-		prompt,
-		(WINDOW_WIDTH - prompt_width) / 2,
-		panel_y + 76,
-		prompt_size,
-		rl.WHITE,
-	)
+	if pause.confirmation != .None {
+		prompt: cstring = "RESTART THIS LEVEL?"
+		if pause.confirmation == .Main_Menu {
+			prompt = "ABANDON RUN FOR MAIN MENU?"
+		}
+		prompt_width := rl.MeasureText(prompt, 18)
+		rl.DrawText(prompt, (WINDOW_WIDTH - prompt_width) / 2, panel_y + 92, 18, rl.WHITE)
+		confirm: cstring = "ENTER / A: CONFIRM    ESC / B: CANCEL"
+		confirm_width := rl.MeasureText(confirm, 14)
+		rl.DrawText(confirm, (WINDOW_WIDTH - confirm_width) / 2, panel_y + 142, 14, rl.GOLD)
+		return
+	}
+
+	for item_index in 0 ..< len(Pause_Menu_Item) {
+		item := Pause_Menu_Item(item_index)
+		label := pause_menu_item_label(item)
+		color := rl.WHITE
+		prefix: cstring = "  "
+		if pause.selected == item {
+			color = rl.GOLD
+			prefix = "> "
+		}
+		y := panel_y + 78 + i32(item_index) * 38
+		rl.DrawText(prefix, panel_x + 100, y, 20, color)
+		rl.DrawText(label, panel_x + 130, y, 20, color)
+	}
+	footer: cstring = "ARROWS / DPAD  ENTER / A  P / START"
+	footer_width := rl.MeasureText(footer, 13)
+	rl.DrawText(footer, (WINDOW_WIDTH - footer_width) / 2, panel_y + 214, 13, rl.LIGHTGRAY)
 }
 
 // draw_front_end displays the story, title, or controls image selected by the
@@ -72,6 +99,7 @@ draw_front_end :: proc(front_end: Front_End_State, screens: ^Screen_Assets) {
 draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {
 	if gameplay.state == .Game_Over {
 		rl.DrawTexture(assets.screens.game_over, 0, 0, rl.WHITE)
+		draw_gameplay_message("Press R for a new run, any other key for menu")
 		return
 	}
 	if gameplay.state == .Game_Won {
@@ -93,7 +121,7 @@ draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {
 	case .Load_Level:
 		draw_gameplay_message("Loading level...")
 	case .Dead:
-		draw_gameplay_message("You died - press Enter to retry")
+		draw_gameplay_message("You died - press Enter or R to retry")
 	case .Won:
 		draw_gameplay_message("Level complete - press Enter to continue")
 	case .Game_Won, .Game_Over:

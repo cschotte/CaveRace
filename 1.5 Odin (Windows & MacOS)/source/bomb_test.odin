@@ -29,7 +29,7 @@ run_bomb_timing_scenario :: proc(render_fps, seconds: int) -> Bomb_Timing_Summar
 		if frame_index == 0 do input.space_pressed = true
 		frame := update_gameplay(&gameplay, input, 1.0 / f64(render_fps))
 		if frame.ticks.bomb_placed do summary.placements += 1
-		if frame.ticks.ticking_requested do summary.ticking_requests += 1
+		summary.ticking_requests += frame.ticks.ticking_requests
 		summary.expirations += frame.ticks.bombs_expired
 	}
 
@@ -56,21 +56,21 @@ bomb_placement_captures_current_player_values_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, gameplay.bomb_occupancy[position.x][position.y], u8(BOMB_TICKING_SPRITE))
 	testing.expect(t, gameplay.bombs[0].active)
 	testing.expect_value(t, gameplay.bombs[0].position, position)
-	testing.expect_value(t, gameplay.bombs[0].fuse_actions, BOMB_FUSE_ACTIONS)
+	testing.expect_value(t, gameplay.bombs[0].fuse_ticks, BOMB_FUSE_TICKS)
 	testing.expect_value(t, gameplay.bombs[0].power, 6)
-	testing.expect_value(t, gameplay.player.score, 12 - SCORE_BOMB_COST)
+	testing.expect_value(t, gameplay.player.score, 12)
 
 	gameplay.player.bomb_power = 1
 	testing.expect_value(t, gameplay.bombs[0].power, 6)
 	testing.expect(t, !try_place_bomb(&gameplay))
 	testing.expect_value(t, active_bomb_count(&gameplay), 1)
-	testing.expect_value(t, gameplay.player.score, 12 - SCORE_BOMB_COST)
+	testing.expect_value(t, gameplay.player.score, 12)
 }
 
-// Protects the legacy rule that bomb cost never makes a score negative.
+// Protects Standard's visible-event scoring: placing a bomb is score-neutral.
 @(test)
-bomb_score_cost_has_legacy_floor_test :: proc(t: ^testing.T) {
-	for initial_score in 0 ..< SCORE_BOMB_COST {
+bomb_placement_is_score_neutral_test :: proc(t: ^testing.T) {
+	for initial_score in 0 ..= 10 {
 		gameplay := open_gameplay_at({initial_score, 0})
 		gameplay.player.bomb_capacity = 1
 		gameplay.player.bomb_power = 1
@@ -78,13 +78,27 @@ bomb_score_cost_has_legacy_floor_test :: proc(t: ^testing.T) {
 		testing.expect(t, try_place_bomb(&gameplay))
 		testing.expect_value(t, gameplay.player.score, initial_score)
 	}
+}
 
-	gameplay := open_gameplay_at({6, 0})
-	gameplay.player.bomb_capacity = 1
-	gameplay.player.bomb_power = 1
-	gameplay.player.score = SCORE_BOMB_COST
-	testing.expect(t, try_place_bomb(&gameplay))
-	testing.expect_value(t, gameplay.player.score, 0)
+@(test)
+bomb_warning_window_and_tick_cadence_accelerate_test :: proc(t: ^testing.T) {
+	bomb := Bomb_State {
+		active     = true,
+		position   = {5, 5},
+		fuse_ticks = BOMB_DANGER_PREVIEW_TICKS + 1,
+		power      = 4,
+	}
+	preview: Explosion_State
+	visible: bool
+	_, visible = bomb_danger_footprint(&bomb)
+	testing.expect(t, !visible)
+	bomb.fuse_ticks = BOMB_DANGER_PREVIEW_TICKS
+	preview, visible = bomb_danger_footprint(&bomb)
+	testing.expect(t, visible)
+	testing.expect(t, preview.cell_count > 1)
+	testing.expect_value(t, bomb_tick_interval(GAMEPLAY_TICK_HZ * 2 + 1), 30)
+	testing.expect_value(t, bomb_tick_interval(GAMEPLAY_TICK_HZ + 1), 15)
+	testing.expect_value(t, bomb_tick_interval(GAMEPLAY_TICK_HZ), 6)
 }
 
 // Verifies that fixed bomb slots return to player capacity exactly once after
@@ -134,29 +148,33 @@ bomb_fixed_slot_limit_test :: proc(t: ^testing.T) {
 	testing.expect(t, !try_place_bomb(&gameplay))
 }
 
-// Verifies that fuse expiry clears map occupancy and reports one expiration
-// without double-releasing the slot.
+// Verifies fixed-tick fuse expiry starts an explosion and the paired slot is
+// released only after its animation/damage lifetime.
 @(test)
-bomb_fuse_expires_and_clears_occupancy_once_test :: proc(t: ^testing.T) {
+bomb_fuse_starts_explosion_then_releases_slot_once_test :: proc(t: ^testing.T) {
 	position := Grid_Position {2, 2}
 	gameplay := open_gameplay_at(position)
 	gameplay.player.bomb_capacity = 1
 	gameplay.player.bomb_power = 2
 	testing.expect(t, try_place_bomb(&gameplay))
 
-	for expected_fuse := BOMB_FUSE_ACTIONS - 1; expected_fuse >= 1; expected_fuse -= 1 {
-		testing.expect_value(t, advance_bomb_fuses(&gameplay), 0)
+	for expected_fuse := BOMB_FUSE_TICKS - 1; expected_fuse >= 1; expected_fuse -= 1 {
+		_ = advance_bomb_fuses(&gameplay)
 		testing.expect(t, gameplay.bombs[0].active)
-		testing.expect_value(t, gameplay.bombs[0].fuse_actions, expected_fuse)
+		testing.expect_value(t, gameplay.bombs[0].fuse_ticks, expected_fuse)
 		testing.expect_value(t, gameplay.bomb_occupancy[position.x][position.y], u8(1))
 	}
 
-	testing.expect_value(t, advance_bomb_fuses(&gameplay), 1)
-	testing.expect(t, !gameplay.bombs[0].active)
+	_ = advance_bomb_fuses(&gameplay)
+	result: Gameplay_Tick_Result
+	start_ready_explosions(&gameplay, &result)
+	testing.expect_value(t, result.explosions_started, 1)
+	testing.expect(t, gameplay.bombs[0].active)
+	testing.expect(t, gameplay.explosions[0].active)
 	testing.expect_value(t, gameplay.bomb_occupancy[position.x][position.y], u8(0))
-	testing.expect_value(t, active_bomb_count(&gameplay), 0)
-	testing.expect_value(t, available_bomb_count(&gameplay), 1)
-	testing.expect_value(t, advance_bomb_fuses(&gameplay), 0)
+	for _ in 1 ..< EXPLOSION_STEPS do testing.expect_value(t, advance_explosion_ages(&gameplay), 0)
+	testing.expect_value(t, advance_explosion_ages(&gameplay), 1)
+	testing.expect(t, !gameplay.bombs[0].active)
 	testing.expect_value(t, available_bomb_count(&gameplay), 1)
 }
 
@@ -196,8 +214,8 @@ bomb_action_requests_ticking_only_on_success_test :: proc(t: ^testing.T) {
 	)
 	testing.expect(t, placed.ticks.bomb_action_started)
 	testing.expect(t, placed.ticks.bomb_placed)
-	testing.expect(t, placed.ticks.ticking_requested)
-	testing.expect_value(t, gameplay.bombs[0].fuse_actions, BOMB_FUSE_ACTIONS - 1)
+	testing.expect_value(t, placed.ticks.ticking_requests, 1)
+	testing.expect_value(t, gameplay.bombs[0].fuse_ticks, BOMB_FUSE_TICKS)
 
 	queue_gameplay_input(&gameplay.tick_state, Game_Input {space_pressed = true})
 	before_boundary := run_gameplay_ticks(
@@ -208,24 +226,24 @@ bomb_action_requests_ticking_only_on_success_test :: proc(t: ^testing.T) {
 	failed := run_gameplay_ticks(&gameplay, GAMEPLAY_TICK_SECONDS)
 	testing.expect(t, failed.bomb_action_started)
 	testing.expect(t, !failed.bomb_placed)
-	testing.expect(t, !failed.ticking_requested)
+	testing.expect_value(t, failed.ticking_requests, 0)
 	testing.expect_value(t, active_bomb_count(&gameplay), 1)
 }
 
 // Protects fixed-tick bomb behavior from changes in presentation frame rate.
 @(test)
 bomb_timing_is_render_rate_independent_test :: proc(t: ^testing.T) {
-	at_30_fps := run_bomb_timing_scenario(30, 3)
-	at_60_fps := run_bomb_timing_scenario(60, 3)
-	at_240_fps := run_bomb_timing_scenario(240, 3)
+	at_30_fps := run_bomb_timing_scenario(30, 4)
+	at_60_fps := run_bomb_timing_scenario(60, 4)
+	at_144_fps := run_bomb_timing_scenario(144, 4)
 
 	testing.expect_value(t, at_30_fps, at_60_fps)
-	testing.expect_value(t, at_60_fps, at_240_fps)
+	testing.expect_value(t, at_60_fps, at_144_fps)
 	testing.expect_value(t, at_60_fps.placements, 1)
-	testing.expect_value(t, at_60_fps.ticking_requests, 1)
+	testing.expect_value(t, at_60_fps.ticking_requests, 16)
 	testing.expect_value(t, at_60_fps.expirations, 1)
 	testing.expect_value(t, at_60_fps.active_bombs, 0)
 	testing.expect_value(t, at_60_fps.available_bombs, 1)
-	testing.expect_value(t, at_60_fps.score, 10 - SCORE_BOMB_COST)
+	testing.expect_value(t, at_60_fps.score, 10)
 	testing.expect_value(t, at_60_fps.occupied, u8(0))
 }

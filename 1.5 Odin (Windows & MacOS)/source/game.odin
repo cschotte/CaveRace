@@ -16,7 +16,7 @@ Game :: struct {
 	gameplay:        Gameplay,
 	feedback:        Game_Feedback,
 	cheats_enabled:  bool,
-	paused:          bool,
+	pause:           Pause_State,
 	debug_overlay_visible: bool,
 }
 
@@ -42,7 +42,7 @@ init_game :: proc(game: ^Game, cheats_enabled := false) {
 // input on the main menu.
 start_new_game :: proc(game: ^Game) {
 	init_gameplay(&game.gameplay)
-	game.paused = false
+	game.pause = {}
 	game.screen = .Playing
 }
 
@@ -50,7 +50,7 @@ start_new_game :: proc(game: ^Game) {
 // presentation whenever play returns to the front end.
 show_main_menu :: proc(game: ^Game) {
 	begin_main_menu(&game.front_end)
-	game.paused = false
+	game.pause = {}
 	game.screen = .Main_Menu
 }
 
@@ -80,16 +80,30 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 		advance_main_menu(&game.front_end, frame_seconds)
 		if main_menu_start_requested(input) do start_new_game(game)
 	case .Playing:
-		if previous_gameplay_state == .Playing && input.pause_pressed {
-			toggle_game_pause(game)
-		} else if !game.paused {
+		if game.pause.open {
+			pause_result := update_pause_menu(game, input)
+			if pause_result.restart_level {
+				begin_level_restart(&game.gameplay)
+				result.load_level_requested = true
+			} else if pause_result.main_menu {
+				show_main_menu(game)
+			}
+		} else if previous_gameplay_state == .Playing && input.pause_pressed {
+			open_game_pause(game)
+		} else if previous_gameplay_state == .Dead && input.restart_pressed {
+			begin_level_retry(&game.gameplay)
+			result.load_level_requested = true
+		} else if previous_gameplay_state == .Game_Over && input.restart_pressed {
+			start_new_game(game)
+			result.load_level_requested = true
+		} else {
 			result.gameplay = update_gameplay(
 				&game.gameplay,
 				input,
 				frame_seconds,
 				game.cheats_enabled,
 			)
-			if !result.gameplay.back_requested && previous_gameplay_state == .Load_Level {
+			if !result.gameplay.back_requested && game.gameplay.state == .Load_Level {
 				result.load_level_requested = true
 			}
 			if result.gameplay.back_requested {

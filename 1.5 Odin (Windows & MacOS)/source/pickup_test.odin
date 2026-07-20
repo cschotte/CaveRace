@@ -41,44 +41,34 @@ run_pickup_timing_scenario :: proc(render_fps, seconds: int) -> Pickup_Timing_Su
 	return summary
 }
 
-// Verifies every score event uses the centralized legacy arithmetic, including
-// costs, rewards, penalties, and the action floor.
+// Verifies every Standard score event is a visible attributable reward.
 @(test)
-all_legacy_score_events_use_the_central_rule_set_test :: proc(t: ^testing.T) {
-	player := Player_State {score = SCORE_BOMB_COST - 1}
-	apply_score_event(&player, .Bomb_Placed)
-	testing.expect_value(t, player.score, SCORE_BOMB_COST - 1)
-	player.score = SCORE_BOMB_COST
-	apply_score_event(&player, .Bomb_Placed)
-	testing.expect_value(t, player.score, 0)
-	apply_score_event(&player, .Action_Floor)
-	testing.expect_value(t, player.score, SCORE_BOMB_COST)
-
-	player.score = 0
+all_standard_score_events_use_the_central_rule_set_test :: proc(t: ^testing.T) {
+	player: Player_State
 	apply_score_event(&player, .Item_Collected)
 	testing.expect_value(t, player.score, SCORE_ITEM_PICKUP)
+	apply_score_event(&player, .Capped_Item_Salvaged)
+	testing.expect_value(t, player.score, SCORE_ITEM_PICKUP + SCORE_CAPPED_ITEM_SALVAGE)
 	apply_score_event(&player, .Enemy_Destroyed)
-	testing.expect_value(t, player.score, SCORE_ITEM_PICKUP + SCORE_ENEMY_DESTROYED)
+	testing.expect_value(
+		t,
+		player.score,
+		SCORE_ITEM_PICKUP + SCORE_CAPPED_ITEM_SALVAGE + SCORE_ENEMY_DESTROYED,
+	)
 	apply_score_event(&player, .Treasure_Collected)
 	testing.expect_value(
 		t,
 		player.score,
-		SCORE_ITEM_PICKUP + SCORE_ENEMY_DESTROYED + SCORE_TREASURE_PICKUP,
+		SCORE_ITEM_PICKUP + SCORE_CAPPED_ITEM_SALVAGE +
+			SCORE_ENEMY_DESTROYED + SCORE_TREASURE_PICKUP,
 	)
 	apply_score_event(&player, .Level_Won)
 	testing.expect_value(
 		t,
 		player.score,
-		SCORE_ITEM_PICKUP + SCORE_ENEMY_DESTROYED +
+		SCORE_ITEM_PICKUP + SCORE_CAPPED_ITEM_SALVAGE + SCORE_ENEMY_DESTROYED +
 			SCORE_TREASURE_PICKUP + SCORE_LEVEL_WON,
 	)
-
-	player.score = SCORE_DEATH_PENALTY - 1
-	apply_score_event(&player, .Death_Retry)
-	testing.expect_value(t, player.score, SCORE_DEATH_PENALTY - 1)
-	player.score = SCORE_DEATH_PENALTY
-	apply_score_event(&player, .Death_Retry)
-	testing.expect_value(t, player.score, 0)
 }
 
 // Confirms each beneficial item mutates the intended stat, clears its map cell,
@@ -121,10 +111,10 @@ all_four_beneficial_items_apply_caps_clear_and_score_test :: proc(t: ^testing.T)
 	testing.expect_value(t, life_gameplay.player.score, SCORE_ITEM_PICKUP)
 }
 
-// Protects the rule that a capped item remains in place and defers treasure in
-// the same cell until it can be collected.
+// Capped items become visible salvage, clear immediately, and stop blocking
+// treasure while awarding the smaller attributable salvage reward.
 @(test)
-capped_items_remain_and_defer_treasure_test :: proc(t: ^testing.T) {
+capped_items_become_salvage_and_stop_blocking_treasure_test :: proc(t: ^testing.T) {
 	position := Grid_Position {6, 6}
 	gameplay := open_gameplay_at(position)
 	gameplay.player.bomb_power = PLAYER_MAX_BOMB_POWER
@@ -133,30 +123,23 @@ capped_items_remain_and_defer_treasure_test :: proc(t: ^testing.T) {
 
 	capped := collect_player_cell(&gameplay)
 	testing.expect(t, !capped.item_collected)
+	testing.expect(t, capped.item_salvaged)
 	testing.expect(t, !capped.treasure_collected)
-	testing.expect_value(t, gameplay.level.data.item[position.x][position.y], u8(ITEM_POWER))
-	testing.expect_value(t, gameplay.level.data.treasure[position.x][position.y], u8(1))
-	testing.expect_value(t, gameplay.player.score, 0)
-
-	gameplay.player.bomb_power = PLAYER_MAX_BOMB_POWER - 1
-	item := collect_player_cell(&gameplay)
-	testing.expect(t, item.item_collected)
-	testing.expect(t, !item.treasure_collected)
 	testing.expect_value(t, gameplay.level.data.item[position.x][position.y], u8(0))
 	testing.expect_value(t, gameplay.level.data.treasure[position.x][position.y], u8(1))
-	testing.expect_value(t, gameplay.player.score, SCORE_ITEM_PICKUP)
+	testing.expect_value(t, gameplay.player.score, SCORE_CAPPED_ITEM_SALVAGE)
 
 	treasure := collect_player_cell(&gameplay)
 	testing.expect(t, !treasure.item_collected)
 	testing.expect(t, treasure.treasure_collected)
 	testing.expect_value(t, gameplay.level.data.treasure[position.x][position.y], u8(0))
-	testing.expect_value(t, gameplay.player.score, SCORE_ITEM_PICKUP + SCORE_TREASURE_PICKUP)
+	testing.expect_value(t, gameplay.player.score, SCORE_CAPPED_ITEM_SALVAGE + SCORE_TREASURE_PICKUP)
 }
 
-// Verifies every item type is retained when its corresponding player stat is
-// already at the supported cap.
+// Verifies every capped item type clears and awards salvage without changing
+// the already-capped player values.
 @(test)
-each_item_at_its_cap_is_retained_test :: proc(t: ^testing.T) {
+each_item_at_its_cap_is_salvaged_test :: proc(t: ^testing.T) {
 	position := Grid_Position {2, 2}
 
 	for item in u8(ITEM_POWER) ..= u8(ITEM_LIFE) {
@@ -169,8 +152,9 @@ each_item_at_its_cap_is_retained_test :: proc(t: ^testing.T) {
 
 		result := collect_player_cell(&gameplay)
 		testing.expect(t, !result.item_collected)
-		testing.expect_value(t, gameplay.level.data.item[position.x][position.y], item)
-		testing.expect_value(t, gameplay.player.score, 0)
+		testing.expect(t, result.item_salvaged)
+		testing.expect_value(t, gameplay.level.data.item[position.x][position.y], u8(0))
+		testing.expect_value(t, gameplay.player.score, SCORE_CAPPED_ITEM_SALVAGE)
 	}
 }
 
@@ -223,9 +207,9 @@ treasure_requests_one_item_sound_on_action_completion_test :: proc(t: ^testing.T
 	testing.expect_value(t, gameplay.player.score, SCORE_TREASURE_PICKUP)
 }
 
-// Protects the legacy minimum score floor applied at every completed action.
+// Empty actions never create unexplained score.
 @(test)
-legacy_score_floor_applies_at_action_completion_test :: proc(t: ^testing.T) {
+empty_action_does_not_change_score_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
 	gameplay.player.energy = PLAYER_START_ENERGY
 	gameplay.player.score = 0
@@ -236,7 +220,7 @@ legacy_score_floor_applies_at_action_completion_test :: proc(t: ^testing.T) {
 	)
 	testing.expect_value(t, gameplay.player.score, 0)
 	run_gameplay_ticks(&gameplay, GAMEPLAY_TICK_SECONDS)
-	testing.expect_value(t, gameplay.player.score, SCORE_BOMB_COST)
+	testing.expect_value(t, gameplay.player.score, 0)
 }
 
 // Confirms pickup timing, scoring, audio requests, and resulting player state are
@@ -245,10 +229,10 @@ legacy_score_floor_applies_at_action_completion_test :: proc(t: ^testing.T) {
 pickup_timing_is_render_rate_independent_test :: proc(t: ^testing.T) {
 	at_30_fps := run_pickup_timing_scenario(30, 1)
 	at_60_fps := run_pickup_timing_scenario(60, 1)
-	at_240_fps := run_pickup_timing_scenario(240, 1)
+	at_144_fps := run_pickup_timing_scenario(144, 1)
 
 	testing.expect_value(t, at_30_fps, at_60_fps)
-	testing.expect_value(t, at_60_fps, at_240_fps)
+	testing.expect_value(t, at_60_fps, at_144_fps)
 	testing.expect_value(t, at_60_fps.items_collected, 1)
 	testing.expect_value(t, at_60_fps.treasures_collected, 0)
 	testing.expect_value(t, at_60_fps.item_sounds, 1)

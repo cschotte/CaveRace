@@ -1,11 +1,89 @@
 package caverace
 
-// toggle_game_pause freezes or resumes active gameplay at the Game routing
-// layer. Clearing queued input on both edges prevents a key held before pause
-// from being replayed after the overlay closes.
-toggle_game_pause :: proc(game: ^Game) {
-	assert(game.screen == .Playing)
-	assert(game.gameplay.state == .Playing)
-	game.paused = !game.paused
+Pause_Menu_Item :: enum {
+	Resume,
+	Restart_Level,
+	Main_Menu,
+}
+
+Pause_Confirmation :: enum {
+	None,
+	Restart_Level,
+	Main_Menu,
+}
+
+Pause_State :: struct {
+	open:         bool,
+	selected:     Pause_Menu_Item,
+	confirmation: Pause_Confirmation,
+}
+
+Pause_Update_Result :: struct {
+	restart_level: bool,
+	main_menu:     bool,
+}
+
+game_is_paused :: proc(game: ^Game) -> bool {
+	return game.pause.open
+}
+
+open_game_pause :: proc(game: ^Game) {
+	if game.pause.open do return
+	if game.screen != .Playing || game.gameplay.state != .Playing do return
+	game.pause = Pause_State {open = true}
 	game.gameplay.tick_state.input = {}
+}
+
+close_game_pause :: proc(game: ^Game) {
+	game.pause = {}
+	game.gameplay.tick_state.input = {}
+}
+
+move_pause_selection :: proc(state: ^Pause_State, delta: int) {
+	count := len(Pause_Menu_Item)
+	selected := (int(state.selected) + delta + count) % count
+	state.selected = Pause_Menu_Item(selected)
+}
+
+update_pause_menu :: proc(game: ^Game, input: Game_Input) -> Pause_Update_Result {
+	assert(game.pause.open)
+	result: Pause_Update_Result
+
+	if game.pause.confirmation != .None {
+		if input.back || input.pause_pressed {
+			game.pause.confirmation = .None
+			return result
+		}
+		if !input.confirm do return result
+
+		switch game.pause.confirmation {
+		case .Restart_Level: result.restart_level = true
+		case .Main_Menu:     result.main_menu = true
+		case .None:
+		}
+		close_game_pause(game)
+		return result
+	}
+
+	if input.pause_pressed || input.back {
+		close_game_pause(game)
+		return result
+	}
+	if input.restart_pressed {
+		game.pause.confirmation = .Restart_Level
+		return result
+	}
+	if input.menu_up_pressed do move_pause_selection(&game.pause, -1)
+	if input.menu_down_pressed do move_pause_selection(&game.pause, 1)
+	if !input.confirm do return result
+
+	switch game.pause.selected {
+	case .Resume:
+		close_game_pause(game)
+	case .Restart_Level:
+		game.pause.confirmation = .Restart_Level
+	case .Main_Menu:
+		game.pause.confirmation = .Main_Menu
+	}
+	return result
 }

@@ -62,9 +62,9 @@ run_seeded_enemy_scenario :: proc(render_fps, seconds: int, seed: u64) -> Enemy_
 	}
 }
 
-// run_stationary_contact_half_second counts damage events while player and
+// run_stationary_contact_one_second counts damage events while player and
 // enemy overlap, allowing contact cadence to be compared across render rates.
-run_stationary_contact_half_second :: proc(render_fps: int) -> int {
+run_stationary_contact_one_second :: proc(render_fps: int) -> int {
 	position := Grid_Position {5, 5}
 	gameplay := open_gameplay_at(position)
 	gameplay.player.energy = PLAYER_START_ENERGY
@@ -73,7 +73,7 @@ run_stationary_contact_half_second :: proc(render_fps: int) -> int {
 	block_cardinal_neighbors(&gameplay.level.data, position)
 	seed_gameplay_random(&gameplay, 99)
 
-	for _ in 0 ..< render_fps / 2 {
+	for _ in 0 ..< render_fps {
 		update_gameplay(&gameplay, {}, 1.0 / f64(render_fps))
 	}
 	return gameplay.player.energy
@@ -126,18 +126,18 @@ cosmetic_random_draws_do_not_change_seeded_enemy_trace_test :: proc(t: ^testing.
 enemy_updates_are_render_rate_independent_test :: proc(t: ^testing.T) {
 	at_30_fps := run_seeded_enemy_scenario(30, 8, 12345)
 	at_60_fps := run_seeded_enemy_scenario(60, 8, 12345)
-	at_240_fps := run_seeded_enemy_scenario(240, 8, 12345)
+	at_144_fps := run_seeded_enemy_scenario(144, 8, 12345)
 
 	testing.expect_value(t, at_30_fps, at_60_fps)
-	testing.expect_value(t, at_60_fps, at_240_fps)
+	testing.expect_value(t, at_60_fps, at_144_fps)
 	testing.expect_value(t, at_60_fps.energy, PLAYER_START_ENERGY)
 	testing.expect_value(t, at_60_fps.state, Gameplay_State.Playing)
 }
 
-// Confirms enemy interpolation covers exactly one tile over sixteen movement
+// Confirms enemy interpolation covers exactly one tile over twelve movement
 // steps before committing the target cell.
 @(test)
-enemy_moves_one_tile_in_sixteen_steps_test :: proc(t: ^testing.T) {
+enemy_moves_one_tile_in_twelve_steps_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
 	gameplay.enemies[0] = enemy_at({1, 1})
 	gameplay.enemy_count = 1
@@ -148,7 +148,11 @@ enemy_moves_one_tile_in_sixteen_steps_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, enemy.position, Grid_Position {1, 1})
 	testing.expect_value(t, enemy.move_to, Grid_Position {2, 1})
 	x, y := enemy_screen_position(enemy)
-	testing.expect_value(t, x, i32(MAP_OFFSET_X + MAP_TILE_SIZE + MOVEMENT_PIXELS_PER_STEP))
+	testing.expect_value(
+		t,
+		x,
+		i32(MAP_OFFSET_X + MAP_TILE_SIZE + MAP_TILE_SIZE / MOVEMENT_STEPS_PER_TILE),
+	)
 	testing.expect_value(t, y, i32(MAP_OFFSET_Y + MAP_TILE_SIZE))
 
 	advance_enemy_action_steps(&gameplay, MOVEMENT_STEPS_PER_TILE)
@@ -230,22 +234,22 @@ seeded_enemies_stay_walkable_on_all_levels_test :: proc(t: ^testing.T) {
 crossing_entities_overlap_at_pixel_step_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({1, 1})
 	gameplay.player.move_to = {2, 1}
-	gameplay.player.movement_step = 7
+	gameplay.player.movement_step = 5
 	gameplay.enemies[0] = enemy_at({2, 1})
 	gameplay.enemies[0].move_to = {1, 1}
-	gameplay.enemies[0].movement_step = 7
+	gameplay.enemies[0].movement_step = 5
 	gameplay.enemy_count = 1
 	testing.expect(t, !player_touches_enemy(&gameplay))
 
-	gameplay.player.movement_step = 8
-	gameplay.enemies[0].movement_step = 8
+	gameplay.player.movement_step = 6
+	gameplay.enemies[0].movement_step = 6
 	testing.expect(t, player_touches_enemy(&gameplay))
 }
 
-// Protects the rule that continuous contact deals damage only once during a
-// sixteen-step action and may deal damage again at the next boundary.
+// Contact grace is independent from movement boundaries and prevents another
+// hit for exactly 0.75 seconds across render rates.
 @(test)
-contact_damage_occurs_once_per_action_test :: proc(t: ^testing.T) {
+contact_grace_prevents_repeat_damage_across_render_rates_test :: proc(t: ^testing.T) {
 	position := Grid_Position {5, 5}
 	gameplay := open_gameplay_at(position)
 	gameplay.player.energy = PLAYER_START_ENERGY
@@ -257,9 +261,11 @@ contact_damage_occurs_once_per_action_test :: proc(t: ^testing.T) {
 
 	first_contact := update_gameplay(&gameplay, {}, GAMEPLAY_TICK_SECONDS)
 	testing.expect(t, first_contact.ticks.player_damaged)
+	testing.expect_value(t, first_contact.ticks.contact_hit_requests, 1)
+	testing.expect_value(t, gameplay.player.contact_grace_ticks, CONTACT_GRACE_TICKS)
 	testing.expect_value(t, gameplay.player.energy, PLAYER_START_ENERGY - ENEMY_CONTACT_DAMAGE)
 
-	for _ in 1 ..< MOVEMENT_STEPS_PER_TILE {
+	for _ in 1 ..< CONTACT_GRACE_TICKS {
 		frame := update_gameplay(&gameplay, {}, GAMEPLAY_TICK_SECONDS)
 		testing.expect(t, !frame.ticks.player_damaged)
 	}
@@ -267,6 +273,7 @@ contact_damage_occurs_once_per_action_test :: proc(t: ^testing.T) {
 
 	second_contact := update_gameplay(&gameplay, {}, GAMEPLAY_TICK_SECONDS)
 	testing.expect(t, second_contact.ticks.player_damaged)
+	testing.expect_value(t, second_contact.ticks.contact_hit_requests, 1)
 	testing.expect_value(
 		t,
 		gameplay.player.energy,
@@ -274,9 +281,9 @@ contact_damage_occurs_once_per_action_test :: proc(t: ^testing.T) {
 	)
 
 	expected_energy := PLAYER_START_ENERGY - 2 * ENEMY_CONTACT_DAMAGE
-	testing.expect_value(t, run_stationary_contact_half_second(30), expected_energy)
-	testing.expect_value(t, run_stationary_contact_half_second(60), expected_energy)
-	testing.expect_value(t, run_stationary_contact_half_second(240), expected_energy)
+	testing.expect_value(t, run_stationary_contact_one_second(30), expected_energy)
+	testing.expect_value(t, run_stationary_contact_one_second(60), expected_energy)
+	testing.expect_value(t, run_stationary_contact_one_second(144), expected_energy)
 }
 
 // Confirms contact that reduces energy to zero reports death and routes gameplay

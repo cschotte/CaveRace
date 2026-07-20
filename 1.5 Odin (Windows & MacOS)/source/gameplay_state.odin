@@ -10,7 +10,7 @@ MAX_BOMBS   :: 4
 BOMB_SOUND_COUNT     :: 4
 
 MAX_EXPLOSION_CELLS :: 1 + 4 * PLAYER_MAX_BOMB_POWER
-EXPLOSION_STEPS     :: MOVEMENT_STEPS_PER_TILE
+EXPLOSION_STEPS     :: 12
 
 INDESTRUCTIBLE_ITEM_FIRST :: 9
 
@@ -34,8 +34,7 @@ PLAYER_RIGHT_FIRST_SPRITE    :: 13
 PLAYER_DIRECTION_FRAME_COUNT :: 4
 
 #assert(MAX_BOMBS == PLAYER_MAX_BOMB_CAPACITY)
-#assert(MOVEMENT_STEPS_PER_TILE * MOVEMENT_PIXELS_PER_STEP == MAP_TILE_SIZE)
-#assert(MAX_GAMEPLAY_TICKS_PER_FRAME < MOVEMENT_STEPS_PER_TILE)
+#assert(MAX_GAMEPLAY_TICKS_PER_FRAME >= MOVEMENT_STEPS_PER_TILE)
 #assert(PLAYER_IDLE_SPRITE < PLAYER_SPRITE_COUNT)
 #assert(PLAYER_RIGHT_FIRST_SPRITE + PLAYER_DIRECTION_FRAME_COUNT == PLAYER_SPRITE_COUNT)
 #assert(BOMB_TICKING_SPRITE < BOMB_SPRITE_COUNT)
@@ -59,11 +58,10 @@ Direction :: enum {
 	Left,
 }
 
-// Gameplay_Action is the single prioritized command selected at each sixteen-
-// step action boundary.
+// Gameplay_Action is the movement command selected at each action boundary.
+// Bomb placement is an independent latched edge and never consumes movement.
 Gameplay_Action :: enum {
 	None,
-	Place_Bomb,
 	Move_Down,
 	Move_Up,
 	Move_Right,
@@ -82,11 +80,10 @@ Gameplay_Input_Buffer :: struct {
 }
 
 // Gameplay_Tick_State persists the fixed-clock accumulator, current action
-// progress, contact guard, and queued input across render frames.
+// progress and queued input across render frames.
 Gameplay_Tick_State :: struct {
 	accumulator_seconds:    f64,
 	action_step:            int,
-	contact_damage_applied: bool,
 	input:                  Gameplay_Input_Buffer,
 }
 
@@ -99,7 +96,8 @@ Gameplay_Tick_Result :: struct {
 	bomb_action_started:     bool,
 	bomb_placed:             bool,
 	bombs_expired:           int,
-	ticking_requested:       bool,
+	ticking_requests:        int,
+	contact_hit_requests:    int,
 	player_damaged:          bool,
 	player_died:             bool,
 	explosions_started:      int,
@@ -108,6 +106,7 @@ Gameplay_Tick_Result :: struct {
 	enemies_destroyed:       int,
 	squish_requests:         int,
 	items_collected:         int,
+	items_salvaged:          int,
 	treasures_collected:     int,
 	item_sound_requests:     int,
 	cheat_pressed:           [Cheat_Key]bool,
@@ -126,6 +125,7 @@ Player_State :: struct {
 	bomb_capacity: int,
 	bomb_power:    int,
 	score:         int,
+	contact_grace_ticks: int,
 }
 
 // Enemy_State represents one fixed enemy slot, including activity, sprite kind,
@@ -145,7 +145,7 @@ Enemy_State :: struct {
 Bomb_State :: struct {
 	active:       bool,
 	position:     Grid_Position,
-	fuse_actions: int,
+	fuse_ticks:   int,
 	power:        int,
 }
 
@@ -277,6 +277,7 @@ reset_player_for_level_start :: proc(
 	player.move_to = player.position
 	player.movement_step = 0
 	player.direction = .None
+	player.contact_grace_ticks = 0
 	player.energy = tuning.player_start_energy
 	player.bomb_capacity = tuning.player_start_bomb_capacity
 	player.bomb_power = tuning.player_start_bomb_power

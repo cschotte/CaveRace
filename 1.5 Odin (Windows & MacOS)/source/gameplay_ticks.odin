@@ -17,13 +17,9 @@ queue_gameplay_input :: proc(tick_state: ^Gameplay_Tick_State, input: Game_Input
 	}
 }
 
-// The 1.3 input order is intentional: bomb, down, up, right, then left. This
-// returns one action only and is called exclusively at a 16-step boundary.
+// Movement keeps the legacy down/up/right/left priority. Bomb placement is
+// consumed independently at the same boundary and never creates an idle action.
 select_gameplay_action :: proc(input: ^Gameplay_Input_Buffer) -> Gameplay_Action {
-	if input.bomb_pending {
-		input.bomb_pending = false
-		return .Place_Bomb
-	}
 	if input.move_down  do return .Move_Down
 	if input.move_up    do return .Move_Up
 	if input.move_right do return .Move_Right
@@ -50,39 +46,36 @@ apply_queued_cheats :: proc(
 	}
 }
 
-// begin_gameplay_action_interval starts actor movement, optional bomb placement,
-// fuse updates, and ready explosions in the original action-boundary order.
+// begin_gameplay_action_interval consumes a queued bomb edge independently,
+// then starts actor movement at the selected 12-tick action boundary.
 begin_gameplay_action_interval :: proc(
 	gameplay: ^Gameplay,
 	result: ^Gameplay_Tick_Result,
 ) {
-	gameplay.tick_state.contact_damage_applied = false
+	if gameplay.tick_state.input.bomb_pending {
+		gameplay.tick_state.input.bomb_pending = false
+		result.bomb_action_started = true
+		result.bomb_placed = try_place_bomb(gameplay)
+		if result.bomb_placed do result.ticking_requests += 1
+	}
 	result.last_action = select_gameplay_action(&gameplay.tick_state.input)
 	result.action_decisions += 1
 	begin_enemy_actions(gameplay)
 	begin_player_action(gameplay, result.last_action)
-	if result.last_action == .Place_Bomb {
-		result.bomb_action_started = true
-		result.bomb_placed = try_place_bomb(gameplay)
-		result.ticking_requested = result.bomb_placed
-	}
-	result.bombs_expired += advance_bomb_fuses(gameplay)
-	start_ready_explosions(gameplay, result)
 }
 
-// finish_gameplay_action_interval collects the committed player cell and applies
-// the legacy score floor after the sixteenth step of an action.
+// finish_gameplay_action_interval collects the committed player cell.
 finish_gameplay_action_interval :: proc(
 	gameplay: ^Gameplay,
 	result: ^Gameplay_Tick_Result,
 ) {
 	pickup := collect_player_cell(gameplay)
 	if pickup.item_collected do result.items_collected += 1
+	if pickup.item_salvaged do result.items_salvaged += 1
 	if pickup.treasure_collected do result.treasures_collected += 1
-	if pickup.item_collected || pickup.treasure_collected {
+	if pickup.item_collected || pickup.item_salvaged || pickup.treasure_collected {
 		result.item_sound_requests += 1
 	}
-	apply_score_event(&gameplay.player, .Action_Floor, gameplay.difficulty)
 }
 
 // run_gameplay_ticks advances as many fixed gameplay ticks as the render-frame
@@ -108,24 +101,33 @@ run_gameplay_ticks :: proc(
 		result.ticks_run += 1
 
 		apply_queued_cheats(gameplay, &result, cheats_enabled)
+		result.ticking_requests += advance_bomb_fuses(gameplay)
+		start_ready_explosions(gameplay, &result)
 
 		if tick_state.action_step == 0 {
 			begin_gameplay_action_interval(gameplay, &result)
 		}
 
+		if gameplay.player.contact_grace_ticks > 0 {
+			gameplay.player.contact_grace_ticks -= 1
+		}
 		player_was_alive := gameplay.player.energy > 0
-		if !tick_state.contact_damage_applied && player_touches_enemy(gameplay) {
-			tick_state.contact_damage_applied = true
+		if gameplay.player.contact_grace_ticks == 0 && player_touches_enemy(gameplay) {
 			result.player_damaged = apply_enemy_contact_damage(
 				&gameplay.player,
 				gameplay.difficulty,
 			)
+			if result.player_damaged {
+				gameplay.player.contact_grace_ticks =
+					gameplay_tuning(gameplay.difficulty).contact_grace_ticks
+				result.contact_hit_requests += 1
+			}
 		}
 
 		apply_active_explosions_to_entities(gameplay, &result)
 		if player_was_alive && gameplay.player.energy == 0 {
 			result.player_died = true
-			advance_explosion_ages(gameplay)
+			result.bombs_expired += advance_explosion_ages(gameplay)
 			break
 		}
 
@@ -134,7 +136,7 @@ run_gameplay_ticks :: proc(
 			tick_state.action_step + 1,
 		)
 		advance_enemy_action_steps(gameplay, tick_state.action_step + 1)
-		advance_explosion_ages(gameplay)
+		result.bombs_expired += advance_explosion_ages(gameplay)
 
 		if tick_state.action_step + 1 == MOVEMENT_STEPS_PER_TILE {
 			finish_gameplay_action_interval(gameplay, &result)
