@@ -32,6 +32,9 @@ Game :: struct {
 	pause:                 Pause_State,
 	debug_overlay_visible: bool,
 	branding_elapsed_seconds: f64,
+	// Free-running cosmetic clock for menu glow/pulse/twinkle animation only;
+	// it never gates gameplay or input and is safe to ignore in tests.
+	ui_clock:              f64,
 }
 
 Game_Update_Result :: struct {
@@ -77,15 +80,6 @@ start_new_game :: proc(game: ^Game) {
 	game.screen = .Playing
 }
 
-start_practice_game :: proc(game: ^Game, level_index: int) {
-	init_gameplay(&game.gameplay, game.settings.difficulty)
-	game.gameplay.mode = .Practice
-	game.gameplay.level_index = clamp(level_index, 0, LEVEL_COUNT - 1)
-	game.effects = {}
-	game.pause = {}
-	game.screen = .Playing
-}
-
 start_game_tutorial :: proc(game: ^Game) {
 	game.gameplay.difficulty = game.settings.difficulty
 	setup_tutorial_level(&game.gameplay, &game.tutorial)
@@ -120,6 +114,7 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 	game.feedback.reduced_flashes = game.settings.reduced_flashes
 	advance_game_feedback(&game.feedback, frame_seconds)
 	advance_game_effects(&game.effects, frame_seconds)
+	game.ui_clock += clamp(frame_seconds, 0, MAX_FRAME_DELTA_SECONDS)
 	when ODIN_DEBUG {
 		if input.debug_toggle_pressed {
 			game.debug_overlay_visible = !game.debug_overlay_visible
@@ -161,9 +156,6 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			result.load_level_requested = true
 		} else if menu_result.start_tutorial {
 			start_game_tutorial(game)
-		} else if menu_result.start_practice {
-			start_practice_game(game, menu_result.practice_level)
-			result.load_level_requested = true
 		} else if menu_result.replay_story {
 			begin_intro(&game.front_end)
 			game.screen = .Intro
@@ -172,7 +164,7 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 		}
 	case .Tutorial:
 		if game.pause.open {
-			pause_result := update_pause_menu(game, input)
+			pause_result := update_pause_menu(game, input, frame_seconds)
 			result.settings_changed = pause_result.settings_changed
 			result.display_changed = pause_result.display_changed
 			if pause_result.restart_level {
@@ -206,7 +198,7 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 		}
 	case .Playing:
 		if game.pause.open {
-			pause_result := update_pause_menu(game, input)
+			pause_result := update_pause_menu(game, input, frame_seconds)
 			result.settings_changed = pause_result.settings_changed
 			result.display_changed = pause_result.display_changed
 			if pause_result.restart_level {
@@ -237,7 +229,7 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			if !result.gameplay.back_requested && game.gameplay.state == .Load_Level {
 				result.load_level_requested = true
 			}
-			if result.gameplay.back_requested || result.gameplay.practice_exit_requested {
+			if result.gameplay.back_requested {
 				show_main_menu(game)
 			}
 		}

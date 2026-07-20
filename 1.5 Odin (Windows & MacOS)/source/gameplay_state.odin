@@ -231,7 +231,6 @@ Gameplay :: struct {
 // from update_gameplay.
 Gameplay_Frame_Result :: struct {
 	back_requested: bool,
-	practice_exit_requested: bool,
 	ticks:          Gameplay_Tick_Result,
 }
 

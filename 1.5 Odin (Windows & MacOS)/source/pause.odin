@@ -25,6 +25,8 @@ Pause_State :: struct {
 	selected:     Pause_Menu_Item,
 	confirmation: Pause_Confirmation,
 	page:         Pause_Page,
+	// Time since the pause overlay opened, purely for its cosmetic fade-in.
+	elapsed_seconds: f64,
 }
 
 Pause_Update_Result :: struct {
@@ -59,9 +61,10 @@ move_pause_selection :: proc(state: ^Pause_State, delta: int) {
 	state.selected = Pause_Menu_Item(selected)
 }
 
-update_pause_menu :: proc(game: ^Game, input: Game_Input) -> Pause_Update_Result {
+update_pause_menu :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Pause_Update_Result {
 	assert(game.pause.open)
 	result: Pause_Update_Result
+	game.pause.elapsed_seconds += clamp(frame_seconds, 0, MAX_FRAME_DELTA_SECONDS)
 	if game.pause.page != .Main {
 		if input.pause_pressed {
 			close_game_pause(game)

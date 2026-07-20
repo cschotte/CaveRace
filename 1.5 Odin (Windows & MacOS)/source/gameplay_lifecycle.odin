@@ -87,9 +87,6 @@ resolve_gameplay_outcome :: proc(
 	if !ticks.player_died do return
 	gameplay.level_stats.deaths += 1
 	gameplay.player.lives = max(gameplay.player.lives - 1, 0)
-	if gameplay.mode == .Practice && gameplay.player.lives == 0 {
-		gameplay.player.lives = 1
-	}
 	if gameplay.player.lives > 0 {
 		gameplay.state = .Dead
 		return

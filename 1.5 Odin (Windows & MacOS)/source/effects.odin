@@ -5,6 +5,9 @@ import rl "vendor:raylib"
 MAX_EFFECT_PARTICLES :: 64
 MAX_SCORE_POPUPS     :: 8
 
+TREASURE_TOAST_SECONDS      :: 2.2
+TREASURE_TOAST_FADE_SECONDS :: 0.35
+
 Effect_Kind :: enum {
 	Explosion,
 	Damage,
@@ -35,6 +38,11 @@ Score_Popup :: struct {
 Game_Effects :: struct {
 	particles: [MAX_EFFECT_PARTICLES]Effect_Particle,
 	popups:    [MAX_SCORE_POPUPS]Score_Popup,
+	// A one-shot "TREASURE x/y" readout so a pickup's progress toward the
+	// cave's total is legible without a permanent HUD counter.
+	treasure_toast_remaining: f64,
+	treasure_toast_collected: int,
+	treasure_toast_total:     int,
 }
 
 effect_particle_slot :: proc(effects: ^Game_Effects) -> ^Effect_Particle {
@@ -178,6 +186,9 @@ request_game_effects :: proc(
 			8 / burst_scale,
 			.Treasure,
 		)
+		effects.treasure_toast_remaining = TREASURE_TOAST_SECONDS
+		effects.treasure_toast_collected = gameplay.treasure_collected
+		effects.treasure_toast_total = gameplay.treasure_total
 	}
 
 	tuning := gameplay_tuning(gameplay.difficulty)
@@ -227,6 +238,31 @@ advance_game_effects :: proc(effects: ^Game_Effects, frame_seconds: f64) {
 		popup.remaining_seconds = max(popup.remaining_seconds - delta, 0)
 		if popup.remaining_seconds == 0 do popup.active = false
 	}
+	effects.treasure_toast_remaining = max(effects.treasure_toast_remaining - delta, 0)
+}
+
+// treasure_toast_alpha eases the readout in, holds it, then eases it back out
+// over its fixed lifetime.
+treasure_toast_alpha :: proc(remaining_seconds: f64) -> f32 {
+	if remaining_seconds <= 0 do return 0
+	if remaining_seconds > TREASURE_TOAST_SECONDS - TREASURE_TOAST_FADE_SECONDS {
+		return f32((TREASURE_TOAST_SECONDS - remaining_seconds) / TREASURE_TOAST_FADE_SECONDS)
+	}
+	if remaining_seconds < TREASURE_TOAST_FADE_SECONDS {
+		return f32(remaining_seconds / TREASURE_TOAST_FADE_SECONDS)
+	}
+	return 1
+}
+
+draw_treasure_toast :: proc(effects: ^Game_Effects) {
+	alpha := treasure_toast_alpha(effects.treasure_toast_remaining)
+	if alpha <= 0 do return
+	buffer: [32]byte
+	text := format_cstring(buffer[:], "TREASURE  %d/%d", effects.treasure_toast_collected, effects.treasure_toast_total)
+	width := rl.MeasureText(text, 15)
+	x := (WINDOW_WIDTH - width) / 2
+	rl.DrawRectangle(x - 10, 6, width + 20, 20, rl.Fade(rl.BLACK, 0.55 * alpha))
+	rl.DrawText(text, x, 9, 15, rl.Fade(rl.SKYBLUE, alpha))
 }
 
 effect_color :: proc(kind: Effect_Kind) -> rl.Color {
@@ -263,5 +299,6 @@ draw_game_effects :: proc(effects: ^Game_Effects) {
 		alpha := f32(clamp(popup.remaining_seconds / 0.8, 0, 1))
 		draw_ui_format(i32(popup.x), i32(popup.y), 14, rl.Fade(rl.GOLD, alpha), "+%d", popup.points)
 	}
+	draw_treasure_toast(effects)
 }
 

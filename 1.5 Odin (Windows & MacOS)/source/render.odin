@@ -1,6 +1,7 @@
 package caverace
 
 import "core:fmt"
+import "core:math"
 import rl "vendor:raylib"
 
 // draw_game dispatches the active screen renderer, then draws shared feedback
@@ -12,7 +13,6 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 	case .Intro:
 		draw_front_end(game.front_end, &assets.screens)
 		draw_story_effects(game.front_end, game.settings.reduced_flashes)
-		draw_story_prompt(game)
 	case .Main_Menu:
 		background_index := MAIN_MENU_FIRST_IMAGE
 		if game.menu.page == .How_To_Play do background_index = MAIN_MENU_LAST_IMAGE
@@ -69,10 +69,11 @@ draw_game_pause :: proc(game: ^Game) {
 	panel_height: i32 = 320
 	panel_x := (WINDOW_WIDTH - panel_width) / 2
 	panel_y := (WINDOW_HEIGHT - panel_height) / 2
+	ease := f32(clamp(game.pause.elapsed_seconds / 0.15, 0, 1))
 
-	rl.DrawRectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, rl.Fade(rl.BLACK, 0.72))
-	rl.DrawRectangle(panel_x, panel_y, panel_width, panel_height, rl.BLACK)
-	rl.DrawRectangleLines(panel_x, panel_y, panel_width, panel_height, rl.GOLD)
+	rl.DrawRectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, rl.Fade(rl.BLACK, 0.72 * ease))
+	rl.DrawRectangle(panel_x, panel_y, panel_width, panel_height, rl.Fade(rl.BLACK, ease))
+	rl.DrawRectangleLines(panel_x, panel_y, panel_width, panel_height, rl.Fade(rl.GOLD, ease))
 
 	title: cstring = "PAUSED"
 	title_size: i32 = 32
@@ -82,7 +83,7 @@ draw_game_pause :: proc(game: ^Game) {
 		(WINDOW_WIDTH - title_width) / 2,
 		panel_y + 20,
 		title_size,
-		rl.GOLD,
+		rl.Fade(rl.GOLD, ease),
 	)
 
 	if pause.confirmation != .None {
@@ -112,18 +113,20 @@ draw_game_pause :: proc(game: ^Game) {
 		return
 	}
 
+	pulse := ui_pulse(game.ui_clock, 1.6)
 	for item_index in 0 ..< len(Pause_Menu_Item) {
 		item := Pause_Menu_Item(item_index)
 		label := pause_menu_item_label(item)
 		color := rl.WHITE
 		prefix: cstring = "  "
+		y := panel_y + 72 + i32(item_index) * 38
 		if pause.selected == item {
+			draw_selection_glow(panel_x + 90, y - 5, panel_width - 80, 30, pulse * ease)
 			color = rl.GOLD
 			prefix = "> "
 		}
-		y := panel_y + 72 + i32(item_index) * 38
-		rl.DrawText(prefix, panel_x + 100, y, 20, color)
-		rl.DrawText(label, panel_x + 130, y, 20, color)
+		rl.DrawText(prefix, panel_x + 100, y, 20, rl.Fade(color, ease))
+		rl.DrawText(label, panel_x + 130, y, 20, rl.Fade(color, ease))
 	}
 	footer_buffer: [160]byte
 	footer: cstring
@@ -147,7 +150,29 @@ draw_game_pause :: proc(game: ^Game) {
 		)
 	}
 	footer_width := rl.MeasureText(footer, 13)
-	rl.DrawText(footer, (WINDOW_WIDTH - footer_width) / 2, panel_y + 286, 13, rl.LIGHTGRAY)
+	rl.DrawText(footer, (WINDOW_WIDTH - footer_width) / 2, panel_y + 286, 13, rl.Fade(rl.LIGHTGRAY, ease))
+}
+
+// draw_ken_burns_texture draws a full-canvas texture with a slow, subtle zoom
+// and drift instead of a static blit, giving story and outcome screens a
+// gentle sense of camera movement without any new gameplay-facing state.
+draw_ken_burns_texture :: proc(texture: rl.Texture, zoom: f32, drift_right: bool, tint: rl.Color) {
+	if zoom <= 0 || !rl.IsTextureValid(texture) {
+		rl.DrawTexture(texture, 0, 0, tint)
+		return
+	}
+	crop_width := f32(texture.width) * (1 - zoom)
+	crop_height := f32(texture.height) * (1 - zoom)
+	drift_x: f32 = 0.35
+	if drift_right do drift_x = 0.65
+	source := rl.Rectangle {
+		x      = (f32(texture.width) - crop_width) * drift_x,
+		y      = (f32(texture.height) - crop_height) * 0.5,
+		width  = crop_width,
+		height = crop_height,
+	}
+	dest := rl.Rectangle{width = WINDOW_WIDTH, height = WINDOW_HEIGHT}
+	rl.DrawTexturePro(texture, source, dest, {}, 0, tint)
 }
 
 // draw_front_end displays the story, title, or controls image selected by the
@@ -161,7 +186,6 @@ draw_front_end :: proc(front_end: Front_End_State, screens: ^Screen_Assets) {
 main_menu_item_label :: proc(item: Main_Menu_Item) -> cstring {
 	switch item {
 	case .Start_Game:   return "START GAME"
-	case .Practice:     return "PRACTICE / LEVEL SELECT"
 	case .Tutorial:     return "TUTORIAL"
 	case .How_To_Play:  return "HOW TO PLAY"
 	case .Settings:     return "SETTINGS"
@@ -203,10 +227,27 @@ draw_ui_format :: proc(x, y, size: i32, color: rl.Color, format: string, args: .
 	rl.DrawText(format_cstring(buffer[:], format, ..args), x, y, size, color)
 }
 
-draw_menu_row :: proc(label: cstring, index, selected, y: int) {
+// ui_pulse returns a smooth 0..1 breathing value from a free-running clock.
+// It drives selection glow and ambient twinkles and never affects gameplay.
+ui_pulse :: proc(clock: f64, period_seconds: f64) -> f32 {
+	phase := math.mod(clock, period_seconds) / period_seconds
+	return f32((math.sin(phase * math.TAU - math.PI / 2) + 1) / 2)
+}
+
+// draw_selection_glow paints a soft gold highlight bar and left accent tick
+// behind the selected row of any list-style menu, shared across every menu
+// screen so selection feedback reads consistently throughout the game.
+draw_selection_glow :: proc(x, y, width, height: i32, pulse: f32) {
+	glow_alpha := 0.14 + pulse * 0.10
+	rl.DrawRectangle(x, y, width, height, rl.Fade(rl.GOLD, glow_alpha))
+	rl.DrawRectangle(x, y, 3, height, rl.Fade(rl.GOLD, 0.85 + pulse * 0.15))
+}
+
+draw_menu_row :: proc(label: cstring, index, selected, y: int, pulse: f32 = 0) {
 	color := rl.LIGHTGRAY
 	prefix: cstring = "  "
 	if index == selected {
+		draw_selection_glow(163, i32(y) - 3, 320, 24, pulse)
 		color = rl.GOLD
 		prefix = "> "
 	}
@@ -227,33 +268,71 @@ draw_menu_panel :: proc(title: cstring, height: i32 = 310) {
 	rl.DrawText(title, (WINDOW_WIDTH - title_width) / 2, panel_y + 14, 24, rl.GOLD)
 }
 
+// main_menu_item_gap adds breathing room between the primary, secondary, and
+// quit action groups so the list reads with clear hierarchy instead of one
+// flat block.
+main_menu_item_gap :: proc(item_index: int) -> i32 {
+	gap: i32 = 0
+	if item_index > 1 do gap += 8
+	if item_index > 4 do gap += 8
+	return gap
+}
+
+// draw_main_menu_ambience adds a handful of slow, story-effect-style twinkles
+// over the quiet sky area of the title art so the menu feels alive even
+// before the player touches a control.
+draw_main_menu_ambience :: proc(game: ^Game) {
+	points := [5]Story_Point{{40, 26}, {130, 54}, {238, 22}, {74, 96}, {305, 68}}
+	for point, point_index in points {
+		pulse := story_effect_pulse(game.ui_clock, point_index * 6, 26, game.settings.reduced_flashes)
+		draw_story_glint(point, 2, rl.SKYBLUE, pulse, 1, game.settings.reduced_flashes)
+	}
+}
+
 // draw_main_menu_page preserves the title scene by keeping navigation in a
-// compact command card on the quiet right side of the original artwork.
+// compact command card on the quiet right side of the original artwork. A
+// soft vignette replaces the old flat panel so the art stays the focus, and
+// the card eases in when the menu is entered.
 draw_main_menu_page :: proc(game: ^Game) {
 	panel_x: i32 = 358
-	panel_y: i32 = 112
+	panel_y: i32 = 96
 	panel_width: i32 = 258
-	panel_height: i32 = 220
+	panel_height: i32 = 232
+
+	ease := clamp(f32(game.menu.page_elapsed_seconds) / 0.28, 0, 1)
+	ease = ease * ease * (3 - 2 * ease)
+	panel_x += i32((1 - ease) * 22)
+	pulse := ui_pulse(game.ui_clock, 1.6)
+
+	draw_main_menu_ambience(game)
 
 	// The source art contains its legacy "Press any key" prompt. A dedicated
 	// footer replaces it with current keyboard/controller guidance.
-	rl.DrawRectangle(0, 334, WINDOW_WIDTH, 66, rl.Fade(rl.BLACK, 0.88))
-	rl.DrawRectangle(panel_x + 5, panel_y + 6, panel_width, panel_height, rl.Fade(rl.BLACK, 0.62))
-	rl.DrawRectangle(panel_x, panel_y, panel_width, panel_height, rl.Fade(rl.BLACK, 0.78))
-	rl.DrawRectangle(panel_x, panel_y, 4, panel_height, rl.GOLD)
-	rl.DrawRectangleLines(panel_x, panel_y, panel_width, panel_height, rl.Fade(rl.GOLD, 0.72))
-	rl.DrawText("MAIN MENU", panel_x + 18, panel_y + 11, 17, rl.GOLD)
-	rl.DrawLine(panel_x + 18, panel_y + 35, panel_x + panel_width - 16, panel_y + 35, rl.Fade(rl.GOLD, 0.5))
+	rl.DrawRectangle(0, 334, WINDOW_WIDTH, 66, rl.Fade(rl.BLACK, 0.88 * ease))
+
+	// Soft drop shadow, then a top/bottom vignette instead of a flat panel so
+	// the artwork stays visible at the card's edges while the center, where
+	// the text lives, stays readable.
+	rl.DrawRectangle(panel_x + 5, panel_y + 6, panel_width, panel_height, rl.Fade(rl.BLACK, 0.45 * ease))
+	half_height := panel_height / 2
+	rl.DrawRectangleGradientV(panel_x, panel_y, panel_width, half_height, rl.Fade(rl.BLACK, 0.40 * ease), rl.Fade(rl.BLACK, 0.82 * ease))
+	rl.DrawRectangleGradientV(panel_x, panel_y + half_height, panel_width, panel_height - half_height, rl.Fade(rl.BLACK, 0.82 * ease), rl.Fade(rl.BLACK, 0.40 * ease))
+	rl.DrawRectangleLines(panel_x - 3, panel_y - 3, panel_width + 6, panel_height + 6, rl.Fade(rl.GOLD, 0.22 * ease))
+	rl.DrawRectangle(panel_x, panel_y, 4, panel_height, rl.Fade(rl.GOLD, ease))
+	rl.DrawRectangleLines(panel_x, panel_y, panel_width, panel_height, rl.Fade(rl.GOLD, 0.72 * ease))
+
+	rl.DrawText("MAIN MENU", panel_x + 19, panel_y + 12, 17, rl.Fade(rl.BLACK, 0.6 * ease))
+	rl.DrawText("MAIN MENU", panel_x + 18, panel_y + 11, 17, rl.Fade(rl.GOLD, ease))
+	rl.DrawLine(panel_x + 18, panel_y + 35, panel_x + panel_width - 16, panel_y + 35, rl.Fade(rl.GOLD, 0.5 * ease))
 
 	for item_index in 0 ..< len(Main_Menu_Item) {
-		y := panel_y + 44 + i32(item_index) * 24
-		color := rl.LIGHTGRAY
+		y := panel_y + 44 + i32(item_index) * 24 + main_menu_item_gap(item_index)
+		color := rl.Fade(rl.LIGHTGRAY, ease)
 		label_x := panel_x + 29
 		if game.menu.selected == item_index {
-			rl.DrawRectangle(panel_x + 10, y - 3, panel_width - 20, 22, rl.Fade(rl.GOLD, 0.18))
-			rl.DrawRectangle(panel_x + 10, y - 3, 3, 22, rl.GOLD)
-			rl.DrawText(">", panel_x + 17, y, 16, rl.GOLD)
-			color = rl.GOLD
+			draw_selection_glow(panel_x + 10, y - 3, panel_width - 20, 22, pulse)
+			rl.DrawText(">", panel_x + 17, y, 16, rl.Fade(rl.GOLD, (0.85 + pulse * 0.15) * ease))
+			color = rl.Fade(rl.GOLD, ease)
 		}
 		rl.DrawText(main_menu_item_label(Main_Menu_Item(item_index)), label_x, y, 16, color)
 	}
@@ -296,15 +375,17 @@ draw_device_footer :: proc(game: ^Game, text_y: i32 = 372) {
 draw_settings_menu :: proc(game: ^Game) {
 	draw_menu_panel("SETTINGS", 334)
 	settings := &game.settings
+	pulse := ui_pulse(game.ui_clock, 1.6)
 	for item_index in 0 ..< len(Settings_Menu_Item) {
 		item := Settings_Menu_Item(item_index)
 		color := rl.LIGHTGRAY
 		prefix: cstring = "  "
+		y := i32(88 + item_index * 22)
 		if game.menu.selected == item_index {
+			draw_selection_glow(163, y - 3, 400, 22, pulse)
 			color = rl.GOLD
 			prefix = "> "
 		}
-		y := i32(88 + item_index * 22)
 		rl.DrawText(prefix, 163, y, 16, color)
 		switch item {
 		case .Music:              draw_ui_format(187, y, 16, color, "MUSIC                 %3d%%", settings.music_volume)
@@ -331,15 +412,17 @@ draw_bindings_menu :: proc(game: ^Game) {
 	title: cstring = "KEYBOARD BINDINGS"
 	if game.menu.binding_device == .Controller do title = "CONTROLLER BINDINGS"
 	draw_menu_panel(title, 328)
+	pulse := ui_pulse(game.ui_clock, 1.6)
 	for action_index in 0 ..< len(Input_Action) {
 		action := Input_Action(action_index)
 		color := rl.LIGHTGRAY
 		prefix: cstring = "  "
+		y := i32(92 + action_index * 29)
 		if game.menu.selected == action_index {
+			draw_selection_glow(167, y - 4, 400, 26, pulse)
 			color = rl.GOLD
 			prefix = "> "
 		}
-		y := i32(92 + action_index * 29)
 		rl.DrawText(prefix, 167, y, 16, color)
 		if game.menu.binding_device == .Keyboard {
 			draw_ui_format(191, y, 16, color, "%-14s %s", input_action_label(action), keyboard_key_label(game.settings.bindings[action]))
@@ -347,7 +430,7 @@ draw_bindings_menu :: proc(game: ^Game) {
 			draw_ui_format(191, y, 16, color, "%-14s %s", input_action_label(action), controller_action_label(action, game.settings.controller_bindings))
 		}
 	}
-	draw_menu_row("BACK", len(Input_Action), game.menu.selected, 92 + len(Input_Action) * 29)
+	draw_menu_row("BACK", len(Input_Action), game.menu.selected, 92 + len(Input_Action) * 29, pulse)
 	if game.menu.binding_waiting {
 		rl.DrawRectangle(153, 164, 334, 70, rl.BLACK)
 		rl.DrawRectangleLines(153, 164, 334, 70, rl.GOLD)
@@ -370,60 +453,19 @@ draw_how_to_play :: proc(game: ^Game) {
 	}
 }
 
-draw_level_select :: proc(game: ^Game) {
-	draw_menu_panel("PRACTICE / LEVEL SELECT", 320)
-	for level_index in 0 ..< LEVEL_COUNT {
-		color := rl.LIGHTGRAY
-		prefix: cstring = "  "
-		if game.menu.selected == level_index {
-			color = rl.GOLD
-			prefix = "> "
-		}
-		y := i32(88 + level_index * 23)
-		rl.DrawText(prefix, 112, y, 15, color)
-		metadata := level_metadata(level_index)
-		draw_ui_format(136, y, 15, color, "%2d  %-12s  PAR %3.0fs", level_index + 1, metadata.name, metadata.par_seconds)
-	}
-	draw_menu_row("BACK", LEVEL_COUNT, game.menu.selected, 88 + LEVEL_COUNT * 23)
-	draw_ui_format(205, 346, 13, rl.GOLD, "%s PRACTICE", difficulty_label(game.settings.difficulty))
-	draw_device_footer(game, 378)
-}
-
-draw_story_prompt :: proc(game: ^Game) {
-	buffer: [160]byte
-	prompt: cstring
-	if game.last_input_device == .Controller {
-		prompt = format_cstring(
-			buffer[:],
-			"AUTO NEXT     %s: SKIP SLIDE     B: SKIP STORY",
-			action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
-		)
-	} else {
-		prompt = format_cstring(
-			buffer[:],
-			"AUTO NEXT     %s / %s: SKIP SLIDE     ESC: SKIP STORY",
-			action_prompt(.Bomb, .Keyboard, game.settings.bindings),
-			action_prompt(.Confirm, .Keyboard, game.settings.bindings),
-		)
-	}
-	width := rl.MeasureText(prompt, 14)
-	rl.DrawRectangle((WINDOW_WIDTH - width) / 2 - 8, 370, width + 16, 22, rl.Fade(rl.BLACK, 0.82))
-	rl.DrawText(prompt, (WINDOW_WIDTH - width) / 2, 373, 14, rl.GOLD)
-}
-
 draw_main_menu :: proc(game: ^Game) {
 	switch game.menu.page {
 	case .Settings:    draw_settings_menu(game)
 	case .Bindings:    draw_bindings_menu(game)
 	case .How_To_Play: draw_how_to_play(game)
-	case .Level_Select: draw_level_select(game)
 	case .Main:
 		draw_main_menu_page(game)
 	case .First_Run:
 		draw_menu_panel("CHOOSE YOUR START", 254)
 		rl.DrawText("LEARN MOVEMENT, BOMBS, PICKUPS AND SAFETY.", 161, 101, 14, rl.WHITE)
+		pulse := ui_pulse(game.ui_clock, 1.6)
 		for item_index in 0 ..< len(First_Run_Item) {
-			draw_menu_row(first_run_item_label(First_Run_Item(item_index)), item_index, game.menu.selected, 145 + item_index * 42)
+			draw_menu_row(first_run_item_label(First_Run_Item(item_index)), item_index, game.menu.selected, 145 + item_index * 42, pulse)
 		}
 		draw_ui_format(172, 292, 14, rl.GOLD, "RULES: %s", difficulty_label(game.settings.difficulty))
 		draw_device_footer(game)
@@ -454,9 +496,7 @@ draw_level_result :: proc(game: ^Game) {
 		draw_ui_format(72, 294, 13, rl.RED, "SCORE ADJUSTMENT                    %+d", result.score_adjustment)
 	}
 	draw_ui_format(72, 314, 16, rl.GOLD, "TOTAL +%d     SCORE %08d     MEDAL %s", result.score_delta, result.final_score, medal_label(result.medal))
-	footer: cstring = "CONTINUE"
-	if game.gameplay.mode == .Practice do footer = "RETURN TO MENU"
-	draw_ui_format(72, 348, 13, rl.LIGHTGRAY, "%s: %s", action_prompt(.Confirm, game.last_input_device, game.settings.bindings, &game.settings.controller_bindings), footer)
+	draw_ui_format(72, 348, 13, rl.LIGHTGRAY, "%s: CONTINUE", action_prompt(.Confirm, game.last_input_device, game.settings.bindings, &game.settings.controller_bindings))
 }
 
 draw_tutorial_prompt :: proc(game: ^Game) {
@@ -499,12 +539,23 @@ draw_tutorial_prompt :: proc(game: ^Game) {
 	rl.DrawText(footer, (WINDOW_WIDTH - footer_width) / 2, 337, 13, rl.GOLD)
 }
 
+// draw_game_over_ambience adds a few slow smoke wisps over the cave opening
+// in the game-over artwork for a dusty, gloomy mood, reusing the same story
+// effect used for intro panels.
+draw_game_over_ambience :: proc(game: ^Game) {
+	origin := Story_Point{330, 90}
+	for particle_index in 0 ..< story_effect_count(5, game.settings.reduced_flashes) {
+		draw_story_smoke(origin, particle_index, game.ui_clock, 1, game.settings.reduced_flashes)
+	}
+}
+
 // draw_gameplay renders terminal screens directly; otherwise it draws the
 // active level when available and overlays its lifecycle message.
 draw_gameplay :: proc(game: ^Game, assets: ^Assets) {
 	gameplay := &game.gameplay
 	if gameplay.state == .Game_Over {
-		rl.DrawTexture(assets.screens.game_over, 0, 0, rl.WHITE)
+		draw_ken_burns_texture(assets.screens.game_over, ui_pulse(game.ui_clock, 16) * 0.03, false, rl.WHITE)
+		draw_game_over_ambience(game)
 		if game.last_input_device == .Controller {
 			draw_gameplay_message_format(
 				"%s: NEW RUN     %s: MAIN MENU",
@@ -521,7 +572,7 @@ draw_gameplay :: proc(game: ^Game, assets: ^Assets) {
 		return
 	}
 	if gameplay.state == .Game_Won {
-		rl.DrawTexture(assets.screens.you_won, 0, 0, rl.WHITE)
+		draw_ken_burns_texture(assets.screens.you_won, ui_pulse(game.ui_clock, 16) * 0.03, true, rl.WHITE)
 		if game.last_input_device == .Controller {
 			draw_gameplay_message_format(
 				"%s: MAIN MENU",

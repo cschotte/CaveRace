@@ -87,9 +87,9 @@ audio cue, then enters the story automatically. Each panel advances automaticall
 when its music finishes. Space/A skips the current panel, while Escape/B skips
 the complete story and opens the stable, selectable main menu. Start Game offers a
 recommended tutorial on first launch. Tutorial is
-always replayable from the menu, while Practice/Level Select, How to
-Play, Settings, Replay Story, and Quit remain directly accessible. How to Play
-shows the supplied full-screen Controls artwork with a device-aware Back hint.
+always replayable from the menu, while How to Play, Settings, Replay Story,
+and Quit remain directly accessible. How to Play shows the supplied
+full-screen Controls artwork with a device-aware Back hint.
 
 Each original story illustration also receives a restrained animated accent:
 space and treasure twinkles, alien eye glow, fuse sparks, torch movement,
@@ -187,8 +187,7 @@ Every cave completion displays all point sources, active bonuses, elapsed/par
 time, treasure, hits, damage, deaths, final score, and medal. Bronze requires a
 clear, Silver adds either all treasure or par, and Gold requires both in the
 same clear. Par times are metadata, never access gates. Campaign completion and
-failure do not create or save high scores, times, or medals. Every cave is
-available in Practice, where retries are effectively unlimited.
+failure do not create or save high scores, times, or medals.
 
 Committed events also produce bounded presentation feedback: at most 64 tiny
 particles and eight score popups, a maximum two-pixel optional shake, short

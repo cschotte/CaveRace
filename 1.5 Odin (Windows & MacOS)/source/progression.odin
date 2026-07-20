@@ -2,7 +2,6 @@ package caverace
 
 Run_Mode :: enum {
 	Campaign,
-	Practice,
 	Tutorial,
 }
 
