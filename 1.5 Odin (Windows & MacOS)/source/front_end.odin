@@ -89,18 +89,26 @@ advance_front_end_transition :: proc(
 	}
 }
 
-// advance_intro advances each story panel once and reports when the final
-// panel has finished its display interval.
-advance_intro :: proc(front_end: ^Front_End_State, frame_seconds: f64) -> bool {
+// advance_intro advances a story panel when its real music stream finishes.
+// The exact packaged duration remains a fallback for silent/no-audio startup
+// and keeps the platform-independent story flow deterministic in tests.
+advance_intro :: proc(
+	front_end: ^Front_End_State,
+	frame_seconds: f64,
+	music_finished := false,
+	music_controls_timing := false,
+) -> bool {
 	if front_end.transition_active {
 		advance_front_end_transition(front_end, frame_seconds)
 		return false
 	}
 	front_end.elapsed_seconds += clamp(frame_seconds, 0, MAX_FRAME_DELTA_SECONDS)
 	image_seconds := intro_image_seconds(front_end.image_index)
-	if front_end.elapsed_seconds < image_seconds do return false
+	if !music_finished {
+		if music_controls_timing || front_end.elapsed_seconds < image_seconds do return false
+	}
 
-	front_end.elapsed_seconds -= image_seconds
+	front_end.elapsed_seconds = 0
 	if front_end.image_index < INTRO_LAST_IMAGE {
 		begin_front_end_transition(front_end, front_end.image_index + 1)
 		return false

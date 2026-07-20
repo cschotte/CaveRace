@@ -145,7 +145,12 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			show_main_menu(game)
 		} else if input.space_pressed || input.confirm {
 			if skip_intro_image(&game.front_end) do show_main_menu(game)
-		} else if advance_intro(&game.front_end, frame_seconds) {
+		} else if advance_intro(
+			&game.front_end,
+			frame_seconds,
+			input.intro_music_finished,
+			input.intro_music_controls_timing,
+		) {
 			show_main_menu(game)
 		}
 	case .Main_Menu:

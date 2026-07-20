@@ -9,6 +9,7 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 	switch game.screen {
 	case .Intro:
 		draw_front_end(game.front_end, &assets.screens)
+		draw_story_effects(game.front_end, game.settings.reduced_flashes)
 		draw_story_prompt(game)
 	case .Main_Menu:
 		background := assets.screens.front_end[MAIN_MENU_FIRST_IMAGE]
@@ -412,7 +413,7 @@ draw_story_prompt :: proc(game: ^Game) {
 	if game.last_input_device == .Controller {
 		formatted := fmt.bprintf(
 			buffer[:len(buffer) - 1],
-			"%s: NEXT     B: SKIP STORY",
+			"AUTO NEXT     %s: SKIP SLIDE     B: SKIP STORY",
 			action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
 		)
 		buffer[len(formatted)] = 0
@@ -420,7 +421,7 @@ draw_story_prompt :: proc(game: ^Game) {
 	} else {
 		formatted := fmt.bprintf(
 			buffer[:len(buffer) - 1],
-			"%s / %s: NEXT     ESC: SKIP STORY",
+			"AUTO NEXT     %s / %s: SKIP SLIDE     ESC: SKIP STORY",
 			action_prompt(.Bomb, .Keyboard, game.settings.bindings),
 			action_prompt(.Confirm, .Keyboard, game.settings.bindings),
 		)

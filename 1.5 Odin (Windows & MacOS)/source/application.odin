@@ -104,6 +104,8 @@ run_application :: proc(options: Launch_Options) -> bool {
 			frame_seconds,
 			rl.IsWindowFocused(),
 		)
+		input.intro_music_controls_timing = app.audio_ready
+		input.intro_music_finished = intro_music_stream_finished(&app)
 		previous_input_device := app.game.last_input_device
 		update_result := update_application(&app, input, frame_seconds)
 		if app.game.last_input_device != previous_input_device {
@@ -214,6 +216,19 @@ music_gain_for_game :: proc(game: ^Game) -> f32 {
 music_crossfade_gains :: proc(elapsed_seconds: f64) -> (incoming, outgoing: f32) {
 	progress := f32(clamp(elapsed_seconds / MUSIC_CROSSFADE_SECONDS, 0, 1))
 	return progress, 1 - progress
+}
+
+// intro_music_stream_finished reports a natural end only after the expected
+// finite cue has actually been started. This prevents the first frame, cue
+// changes, and silent startup from being mistaken for completed playback.
+intro_music_stream_finished :: proc(app: ^Application) -> bool {
+	if !app.audio_ready || app.game.screen != .Intro ||
+	   app.game.front_end.transition_active {
+		return false
+	}
+	active, active_ok := app.active_music.?
+	if !active_ok || active != music_cue_for_game(&app.game) do return false
+	return !rl.IsMusicStreamPlaying(app.assets.music[active])
 }
 
 // update_game_music switches tracks only when the requested cue changes and

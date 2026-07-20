@@ -115,6 +115,59 @@ completed_intro_routes_to_main_menu_test :: proc(t: ^testing.T) {
 }
 
 @(test)
+finished_music_advances_without_user_and_manual_skips_remain_available_test :: proc(t: ^testing.T) {
+	game: Game
+	init_game(&game)
+
+	update_game(&game, Game_Input {intro_music_finished = true}, 0)
+	testing.expect_value(t, game.screen, App_Screen.Intro)
+	testing.expect_value(t, game.front_end.image_index, INTRO_FIRST_IMAGE + 1)
+
+	// Confirm skips the next individual panel even though its music is active.
+	update_game(&game, Game_Input {confirm = true}, 0)
+	testing.expect_value(t, game.front_end.image_index, INTRO_FIRST_IMAGE + 2)
+
+	// Back remains the complete-story skip from any panel.
+	update_game(&game, Game_Input {back = true}, 0)
+	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
+	testing.expect_value(t, game.front_end.image_index, MAIN_MENU_FIRST_IMAGE)
+}
+
+@(test)
+active_music_not_wall_clock_controls_automatic_advance_test :: proc(t: ^testing.T) {
+	front_end: Front_End_State
+	begin_intro(&front_end)
+	for _ in 0 ..< 300 {
+		advance_intro(&front_end, MAX_FRAME_DELTA_SECONDS, false, true)
+	}
+	testing.expect_value(t, front_end.image_index, INTRO_FIRST_IMAGE)
+	testing.expect(t, !front_end.transition_active)
+
+	completed := advance_intro(&front_end, 0, true, true)
+	testing.expect(t, !completed)
+	testing.expect_value(t, front_end.image_index, INTRO_FIRST_IMAGE + 1)
+	testing.expect(t, front_end.transition_active)
+}
+
+@(test)
+every_story_panel_has_a_distinct_bounded_effect_profile_test :: proc(t: ^testing.T) {
+	for image_index in INTRO_FIRST_IMAGE ..= INTRO_LAST_IMAGE {
+		testing.expect_value(
+			t,
+			int(story_effect_kind(image_index)),
+			image_index - INTRO_FIRST_IMAGE,
+		)
+	}
+	testing.expect_value(t, story_effect_count(12, false), 12)
+	testing.expect_value(t, story_effect_count(12, true), 6)
+	for step in 0 ..< 100 {
+		pulse := story_effect_pulse(f64(step) / 10, step, 24, false)
+		testing.expect(t, pulse >= 0 && pulse <= 1)
+		testing.expect_value(t, pulse, story_effect_pulse(f64(step) / 10, step, 24, false))
+	}
+}
+
+@(test)
 music_cues_follow_intro_menu_level_and_outcome_state_test :: proc(t: ^testing.T) {
 	game: Game
 	init_game(&game)
