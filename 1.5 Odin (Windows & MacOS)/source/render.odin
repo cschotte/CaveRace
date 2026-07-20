@@ -268,6 +268,31 @@ draw_menu_panel :: proc(title: cstring, height: i32 = 310) {
 	rl.DrawText(title, (WINDOW_WIDTH - title_width) / 2, panel_y + 14, 24, rl.GOLD)
 }
 
+// MENU_PANEL_CONTENT_TOP sits just below draw_menu_panel's fixed title band
+// (which ends at y=101), so row lists never draw under the panel title.
+MENU_PANEL_CONTENT_TOP :: 106
+
+// MENU_PANEL_VALUE_RIGHT is the shared right edge rows align their value to.
+MENU_PANEL_VALUE_RIGHT :: 540
+
+// draw_menu_value_row draws a label flush left and its value right-aligned to
+// a shared column, using raylib's proportional default font. Formatting the
+// two independently keeps values lined up regardless of label length, which
+// embedding literal spaces in one string cannot guarantee.
+draw_menu_value_row :: proc(
+	label_x, y, size: i32,
+	color: rl.Color,
+	label: cstring,
+	value_format: string,
+	args: ..any,
+) {
+	rl.DrawText(label, label_x, y, size, color)
+	value_buffer: [32]byte
+	value := format_cstring(value_buffer[:], value_format, ..args)
+	value_width := rl.MeasureText(value, size)
+	rl.DrawText(value, MENU_PANEL_VALUE_RIGHT - value_width, y, size, color)
+}
+
 // main_menu_item_gap adds breathing room between the primary, secondary, and
 // quit action groups so the list reads with clear hierarchy instead of one
 // flat block.
@@ -289,15 +314,27 @@ draw_main_menu_ambience :: proc(game: ^Game) {
 	}
 }
 
+// main_menu_content_height returns the exact space the action list needs, so
+// the card can be sized to fit its content instead of leaving empty space
+// where the title used to sit.
+main_menu_content_height :: proc() -> i32 {
+	last_index := len(Main_Menu_Item) - 1
+	last_y := MAIN_MENU_LIST_TOP + i32(last_index) * 24 + main_menu_item_gap(last_index)
+	return last_y + 22 + MAIN_MENU_LIST_TOP
+}
+
+MAIN_MENU_LIST_TOP :: 16
+
 // draw_main_menu_page preserves the title scene by keeping navigation in a
 // compact command card on the quiet right side of the original artwork. A
 // soft vignette replaces the old flat panel so the art stays the focus, and
-// the card eases in when the menu is entered.
+// the card eases in when the menu is entered. The card has no title of its
+// own and is sized to fit exactly around the action list.
 draw_main_menu_page :: proc(game: ^Game) {
-	panel_x: i32 = 358
-	panel_y: i32 = 96
-	panel_width: i32 = 258
-	panel_height: i32 = 232
+	panel_x: i32 = 388
+	panel_width: i32 = 200
+	panel_height := main_menu_content_height()
+	panel_y := (WINDOW_HEIGHT - panel_height) / 2 + 50
 
 	ease := clamp(f32(game.menu.page_elapsed_seconds) / 0.28, 0, 1)
 	ease = ease * ease * (3 - 2 * ease)
@@ -305,10 +342,6 @@ draw_main_menu_page :: proc(game: ^Game) {
 	pulse := ui_pulse(game.ui_clock, 1.6)
 
 	draw_main_menu_ambience(game)
-
-	// The source art contains its legacy "Press any key" prompt. A dedicated
-	// footer replaces it with current keyboard/controller guidance.
-	rl.DrawRectangle(0, 334, WINDOW_WIDTH, 66, rl.Fade(rl.BLACK, 0.88 * ease))
 
 	// Soft drop shadow, then a top/bottom vignette instead of a flat panel so
 	// the artwork stays visible at the card's edges while the center, where
@@ -321,12 +354,8 @@ draw_main_menu_page :: proc(game: ^Game) {
 	rl.DrawRectangle(panel_x, panel_y, 4, panel_height, rl.Fade(rl.GOLD, ease))
 	rl.DrawRectangleLines(panel_x, panel_y, panel_width, panel_height, rl.Fade(rl.GOLD, 0.72 * ease))
 
-	rl.DrawText("MAIN MENU", panel_x + 19, panel_y + 12, 17, rl.Fade(rl.BLACK, 0.6 * ease))
-	rl.DrawText("MAIN MENU", panel_x + 18, panel_y + 11, 17, rl.Fade(rl.GOLD, ease))
-	rl.DrawLine(panel_x + 18, panel_y + 35, panel_x + panel_width - 16, panel_y + 35, rl.Fade(rl.GOLD, 0.5 * ease))
-
 	for item_index in 0 ..< len(Main_Menu_Item) {
-		y := panel_y + 44 + i32(item_index) * 24 + main_menu_item_gap(item_index)
+		y := panel_y + MAIN_MENU_LIST_TOP + i32(item_index) * 24 + main_menu_item_gap(item_index)
 		color := rl.Fade(rl.LIGHTGRAY, ease)
 		label_x := panel_x + 29
 		if game.menu.selected == item_index {
@@ -336,16 +365,6 @@ draw_main_menu_page :: proc(game: ^Game) {
 		}
 		rl.DrawText(main_menu_item_label(Main_Menu_Item(item_index)), label_x, y, 16, color)
 	}
-
-	draw_ui_format(20, 348, 14, rl.GOLD, "MODE  %s", difficulty_label(game.settings.difficulty))
-	if game.last_input_device == .Controller {
-		draw_ui_format(282, 348, 14, rl.LIGHTGRAY, "LEFT STICK / D-PAD    %s SELECT", action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings))
-		rl.DrawText("B  BACK", 541, 376, 13, rl.GRAY)
-	} else {
-		draw_ui_format(280, 348, 14, rl.LIGHTGRAY, "ARROWS / WASD    %s SELECT", action_prompt(.Confirm, .Keyboard, game.settings.bindings))
-		rl.DrawText("ESC  BACK", 532, 376, 13, rl.GRAY)
-	}
-	rl.DrawText("N A V A T R O N   //   C A V E R A C E", 20, 376, 12, rl.DARKGRAY)
 }
 
 draw_device_footer :: proc(game: ^Game, text_y: i32 = 372) {
@@ -380,7 +399,7 @@ draw_settings_menu :: proc(game: ^Game) {
 		item := Settings_Menu_Item(item_index)
 		color := rl.LIGHTGRAY
 		prefix: cstring = "  "
-		y := i32(88 + item_index * 22)
+		y := i32(MENU_PANEL_CONTENT_TOP + item_index * 22)
 		if game.menu.selected == item_index {
 			draw_selection_glow(163, y - 3, 400, 22, pulse)
 			color = rl.GOLD
@@ -388,19 +407,19 @@ draw_settings_menu :: proc(game: ^Game) {
 		}
 		rl.DrawText(prefix, 163, y, 16, color)
 		switch item {
-		case .Music:              draw_ui_format(187, y, 16, color, "MUSIC                 %3d%%", settings.music_volume)
-		case .Sfx:                draw_ui_format(187, y, 16, color, "SFX                   %3d%%", settings.sfx_volume)
+		case .Music:             draw_menu_value_row(187, y, 16, color, "MUSIC", "%d%%", settings.music_volume)
+		case .Sfx:               draw_menu_value_row(187, y, 16, color, "SFX", "%d%%", settings.sfx_volume)
 		case .Display_Mode:
 			mode: cstring = "WINDOWED"
 			if settings.display_mode == .Borderless do mode = "BORDERLESS"
-			draw_ui_format(187, y, 16, color, "DISPLAY        %s", mode)
-		case .Window_Scale:       draw_ui_format(187, y, 16, color, "WINDOW SCALE            %dx", settings.window_scale)
-		case .Reduced_Flashes:    draw_ui_format(187, y, 16, color, "REDUCED FLASHES        %s", "ON" if settings.reduced_flashes else "OFF")
-		case .Screen_Shake:       draw_ui_format(187, y, 16, color, "SCREEN SHAKE          %3d%%", settings.screen_shake)
-		case .Controller_Rumble:  draw_ui_format(187, y, 16, color, "CONTROLLER RUMBLE      %s", "ON" if settings.controller_rumble else "OFF")
-		case .High_Contrast:      draw_ui_format(187, y, 16, color, "DANGER HATCHING        %s", "ON" if settings.high_contrast_preview else "OFF")
-		case .Pause_On_Focus_Loss: draw_ui_format(187, y, 16, color, "FOCUS PAUSE             %s", "ON" if settings.pause_on_focus_loss else "OFF")
-		case .Difficulty:         draw_ui_format(187, y, 16, color, "DIFFICULTY       %s", difficulty_label(settings.difficulty))
+			draw_menu_value_row(187, y, 16, color, "DISPLAY", "%s", mode)
+		case .Window_Scale:       draw_menu_value_row(187, y, 16, color, "WINDOW SCALE", "%dx", settings.window_scale)
+		case .Reduced_Flashes:    draw_menu_value_row(187, y, 16, color, "REDUCED FLASHES", "%s", "ON" if settings.reduced_flashes else "OFF")
+		case .Screen_Shake:       draw_menu_value_row(187, y, 16, color, "SCREEN SHAKE", "%d%%", settings.screen_shake)
+		case .Controller_Rumble:  draw_menu_value_row(187, y, 16, color, "CONTROLLER RUMBLE", "%s", "ON" if settings.controller_rumble else "OFF")
+		case .High_Contrast:      draw_menu_value_row(187, y, 16, color, "DANGER HATCHING", "%s", "ON" if settings.high_contrast_preview else "OFF")
+		case .Pause_On_Focus_Loss: draw_menu_value_row(187, y, 16, color, "FOCUS PAUSE", "%s", "ON" if settings.pause_on_focus_loss else "OFF")
+		case .Difficulty:         draw_menu_value_row(187, y, 16, color, "DIFFICULTY", "%s", difficulty_label(settings.difficulty))
 		case .Bindings:           rl.DrawText("REMAP CONTROLS", 187, y, 16, color)
 		case .Back:               rl.DrawText("BACK", 187, y, 16, color)
 		}
@@ -417,7 +436,7 @@ draw_bindings_menu :: proc(game: ^Game) {
 		action := Input_Action(action_index)
 		color := rl.LIGHTGRAY
 		prefix: cstring = "  "
-		y := i32(92 + action_index * 29)
+		y := i32(MENU_PANEL_CONTENT_TOP + action_index * 29)
 		if game.menu.selected == action_index {
 			draw_selection_glow(167, y - 4, 400, 26, pulse)
 			color = rl.GOLD
@@ -425,12 +444,12 @@ draw_bindings_menu :: proc(game: ^Game) {
 		}
 		rl.DrawText(prefix, 167, y, 16, color)
 		if game.menu.binding_device == .Keyboard {
-			draw_ui_format(191, y, 16, color, "%-14s %s", input_action_label(action), keyboard_key_label(game.settings.bindings[action]))
+			draw_menu_value_row(191, y, 16, color, input_action_label(action), "%s", keyboard_key_label(game.settings.bindings[action]))
 		} else {
-			draw_ui_format(191, y, 16, color, "%-14s %s", input_action_label(action), controller_action_label(action, game.settings.controller_bindings))
+			draw_menu_value_row(191, y, 16, color, input_action_label(action), "%s", controller_action_label(action, game.settings.controller_bindings))
 		}
 	}
-	draw_menu_row("BACK", len(Input_Action), game.menu.selected, 92 + len(Input_Action) * 29, pulse)
+	draw_menu_row("BACK", len(Input_Action), game.menu.selected, MENU_PANEL_CONTENT_TOP + len(Input_Action) * 29, pulse)
 	if game.menu.binding_waiting {
 		rl.DrawRectangle(153, 164, 334, 70, rl.BLACK)
 		rl.DrawRectangleLines(153, 164, 334, 70, rl.GOLD)
@@ -462,7 +481,7 @@ draw_main_menu :: proc(game: ^Game) {
 		draw_main_menu_page(game)
 	case .First_Run:
 		draw_menu_panel("CHOOSE YOUR START", 254)
-		rl.DrawText("LEARN MOVEMENT, BOMBS, PICKUPS AND SAFETY.", 161, 101, 14, rl.WHITE)
+		rl.DrawText("LEARN MOVEMENT, BOMBS, PICKUPS AND SAFETY.", 161, MENU_PANEL_CONTENT_TOP, 14, rl.WHITE)
 		pulse := ui_pulse(game.ui_clock, 1.6)
 		for item_index in 0 ..< len(First_Run_Item) {
 			draw_menu_row(first_run_item_label(First_Run_Item(item_index)), item_index, game.menu.selected, 145 + item_index * 42, pulse)
