@@ -14,7 +14,9 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 		draw_story_effects(game.front_end, game.settings.reduced_flashes)
 		draw_story_prompt(game)
 	case .Main_Menu:
-		rl.DrawTexture(assets.screens.front_end[MAIN_MENU_FIRST_IMAGE], 0, 0, rl.WHITE)
+		background_index := MAIN_MENU_FIRST_IMAGE
+		if game.menu.page == .How_To_Play do background_index = MAIN_MENU_LAST_IMAGE
+		rl.DrawTexture(assets.screens.front_end[background_index], 0, 0, rl.WHITE)
 		draw_main_menu(game)
 	case .Tutorial:
 		draw_gameplay(game, assets)
@@ -217,11 +219,56 @@ draw_menu_row :: proc(label: cstring, index, selected, y: int) {
 draw_menu_panel :: proc(title: cstring, height: i32 = 310) {
 	panel_x: i32 = 80
 	panel_y: i32 = 58
-	rl.DrawRectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, rl.Fade(rl.BLACK, 0.34))
-	rl.DrawRectangle(panel_x, panel_y, 480, height, rl.Fade(rl.BLACK, 0.92))
+	rl.DrawRectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, rl.Fade(rl.BLACK, 0.12))
+	rl.DrawRectangle(panel_x + 5, panel_y + 6, 480, height, rl.Fade(rl.BLACK, 0.55))
+	rl.DrawRectangle(panel_x, panel_y, 480, height, rl.Fade(rl.BLACK, 0.84))
+	rl.DrawRectangle(panel_x + 1, panel_y + 1, 478, 42, rl.Fade(rl.DARKBROWN, 0.42))
 	rl.DrawRectangleLines(panel_x, panel_y, 480, height, rl.GOLD)
+	rl.DrawRectangleLines(panel_x + 3, panel_y + 3, 474, height - 6, rl.Fade(rl.GOLD, 0.28))
 	title_width := rl.MeasureText(title, 24)
 	rl.DrawText(title, (WINDOW_WIDTH - title_width) / 2, panel_y + 14, 24, rl.GOLD)
+}
+
+// draw_main_menu_page preserves the title scene by keeping navigation in a
+// compact command card on the quiet right side of the original artwork.
+draw_main_menu_page :: proc(game: ^Game) {
+	panel_x: i32 = 358
+	panel_y: i32 = 112
+	panel_width: i32 = 258
+	panel_height: i32 = 220
+
+	// The source art contains its legacy "Press any key" prompt. A dedicated
+	// footer replaces it with current keyboard/controller guidance.
+	rl.DrawRectangle(0, 334, WINDOW_WIDTH, 66, rl.Fade(rl.BLACK, 0.88))
+	rl.DrawRectangle(panel_x + 5, panel_y + 6, panel_width, panel_height, rl.Fade(rl.BLACK, 0.62))
+	rl.DrawRectangle(panel_x, panel_y, panel_width, panel_height, rl.Fade(rl.BLACK, 0.78))
+	rl.DrawRectangle(panel_x, panel_y, 4, panel_height, rl.GOLD)
+	rl.DrawRectangleLines(panel_x, panel_y, panel_width, panel_height, rl.Fade(rl.GOLD, 0.72))
+	rl.DrawText("MAIN MENU", panel_x + 18, panel_y + 11, 17, rl.GOLD)
+	rl.DrawLine(panel_x + 18, panel_y + 35, panel_x + panel_width - 16, panel_y + 35, rl.Fade(rl.GOLD, 0.5))
+
+	for item_index in 0 ..< len(Main_Menu_Item) {
+		y := panel_y + 44 + i32(item_index) * 24
+		color := rl.LIGHTGRAY
+		label_x := panel_x + 29
+		if game.menu.selected == item_index {
+			rl.DrawRectangle(panel_x + 10, y - 3, panel_width - 20, 22, rl.Fade(rl.GOLD, 0.18))
+			rl.DrawRectangle(panel_x + 10, y - 3, 3, 22, rl.GOLD)
+			rl.DrawText(">", panel_x + 17, y, 16, rl.GOLD)
+			color = rl.GOLD
+		}
+		rl.DrawText(main_menu_item_label(Main_Menu_Item(item_index)), label_x, y, 16, color)
+	}
+
+	draw_ui_format(20, 348, 14, rl.GOLD, "MODE  %s", difficulty_label(game.settings.difficulty))
+	if game.last_input_device == .Controller {
+		draw_ui_format(282, 348, 14, rl.LIGHTGRAY, "LEFT STICK / D-PAD    %s SELECT", action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings))
+		rl.DrawText("B  BACK", 541, 376, 13, rl.GRAY)
+	} else {
+		draw_ui_format(280, 348, 14, rl.LIGHTGRAY, "ARROWS / WASD    %s SELECT", action_prompt(.Confirm, .Keyboard, game.settings.bindings))
+		rl.DrawText("ESC  BACK", 532, 376, 13, rl.GRAY)
+	}
+	rl.DrawText("N A V A T R O N   //   C A V E R A C E", 20, 376, 12, rl.DARKGRAY)
 }
 
 draw_device_footer :: proc(game: ^Game, text_y: i32 = 372) {
@@ -321,36 +368,12 @@ draw_bindings_menu :: proc(game: ^Game) {
 }
 
 draw_how_to_play :: proc(game: ^Game) {
-	draw_menu_panel("HOW TO PLAY", 324)
-	if game.menu.help_page == 0 {
-		if game.last_input_device == .Controller {
-			draw_ui_format(150, 95, 16, rl.WHITE, "MOVE U/D   %s / %s + LEFT STICK", controller_action_label(.Move_Up, game.settings.controller_bindings), controller_action_label(.Move_Down, game.settings.controller_bindings))
-			draw_ui_format(150, 123, 16, rl.WHITE, "MOVE L/R   %s / %s + LEFT STICK", controller_action_label(.Move_Left, game.settings.controller_bindings), controller_action_label(.Move_Right, game.settings.controller_bindings))
-			draw_ui_format(150, 157, 17, rl.WHITE, "BOMB       %s", action_prompt(.Bomb, .Controller, game.settings.bindings, &game.settings.controller_bindings))
-			draw_ui_format(150, 189, 17, rl.WHITE, "PAUSE      %s", action_prompt(.Pause, .Controller, game.settings.bindings, &game.settings.controller_bindings))
-			draw_ui_format(150, 221, 17, rl.WHITE, "RETRY      %s", action_prompt(.Restart, .Controller, game.settings.bindings, &game.settings.controller_bindings))
-			rl.DrawText("BACK       B", 150, 253, 17, rl.WHITE)
-		} else {
-			draw_ui_format(165, 105, 16, rl.WHITE, "MOVE UP/DOWN     %s / %s", keyboard_key_label(game.settings.bindings[.Move_Up]), keyboard_key_label(game.settings.bindings[.Move_Down]))
-			draw_ui_format(165, 135, 16, rl.WHITE, "MOVE LEFT/RIGHT  %s / %s", keyboard_key_label(game.settings.bindings[.Move_Left]), keyboard_key_label(game.settings.bindings[.Move_Right]))
-			draw_ui_format(165, 165, 16, rl.WHITE, "BOMB             %s", action_prompt(.Bomb, .Keyboard, game.settings.bindings))
-			draw_ui_format(165, 195, 16, rl.WHITE, "PAUSE            %s", action_prompt(.Pause, .Keyboard, game.settings.bindings))
-			draw_ui_format(165, 225, 16, rl.WHITE, "RETRY            %s", action_prompt(.Restart, .Keyboard, game.settings.bindings))
-			rl.DrawText("ARROW KEYS ALSO MOVE. ESC GOES BACK.", 165, 262, 14, rl.GOLD)
-		}
-		rl.DrawText("PAGE 1/2", 284, 326, 14, rl.LIGHTGRAY)
+	rl.DrawRectangle(0, 374, WINDOW_WIDTH, 26, rl.Fade(rl.BLACK, 0.86))
+	if game.last_input_device == .Controller {
+		rl.DrawText("B  BACK", 292, 381, 13, rl.GOLD)
 	} else {
-		rl.DrawText("DRIVE OUT EVERY ALIEN TO CLEAR A CAVE.", 130, 92, 16, rl.WHITE)
-		rl.DrawText("TREASURE IS OPTIONAL AND ADDS SCORE.", 130, 116, 16, rl.WHITE)
-		rl.DrawText("HUD: ALIENS / TREASURE / LIFE / ENERGY / BOMBS.", 130, 147, 15, rl.GOLD)
-		rl.DrawText("POWER EXTENDS BLASTS; BOMB ITEMS ADD CAPACITY.", 130, 172, 15, rl.WHITE)
-		rl.DrawText("ENERGY AND LIFE ITEMS RESTORE SURVIVAL.", 130, 197, 15, rl.WHITE)
-		rl.DrawText("BOMBS CROSS OBSTACLES. LEAVE THE MARKED BLAST.", 130, 228, 15, rl.WHITE)
-		rl.DrawText("STANDARD IS LETHAL. ASSISTED: -1 CONTACT,", 130, 253, 15, rl.WHITE)
-		rl.DrawText("-4 BLAST, LONGER WARNING; SAME CONTENT.", 130, 278, 15, rl.WHITE)
-		rl.DrawText("PAGE 2/2", 284, 326, 14, rl.LIGHTGRAY)
+		rl.DrawText("ESC  BACK", 283, 381, 13, rl.GOLD)
 	}
-	draw_device_footer(game, 374)
 }
 
 draw_level_select :: proc(game: ^Game) {
@@ -405,12 +428,7 @@ draw_main_menu :: proc(game: ^Game) {
 	case .How_To_Play: draw_how_to_play(game)
 	case .Level_Select: draw_level_select(game)
 	case .Main:
-		draw_menu_panel("CAVERACE", 320)
-		for item_index in 0 ..< len(Main_Menu_Item) {
-			draw_menu_row(main_menu_item_label(Main_Menu_Item(item_index)), item_index, game.menu.selected, 82 + item_index * 31)
-		}
-		draw_ui_format(175, 337, 14, rl.GOLD, "MODE: %s", difficulty_label(game.settings.difficulty))
-		draw_device_footer(game, 378)
+		draw_main_menu_page(game)
 	case .First_Run:
 		draw_menu_panel("CHOOSE YOUR START", 254)
 		rl.DrawText("LEARN MOVEMENT, BOMBS, PICKUPS AND SAFETY.", 161, 101, 14, rl.WHITE)

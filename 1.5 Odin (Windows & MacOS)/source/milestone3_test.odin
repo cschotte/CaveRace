@@ -84,8 +84,6 @@ menu_navigation_wraps_and_explicit_confirm_routes_every_page_test :: proc(t: ^te
 	menu.selected = int(Main_Menu_Item.How_To_Play)
 	update_menu(&menu, &settings, Game_Input {confirm = true}, 0)
 	testing.expect_value(t, menu.page, Menu_Page.How_To_Play)
-	update_menu(&menu, &settings, Game_Input {confirm = true}, 0)
-	testing.expect_value(t, menu.help_page, 1)
 	update_menu(&menu, &settings, Game_Input {back = true}, 0)
 	testing.expect_value(t, menu.page, Menu_Page.Main)
 

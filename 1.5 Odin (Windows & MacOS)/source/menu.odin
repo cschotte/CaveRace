@@ -43,7 +43,6 @@ Settings_Menu_Item :: enum {
 Menu_State :: struct {
 	page:              Menu_Page,
 	selected:          int,
-	help_page:         int,
 	binding_waiting:   bool,
 	binding_action:    Input_Action,
 	binding_device:    Input_Device,
@@ -148,17 +147,7 @@ update_menu :: proc(
 	)
 
 	if menu.page == .How_To_Play {
-		if input.back {
-			open_menu_page(menu, .Main)
-		} else if input.menu_left_pressed {
-			menu.help_page = max(menu.help_page - 1, 0)
-		} else if input.menu_right_pressed || input.confirm {
-			if menu.help_page < 1 {
-				menu.help_page += 1
-			} else {
-				open_menu_page(menu, .Main)
-			}
-		}
+		if input.back || input.confirm do open_menu_page(menu, .Main)
 		return result
 	}
 	if menu.page == .Level_Select {
@@ -254,7 +243,6 @@ update_menu :: proc(
 		case .Tutorial:     result.start_tutorial = true
 		case .How_To_Play:
 			open_menu_page(menu, .How_To_Play)
-			menu.help_page = 0
 		case .Settings:     open_menu_page(menu, .Settings)
 		case .Replay_Story: result.replay_story = true
 		case .Quit:         result.quit_requested = true
