@@ -1,23 +1,31 @@
 package caverace
 
+import "core:fmt"
 import rl "vendor:raylib"
 
 // draw_game dispatches the active screen renderer, then draws shared feedback
 // overlays at the end of every render frame.
 draw_game :: proc(game: ^Game, assets: ^Assets) {
 	switch game.screen {
-	case .Intro, .Main_Menu:
+	case .Intro:
 		draw_front_end(game.front_end, &assets.screens)
+		draw_story_prompt(game)
+	case .Main_Menu:
+		rl.DrawTexture(assets.screens.front_end[MAIN_MENU_FIRST_IMAGE], 0, 0, rl.WHITE)
+		draw_main_menu(game)
+	case .Tutorial:
+		draw_gameplay(game, assets)
+		draw_tutorial_prompt(game)
 	case .Playing:
-		draw_gameplay(&game.gameplay, assets)
+		draw_gameplay(game, assets)
 	}
-	if game.screen == .Playing && game.pause.open {
-		draw_game_pause(&game.pause)
+	if (game.screen == .Playing || game.screen == .Tutorial) && game.pause.open {
+		draw_game_pause(game)
 	}
 
 	draw_game_feedback(game.feedback)
 	when ODIN_DEBUG {
-		if game.screen == .Playing && game.debug_overlay_visible {
+		if (game.screen == .Playing || game.screen == .Tutorial) && game.debug_overlay_visible {
 			draw_debug_overlay(game)
 		}
 	}
@@ -27,6 +35,8 @@ pause_menu_item_label :: proc(item: Pause_Menu_Item) -> cstring {
 	switch item {
 	case .Resume:        return "RESUME"
 	case .Restart_Level: return "RESTART LEVEL"
+	case .Settings:      return "SETTINGS"
+	case .Controls:      return "CONTROLS"
 	case .Main_Menu:     return "MAIN MENU"
 	}
 	return ""
@@ -34,9 +44,18 @@ pause_menu_item_label :: proc(item: Pause_Menu_Item) -> cstring {
 
 // draw_game_pause renders the keyboard/controller pause menu and destructive
 // action confirmation without mutating gameplay.
-draw_game_pause :: proc(pause: ^Pause_State) {
+draw_game_pause :: proc(game: ^Game) {
+	pause := &game.pause
+	if pause.page == .Settings {
+		draw_settings_menu(game)
+		return
+	}
+	if pause.page == .Controls {
+		draw_bindings_menu(game)
+		return
+	}
 	panel_width: i32 = 430
-	panel_height: i32 = 250
+	panel_height: i32 = 320
 	panel_x := (WINDOW_WIDTH - panel_width) / 2
 	panel_y := (WINDOW_HEIGHT - panel_height) / 2
 
@@ -62,7 +81,25 @@ draw_game_pause :: proc(pause: ^Pause_State) {
 		}
 		prompt_width := rl.MeasureText(prompt, 18)
 		rl.DrawText(prompt, (WINDOW_WIDTH - prompt_width) / 2, panel_y + 92, 18, rl.WHITE)
-		confirm: cstring = "ENTER / A: CONFIRM    ESC / B: CANCEL"
+		confirm_buffer: [128]byte
+		confirm: cstring
+		if game.last_input_device == .Keyboard {
+			formatted := fmt.bprintf(
+				confirm_buffer[:len(confirm_buffer) - 1],
+				"%s: CONFIRM    ESC: CANCEL",
+				action_prompt(.Confirm, .Keyboard, game.settings.bindings),
+			)
+			confirm_buffer[len(formatted)] = 0
+			confirm = cstring(raw_data(confirm_buffer[:]))
+		} else {
+			formatted := fmt.bprintf(
+				confirm_buffer[:len(confirm_buffer) - 1],
+				"%s: CONFIRM    B: CANCEL",
+				action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
+			)
+			confirm_buffer[len(formatted)] = 0
+			confirm = cstring(raw_data(confirm_buffer[:]))
+		}
 		confirm_width := rl.MeasureText(confirm, 14)
 		rl.DrawText(confirm, (WINDOW_WIDTH - confirm_width) / 2, panel_y + 142, 14, rl.GOLD)
 		return
@@ -77,13 +114,37 @@ draw_game_pause :: proc(pause: ^Pause_State) {
 			color = rl.GOLD
 			prefix = "> "
 		}
-		y := panel_y + 78 + i32(item_index) * 38
+		y := panel_y + 72 + i32(item_index) * 38
 		rl.DrawText(prefix, panel_x + 100, y, 20, color)
 		rl.DrawText(label, panel_x + 130, y, 20, color)
 	}
-	footer: cstring = "ARROWS / DPAD  ENTER / A  P / START"
+	footer_buffer: [160]byte
+	footer: cstring
+	if game.last_input_device == .Keyboard {
+		formatted := fmt.bprintf(
+			footer_buffer[:len(footer_buffer) - 1],
+			"ARROWS / %s/%s/%s/%s    %s SELECT    %s PAUSE",
+			keyboard_key_label(game.settings.bindings[.Move_Up]),
+			keyboard_key_label(game.settings.bindings[.Move_Left]),
+			keyboard_key_label(game.settings.bindings[.Move_Down]),
+			keyboard_key_label(game.settings.bindings[.Move_Right]),
+			action_prompt(.Confirm, .Keyboard, game.settings.bindings),
+			action_prompt(.Pause, .Keyboard, game.settings.bindings),
+		)
+		footer_buffer[len(formatted)] = 0
+		footer = cstring(raw_data(footer_buffer[:]))
+	} else {
+		formatted := fmt.bprintf(
+			footer_buffer[:len(footer_buffer) - 1],
+			"LEFT STICK / MOVE BUTTONS    %s SELECT    %s PAUSE",
+			action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
+			action_prompt(.Pause, .Controller, game.settings.bindings, &game.settings.controller_bindings),
+		)
+		footer_buffer[len(formatted)] = 0
+		footer = cstring(raw_data(footer_buffer[:]))
+	}
 	footer_width := rl.MeasureText(footer, 13)
-	rl.DrawText(footer, (WINDOW_WIDTH - footer_width) / 2, panel_y + 214, 13, rl.LIGHTGRAY)
+	rl.DrawText(footer, (WINDOW_WIDTH - footer_width) / 2, panel_y + 286, 13, rl.LIGHTGRAY)
 }
 
 // draw_front_end displays the story, title, or controls image selected by the
@@ -94,16 +155,314 @@ draw_front_end :: proc(front_end: Front_End_State, screens: ^Screen_Assets) {
 	rl.DrawTexture(screens.front_end[image_index], 0, 0, rl.Fade(rl.WHITE, alpha))
 }
 
+main_menu_item_label :: proc(item: Main_Menu_Item) -> cstring {
+	switch item {
+	case .Start_Game:   return "START GAME"
+	case .Tutorial:     return "TUTORIAL"
+	case .How_To_Play:  return "HOW TO PLAY"
+	case .Settings:     return "SETTINGS"
+	case .Replay_Story: return "REPLAY STORY"
+	case .Quit:         return "QUIT"
+	}
+	return ""
+}
+
+first_run_item_label :: proc(item: First_Run_Item) -> cstring {
+	switch item {
+	case .Tutorial: return "TUTORIAL (RECOMMENDED)"
+	case .Campaign: return "START CAMPAIGN"
+	case .Back:     return "BACK"
+	}
+	return ""
+}
+
+draw_ui_format :: proc(x, y, size: i32, color: rl.Color, format: string, args: ..any) {
+	buffer: [256]byte
+	formatted := fmt.bprintf(buffer[:len(buffer) - 1], format, ..args)
+	buffer[len(formatted)] = 0
+	rl.DrawText(cstring(raw_data(buffer[:])), x, y, size, color)
+}
+
+draw_menu_row :: proc(label: cstring, index, selected, y: int) {
+	color := rl.LIGHTGRAY
+	prefix: cstring = "  "
+	if index == selected {
+		color = rl.GOLD
+		prefix = "> "
+	}
+	rl.DrawText(prefix, 177, i32(y), 18, color)
+	rl.DrawText(label, 203, i32(y), 18, color)
+}
+
+draw_menu_panel :: proc(title: cstring, height: i32 = 310) {
+	panel_x: i32 = 80
+	panel_y: i32 = 58
+	rl.DrawRectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, rl.Fade(rl.BLACK, 0.34))
+	rl.DrawRectangle(panel_x, panel_y, 480, height, rl.Fade(rl.BLACK, 0.92))
+	rl.DrawRectangleLines(panel_x, panel_y, 480, height, rl.GOLD)
+	title_width := rl.MeasureText(title, 24)
+	rl.DrawText(title, (WINDOW_WIDTH - title_width) / 2, panel_y + 14, 24, rl.GOLD)
+}
+
+draw_device_footer :: proc(game: ^Game, text_y: i32 = 372) {
+	buffer: [180]byte
+	footer: cstring
+	if game.last_input_device == .Keyboard {
+		formatted := fmt.bprintf(
+			buffer[:len(buffer) - 1],
+			"ARROWS / %s/%s/%s/%s    %s: SELECT    ESC: BACK",
+			keyboard_key_label(game.settings.bindings[.Move_Up]),
+			keyboard_key_label(game.settings.bindings[.Move_Left]),
+			keyboard_key_label(game.settings.bindings[.Move_Down]),
+			keyboard_key_label(game.settings.bindings[.Move_Right]),
+			action_prompt(.Confirm, .Keyboard, game.settings.bindings),
+		)
+		buffer[len(formatted)] = 0
+		footer = cstring(raw_data(buffer[:]))
+	} else {
+		formatted := fmt.bprintf(
+			buffer[:len(buffer) - 1],
+			"LEFT STICK / MOVE BUTTONS    %s: SELECT    B: BACK",
+			action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
+		)
+		buffer[len(formatted)] = 0
+		footer = cstring(raw_data(buffer[:]))
+	}
+	width := rl.MeasureText(footer, 14)
+	rl.DrawText(footer, (WINDOW_WIDTH - width) / 2, text_y, 14, rl.LIGHTGRAY)
+}
+
+draw_settings_menu :: proc(game: ^Game) {
+	draw_menu_panel("SETTINGS", 334)
+	settings := &game.settings
+	for item_index in 0 ..< len(Settings_Menu_Item) {
+		item := Settings_Menu_Item(item_index)
+		color := rl.LIGHTGRAY
+		prefix: cstring = "  "
+		if game.menu.selected == item_index {
+			color = rl.GOLD
+			prefix = "> "
+		}
+		y := i32(92 + item_index * 24)
+		rl.DrawText(prefix, 163, y, 16, color)
+		switch item {
+		case .Music:              draw_ui_format(187, y, 16, color, "MUSIC                 %3d%%", settings.music_volume)
+		case .Sfx:                draw_ui_format(187, y, 16, color, "SFX                   %3d%%", settings.sfx_volume)
+		case .Display_Mode:
+			mode: cstring = "WINDOWED"
+			if settings.display_mode == .Borderless do mode = "BORDERLESS"
+			draw_ui_format(187, y, 16, color, "DISPLAY        %s", mode)
+		case .Window_Scale:       draw_ui_format(187, y, 16, color, "WINDOW SCALE            %dx", settings.window_scale)
+		case .Reduced_Flashes:    draw_ui_format(187, y, 16, color, "REDUCED FLASHES        %s", "ON" if settings.reduced_flashes else "OFF")
+		case .Screen_Shake:       draw_ui_format(187, y, 16, color, "SCREEN SHAKE          %3d%%", settings.screen_shake)
+		case .High_Contrast:      draw_ui_format(187, y, 16, color, "DANGER HATCHING        %s", "ON" if settings.high_contrast_preview else "OFF")
+		case .Pause_On_Focus_Loss: draw_ui_format(187, y, 16, color, "FOCUS PAUSE             %s", "ON" if settings.pause_on_focus_loss else "OFF")
+		case .Difficulty:         draw_ui_format(187, y, 16, color, "DIFFICULTY       %s", difficulty_label(settings.difficulty))
+		case .Bindings:           rl.DrawText("REMAP CONTROLS", 187, y, 16, color)
+		case .Back:               rl.DrawText("BACK", 187, y, 16, color)
+		}
+	}
+	draw_device_footer(game, 378)
+}
+
+draw_bindings_menu :: proc(game: ^Game) {
+	title: cstring = "KEYBOARD BINDINGS"
+	if game.menu.binding_device == .Controller do title = "CONTROLLER BINDINGS"
+	draw_menu_panel(title, 328)
+	for action_index in 0 ..< len(Input_Action) {
+		action := Input_Action(action_index)
+		color := rl.LIGHTGRAY
+		prefix: cstring = "  "
+		if game.menu.selected == action_index {
+			color = rl.GOLD
+			prefix = "> "
+		}
+		y := i32(92 + action_index * 29)
+		rl.DrawText(prefix, 167, y, 16, color)
+		if game.menu.binding_device == .Keyboard {
+			draw_ui_format(191, y, 16, color, "%-14s %s", input_action_label(action), keyboard_key_label(game.settings.bindings[action]))
+		} else {
+			draw_ui_format(191, y, 16, color, "%-14s %s", input_action_label(action), controller_action_label(action, game.settings.controller_bindings))
+		}
+	}
+	draw_menu_row("BACK", len(Input_Action), game.menu.selected, 92 + len(Input_Action) * 29)
+	if game.menu.binding_waiting {
+		rl.DrawRectangle(153, 164, 334, 70, rl.BLACK)
+		rl.DrawRectangleLines(153, 164, 334, 70, rl.GOLD)
+		waiting := "PRESS A KEY FOR %s"
+		if game.menu.binding_device == .Controller do waiting = "PRESS A BUTTON FOR %s"
+		draw_ui_format(174, 180, 18, rl.WHITE, waiting, input_action_label(game.menu.binding_action))
+		rl.DrawText("ESC CANCELS", 254, 210, 14, rl.LIGHTGRAY)
+	} else if game.menu.binding_conflict_seconds > 0 {
+		rl.DrawText("KEY ALREADY USED", 236, 342, 16, rl.RED)
+	}
+	rl.DrawText("LEFT / RIGHT: SWITCH DEVICE", 203, 365, 14, rl.LIGHTGRAY)
+}
+
+draw_how_to_play :: proc(game: ^Game) {
+	draw_menu_panel("HOW TO PLAY", 324)
+	if game.menu.help_page == 0 {
+		if game.last_input_device == .Controller {
+			draw_ui_format(150, 95, 16, rl.WHITE, "MOVE U/D   %s / %s + LEFT STICK", controller_action_label(.Move_Up, game.settings.controller_bindings), controller_action_label(.Move_Down, game.settings.controller_bindings))
+			draw_ui_format(150, 123, 16, rl.WHITE, "MOVE L/R   %s / %s + LEFT STICK", controller_action_label(.Move_Left, game.settings.controller_bindings), controller_action_label(.Move_Right, game.settings.controller_bindings))
+			draw_ui_format(150, 157, 17, rl.WHITE, "BOMB       %s", action_prompt(.Bomb, .Controller, game.settings.bindings, &game.settings.controller_bindings))
+			draw_ui_format(150, 189, 17, rl.WHITE, "PAUSE      %s", action_prompt(.Pause, .Controller, game.settings.bindings, &game.settings.controller_bindings))
+			draw_ui_format(150, 221, 17, rl.WHITE, "RETRY      %s", action_prompt(.Restart, .Controller, game.settings.bindings, &game.settings.controller_bindings))
+			rl.DrawText("BACK       B", 150, 253, 17, rl.WHITE)
+		} else {
+			draw_ui_format(165, 105, 16, rl.WHITE, "MOVE UP/DOWN     %s / %s", keyboard_key_label(game.settings.bindings[.Move_Up]), keyboard_key_label(game.settings.bindings[.Move_Down]))
+			draw_ui_format(165, 135, 16, rl.WHITE, "MOVE LEFT/RIGHT  %s / %s", keyboard_key_label(game.settings.bindings[.Move_Left]), keyboard_key_label(game.settings.bindings[.Move_Right]))
+			draw_ui_format(165, 165, 16, rl.WHITE, "BOMB             %s", action_prompt(.Bomb, .Keyboard, game.settings.bindings))
+			draw_ui_format(165, 195, 16, rl.WHITE, "PAUSE            %s", action_prompt(.Pause, .Keyboard, game.settings.bindings))
+			draw_ui_format(165, 225, 16, rl.WHITE, "RETRY            %s", action_prompt(.Restart, .Keyboard, game.settings.bindings))
+			rl.DrawText("ARROW KEYS ALSO MOVE. ESC GOES BACK.", 165, 262, 14, rl.GOLD)
+		}
+		rl.DrawText("PAGE 1/2", 284, 326, 14, rl.LIGHTGRAY)
+	} else {
+		rl.DrawText("DRIVE OUT EVERY ALIEN TO CLEAR A CAVE.", 130, 92, 16, rl.WHITE)
+		rl.DrawText("TREASURE IS OPTIONAL AND ADDS SCORE.", 130, 116, 16, rl.WHITE)
+		rl.DrawText("HUD: ALIENS / TREASURE / LIFE / ENERGY / BOMBS.", 130, 147, 15, rl.GOLD)
+		rl.DrawText("POWER EXTENDS BLASTS; BOMB ITEMS ADD CAPACITY.", 130, 172, 15, rl.WHITE)
+		rl.DrawText("ENERGY AND LIFE ITEMS RESTORE SURVIVAL.", 130, 197, 15, rl.WHITE)
+		rl.DrawText("BOMBS CROSS OBSTACLES. LEAVE THE MARKED BLAST.", 130, 228, 15, rl.WHITE)
+		rl.DrawText("STANDARD IS LETHAL. ASSISTED: -1 CONTACT,", 130, 253, 15, rl.WHITE)
+		rl.DrawText("-4 BLAST, LONGER WARNING; SAME CONTENT.", 130, 278, 15, rl.WHITE)
+		rl.DrawText("PAGE 2/2", 284, 326, 14, rl.LIGHTGRAY)
+	}
+	draw_device_footer(game, 374)
+}
+
+draw_story_prompt :: proc(game: ^Game) {
+	buffer: [160]byte
+	prompt: cstring
+	if game.last_input_device == .Controller {
+		formatted := fmt.bprintf(
+			buffer[:len(buffer) - 1],
+			"%s: NEXT     B: SKIP STORY",
+			action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
+		)
+		buffer[len(formatted)] = 0
+		prompt = cstring(raw_data(buffer[:]))
+	} else {
+		formatted := fmt.bprintf(
+			buffer[:len(buffer) - 1],
+			"%s / %s: NEXT     ESC: SKIP STORY",
+			action_prompt(.Bomb, .Keyboard, game.settings.bindings),
+			action_prompt(.Confirm, .Keyboard, game.settings.bindings),
+		)
+		buffer[len(formatted)] = 0
+		prompt = cstring(raw_data(buffer[:]))
+	}
+	width := rl.MeasureText(prompt, 14)
+	rl.DrawRectangle((WINDOW_WIDTH - width) / 2 - 8, 370, width + 16, 22, rl.Fade(rl.BLACK, 0.82))
+	rl.DrawText(prompt, (WINDOW_WIDTH - width) / 2, 373, 14, rl.GOLD)
+}
+
+draw_main_menu :: proc(game: ^Game) {
+	switch game.menu.page {
+	case .Settings:    draw_settings_menu(game)
+	case .Bindings:    draw_bindings_menu(game)
+	case .How_To_Play: draw_how_to_play(game)
+	case .Main:
+		draw_menu_panel("CAVERACE", 308)
+		for item_index in 0 ..< len(Main_Menu_Item) {
+			draw_menu_row(main_menu_item_label(Main_Menu_Item(item_index)), item_index, game.menu.selected, 102 + item_index * 38)
+		}
+		draw_ui_format(175, 337, 14, rl.GOLD, "MODE: %s", difficulty_label(game.settings.difficulty))
+		draw_device_footer(game)
+	case .First_Run:
+		draw_menu_panel("CHOOSE YOUR START", 254)
+		rl.DrawText("LEARN MOVEMENT, BOMBS, PICKUPS AND SAFETY.", 161, 101, 14, rl.WHITE)
+		for item_index in 0 ..< len(First_Run_Item) {
+			draw_menu_row(first_run_item_label(First_Run_Item(item_index)), item_index, game.menu.selected, 145 + item_index * 42)
+		}
+		draw_ui_format(172, 292, 14, rl.GOLD, "RULES: %s", difficulty_label(game.settings.difficulty))
+		draw_device_footer(game)
+	}
+}
+
+draw_tutorial_prompt :: proc(game: ^Game) {
+	rl.DrawRectangle(92, 312, 456, 42, rl.Fade(rl.BLACK, 0.9))
+	rl.DrawRectangleLines(92, 312, 456, 42, rl.GOLD)
+	instruction := tutorial_instruction(game.tutorial.step)
+	width := rl.MeasureText(instruction, 16)
+	rl.DrawText(instruction, (WINDOW_WIDTH - width) / 2, 318, 16, rl.WHITE)
+	footer_buffer: [128]byte
+	footer: cstring
+	if game.last_input_device == .Keyboard {
+		formatted := fmt.bprintf(
+			footer_buffer[:len(footer_buffer) - 1],
+			"ESC: SKIP     %s: PAUSE",
+			action_prompt(.Pause, .Keyboard, game.settings.bindings),
+		)
+		footer_buffer[len(formatted)] = 0
+		footer = cstring(raw_data(footer_buffer[:]))
+	} else {
+		formatted := fmt.bprintf(
+			footer_buffer[:len(footer_buffer) - 1],
+			"B: SKIP     %s: PAUSE",
+			action_prompt(.Pause, .Controller, game.settings.bindings, &game.settings.controller_bindings),
+		)
+		footer_buffer[len(formatted)] = 0
+		footer = cstring(raw_data(footer_buffer[:]))
+	}
+	if game.tutorial.step == .Complete {
+		if game.last_input_device == .Keyboard {
+			formatted := fmt.bprintf(
+				footer_buffer[:len(footer_buffer) - 1],
+				"%s: START CAMPAIGN",
+				action_prompt(.Confirm, .Keyboard, game.settings.bindings),
+			)
+			footer_buffer[len(formatted)] = 0
+			footer = cstring(raw_data(footer_buffer[:]))
+		} else {
+			formatted := fmt.bprintf(
+				footer_buffer[:len(footer_buffer) - 1],
+				"%s: START CAMPAIGN",
+				action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
+			)
+			footer_buffer[len(formatted)] = 0
+			footer = cstring(raw_data(footer_buffer[:]))
+		}
+	}
+	footer_width := rl.MeasureText(footer, 13)
+	rl.DrawText(footer, (WINDOW_WIDTH - footer_width) / 2, 337, 13, rl.GOLD)
+}
+
 // draw_gameplay renders terminal screens directly; otherwise it draws the
 // active level when available and overlays its lifecycle message.
-draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {
+draw_gameplay :: proc(game: ^Game, assets: ^Assets) {
+	gameplay := &game.gameplay
 	if gameplay.state == .Game_Over {
 		rl.DrawTexture(assets.screens.game_over, 0, 0, rl.WHITE)
-		draw_gameplay_message("Press R for a new run, any other key for menu")
+		if game.last_input_device == .Controller {
+			draw_gameplay_message_format(
+				"%s: NEW RUN     %s: MAIN MENU",
+				action_prompt(.Restart, .Controller, game.settings.bindings, &game.settings.controller_bindings),
+				action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
+			)
+		} else {
+			draw_gameplay_message_format(
+				"%s: NEW RUN     %s: MAIN MENU",
+				action_prompt(.Restart, .Keyboard, game.settings.bindings),
+				action_prompt(.Confirm, .Keyboard, game.settings.bindings),
+			)
+		}
 		return
 	}
 	if gameplay.state == .Game_Won {
 		rl.DrawTexture(assets.screens.you_won, 0, 0, rl.WHITE)
+		if game.last_input_device == .Controller {
+			draw_gameplay_message_format(
+				"%s: MAIN MENU",
+				action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
+			)
+		} else {
+			draw_gameplay_message_format(
+				"%s: MAIN MENU",
+				action_prompt(.Confirm, .Keyboard, game.settings.bindings),
+			)
+		}
 		return
 	}
 
@@ -112,7 +471,11 @@ draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {
 	switch gameplay.state {
 	case .Playing, .Dead, .Won:
 		draw_level_tiles(&gameplay.level, assets.tiles[gameplay.theme], &assets.sprites)
-		draw_level_entities(gameplay, &assets.sprites)
+		draw_level_entities(
+			gameplay,
+			&assets.sprites,
+			game.settings.high_contrast_preview,
+		)
 		draw_gameplay_hud(gameplay, assets.sprites.tools)
 	case .Load_Level, .Game_Won, .Game_Over, .Load_Failed:
 	}
@@ -121,12 +484,44 @@ draw_gameplay :: proc(gameplay: ^Gameplay, assets: ^Assets) {
 	case .Load_Level:
 		draw_gameplay_message("Loading level...")
 	case .Dead:
-		draw_gameplay_message("You died - press Enter or R to retry")
+		if game.last_input_device == .Controller {
+			draw_gameplay_message_format(
+				"YOU DIED - %s OR %s TO RETRY, B FOR MENU",
+				action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
+				action_prompt(.Restart, .Controller, game.settings.bindings, &game.settings.controller_bindings),
+			)
+		} else {
+			draw_gameplay_message_format(
+				"YOU DIED - %s OR %s TO RETRY, ESC FOR MENU",
+				action_prompt(.Confirm, .Keyboard, game.settings.bindings),
+				action_prompt(.Restart, .Keyboard, game.settings.bindings),
+			)
+		}
 	case .Won:
-		draw_gameplay_message("Level complete - press Enter to continue")
+		if game.last_input_device == .Controller {
+			draw_gameplay_message_format(
+				"LEVEL COMPLETE - %s TO CONTINUE",
+				action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
+			)
+		} else {
+			draw_gameplay_message_format(
+				"LEVEL COMPLETE - %s TO CONTINUE",
+				action_prompt(.Confirm, .Keyboard, game.settings.bindings),
+			)
+		}
 	case .Game_Won, .Game_Over:
 	case .Load_Failed:
-		draw_gameplay_message("Could not load level - Enter to retry, Esc for menu")
+		if game.last_input_device == .Controller {
+			draw_gameplay_message_format(
+				"LOAD FAILED - %s TO RETRY, B FOR MENU",
+				action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
+			)
+		} else {
+			draw_gameplay_message_format(
+				"LOAD FAILED - %s TO RETRY, ESC FOR MENU",
+				action_prompt(.Confirm, .Keyboard, game.settings.bindings),
+			)
+		}
 	case .Playing:
 	}
 }
@@ -141,6 +536,13 @@ draw_gameplay_message :: proc(message: cstring) {
 
 	rl.DrawRectangle(text_x - 12, text_y - 8, text_width + 24, font_size + 16, rl.BLACK)
 	rl.DrawText(message, text_x, text_y, font_size, rl.WHITE)
+}
+
+draw_gameplay_message_format :: proc(format: string, args: ..any) {
+	buffer: [256]byte
+	formatted := fmt.bprintf(buffer[:len(buffer) - 1], format, ..args)
+	buffer[len(formatted)] = 0
+	draw_gameplay_message(cstring(raw_data(buffer[:])))
 }
 
 // feedback_flash_color maps domain feedback kinds to raylib colors only at the

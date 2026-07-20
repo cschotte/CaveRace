@@ -168,8 +168,22 @@ apply_active_explosions_to_entities :: proc(
 		gameplay.player.movement_step,
 	)
 	if ok && active_explosion_contains_cell(gameplay, player_position) {
-		gameplay.player.energy = 0
-		result.player_damaged = true
+		tuning := gameplay_tuning(gameplay.difficulty)
+		if tuning.blast_damage >= tuning.player_max_energy {
+			gameplay.player.energy = 0
+			result.player_damaged = true
+		} else if gameplay.player.blast_grace_ticks == 0 {
+			gameplay.player.energy = max(
+				gameplay.player.energy - tuning.blast_damage,
+				0,
+			)
+			gameplay.player.blast_grace_ticks = tuning.blast_grace_ticks
+			gameplay.player.contact_grace_ticks = max(
+				gameplay.player.contact_grace_ticks,
+				tuning.blast_grace_ticks,
+			)
+			result.player_damaged = true
+		}
 	}
 }
 

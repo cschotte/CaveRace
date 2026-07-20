@@ -165,7 +165,7 @@ final_death_stays_on_game_over_until_input_returns_to_main_menu_test :: proc(t: 
 	testing.expect(t, !game.gameplay.level_completion_enabled)
 	testing.expect_value(t, game.gameplay.enemy_count, 0)
 
-	update_game(&game, Game_Input {any_key_pressed = true}, 0)
+	update_game(&game, Game_Input {confirm = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
 }
 
@@ -256,13 +256,13 @@ ten_level_run_ends_in_game_won_without_wrapping_test :: proc(t: ^testing.T) {
 }
 
 @(test)
-game_won_screen_returns_to_main_menu_on_any_key_test :: proc(t: ^testing.T) {
+game_won_screen_returns_to_main_menu_on_confirm_test :: proc(t: ^testing.T) {
 	game: Game
 	init_game(&game)
 	game.screen = .Playing
 	game.gameplay.state = .Game_Won
 	game.gameplay.level_index = LEVEL_COUNT - 1
 
-	update_game(&game, Game_Input {any_key_pressed = true}, 0)
+	update_game(&game, Game_Input {confirm = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
 }

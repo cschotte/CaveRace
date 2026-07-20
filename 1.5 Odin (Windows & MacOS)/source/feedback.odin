@@ -50,7 +50,7 @@ request_gameplay_feedback :: proc(
 	} else if result.items_collected > 0 {
 		flash = .Item
 	}
-	if flash == .Damage && feedback.reduced_flashes {
+	if flash != .None && feedback.reduced_flashes {
 		flash = .None
 	}
 	if flash != .None {

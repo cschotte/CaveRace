@@ -126,6 +126,7 @@ Player_State :: struct {
 	bomb_power:    int,
 	score:         int,
 	contact_grace_ticks: int,
+	blast_grace_ticks:   int,
 }
 
 // Enemy_State represents one fixed enemy slot, including activity, sprite kind,
@@ -207,6 +208,9 @@ Gameplay :: struct {
 	player:                   Player_State,
 	enemies:                  [MAX_ENEMIES]Enemy_State,
 	enemy_count:              int,
+	initial_enemy_count:      int,
+	treasure_total:           int,
+	treasure_collected:       int,
 	bombs:                    [MAX_BOMBS]Bomb_State,
 	explosions:               [MAX_BOMBS]Explosion_State,
 	bomb_occupancy:           Map_Grid,
@@ -278,6 +282,7 @@ reset_player_for_level_start :: proc(
 	player.movement_step = 0
 	player.direction = .None
 	player.contact_grace_ticks = 0
+	player.blast_grace_ticks = 0
 	player.energy = tuning.player_start_energy
 	player.bomb_capacity = tuning.player_start_bomb_capacity
 	player.bomb_power = tuning.player_start_bomb_power

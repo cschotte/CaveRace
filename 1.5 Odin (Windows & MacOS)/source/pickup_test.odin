@@ -241,11 +241,17 @@ pickup_timing_is_render_rate_independent_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, at_60_fps.item_cell, u8(0))
 }
 
-// Verifies the HUD snapshot reflects gameplay values and fixed legacy icon and
-// score positions.
+// Verifies the compact numeric HUD includes resources and explicit objectives.
 @(test)
-hud_snapshot_matches_gameplay_state_and_legacy_positions_test :: proc(t: ^testing.T) {
+hud_snapshot_includes_numeric_resources_and_objectives_test :: proc(t: ^testing.T) {
 	gameplay := open_gameplay_at({0, 0})
+	gameplay.level_index = 2
+	gameplay.initial_enemy_count = 4
+	gameplay.enemy_count = 4
+	gameplay.enemies[0].active = true
+	gameplay.enemies[1].active = true
+	gameplay.treasure_total = 5
+	gameplay.treasure_collected = 2
 	gameplay.player.lives = 3
 	gameplay.player.energy = 6
 	gameplay.player.bomb_capacity = 4
@@ -257,19 +263,12 @@ hud_snapshot_matches_gameplay_state_and_legacy_positions_test :: proc(t: ^testin
 	hud := gameplay_hud_state(&gameplay)
 	testing.expect_value(t, hud.lives, 3)
 	testing.expect_value(t, hud.energy, 6)
+	testing.expect_value(t, hud.level, 3)
+	testing.expect_value(t, hud.aliens_remaining, 2)
+	testing.expect_value(t, hud.treasure_collected, 2)
+	testing.expect_value(t, hud.treasure_total, 5)
 	testing.expect_value(t, hud.available_bombs, 2)
+	testing.expect_value(t, hud.bomb_capacity, 4)
 	testing.expect_value(t, hud.bomb_power, 8)
 	testing.expect_value(t, hud.score, 12345)
-
-	testing.expect_value(t, HUD_LIVES_X, 16)
-	testing.expect_value(t, HUD_LIVES_Y, 374)
-	testing.expect_value(t, HUD_LIVES_SPACING, 20)
-	testing.expect_value(t, HUD_ENERGY_X, 106)
-	testing.expect_value(t, HUD_ENERGY_Y, 366)
-	testing.expect_value(t, HUD_ENERGY_SPACING, 10)
-	testing.expect_value(t, HUD_BOMBS_X, 196)
-	testing.expect_value(t, HUD_BOMBS_SPACING, 12)
-	testing.expect_value(t, HUD_POWER_X, 254)
-	testing.expect_value(t, HUD_POWER_SPACING, 16)
-	testing.expect_value(t, HUD_SCORE_RIGHT, 446)
 }

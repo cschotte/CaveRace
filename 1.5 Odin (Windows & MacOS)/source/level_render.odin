@@ -23,7 +23,11 @@ draw_level_tiles :: proc(level: ^Level, terrain: rl.Texture, sprites: ^Sprite_As
 
 // draw_level_entities renders bombs, player, enemies, and explosion overlays in
 // the legacy layer order after persistent map tiles are drawn.
-draw_level_entities :: proc(gameplay: ^Gameplay, sprites: ^Sprite_Assets) {
+draw_level_entities :: proc(
+	gameplay: ^Gameplay,
+	sprites: ^Sprite_Assets,
+	high_contrast_preview := false,
+) {
 	for &bomb in gameplay.bombs {
 		preview, visible := bomb_danger_footprint(&bomb, gameplay.difficulty)
 		if !visible do continue
@@ -31,6 +35,12 @@ draw_level_entities :: proc(gameplay: ^Gameplay, sprites: ^Sprite_Assets) {
 			x, y := grid_position_to_screen(preview.cells[cell_index].position)
 			rl.DrawRectangle(x, y, MAP_TILE_SIZE, MAP_TILE_SIZE, rl.Fade(rl.RED, 0.20))
 			rl.DrawRectangleLines(x, y, MAP_TILE_SIZE, MAP_TILE_SIZE, rl.GOLD)
+			if high_contrast_preview {
+				for offset: i32 = 4; offset < MAP_TILE_SIZE; offset += 8 {
+					rl.DrawLine(x + offset, y, x, y + offset, rl.WHITE)
+					rl.DrawLine(x + MAP_TILE_SIZE, y + offset, x + offset, y + MAP_TILE_SIZE, rl.WHITE)
+				}
+			}
 		}
 	}
 
@@ -54,7 +64,10 @@ draw_level_entities :: proc(gameplay: ^Gameplay, sprites: ^Sprite_Assets) {
 
 	player_screen_x, player_screen_y := player_screen_position(&gameplay.player)
 	player_sprite := player_sprite_index(&gameplay.player)
-	player_visible := contact_grace_player_visible(gameplay.player.contact_grace_ticks)
+	player_visible := contact_grace_player_visible(max(
+		gameplay.player.contact_grace_ticks,
+		gameplay.player.blast_grace_ticks,
+	))
 	if player_visible {
 		draw_vertical_sprite(sprites.player, player_sprite, player_screen_x, player_screen_y)
 	}

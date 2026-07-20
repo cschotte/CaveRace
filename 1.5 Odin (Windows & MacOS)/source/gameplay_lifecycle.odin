@@ -5,6 +5,9 @@ package caverace
 clear_level_state :: proc(gameplay: ^Gameplay) {
 	gameplay.enemies = {}
 	gameplay.enemy_count = 0
+	gameplay.initial_enemy_count = 0
+	gameplay.treasure_total = 0
+	gameplay.treasure_collected = 0
 	gameplay.bombs = {}
 	gameplay.explosions = {}
 	gameplay.bomb_occupancy = {}

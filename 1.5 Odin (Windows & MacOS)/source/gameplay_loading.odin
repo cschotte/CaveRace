@@ -30,9 +30,13 @@ setup_level_state :: proc(gameplay: ^Gameplay) -> Level_Setup_Error {
 	player_count := 0
 	enemies: [MAX_ENEMIES]Enemy_State
 	enemy_count := 0
+	treasure_total := 0
 
 	for grid_y in 0 ..< MAP_HEIGHT {
 		for grid_x in 0 ..< MAP_WIDTH {
+			if gameplay.level.data.treasure[grid_x][grid_y] != 0 {
+				treasure_total += 1
+			}
 			if gameplay.level.data.player[grid_x][grid_y] == PLAYER_SPAWN_MARKER {
 				player_count += 1
 				if player_count > 1 do return .Multiple_Players
@@ -62,6 +66,9 @@ setup_level_state :: proc(gameplay: ^Gameplay) -> Level_Setup_Error {
 	gameplay.player.direction = .None
 	gameplay.enemies = enemies
 	gameplay.enemy_count = enemy_count
+	gameplay.initial_enemy_count = enemy_count
+	gameplay.treasure_total = treasure_total
+	gameplay.treasure_collected = 0
 	gameplay.bombs = {}
 	gameplay.explosions = {}
 	gameplay.bomb_occupancy = {}

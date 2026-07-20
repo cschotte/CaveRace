@@ -292,9 +292,10 @@ focus_loss_is_non_destructive_test :: proc(t: ^testing.T) {
 repeated_main_menu_game_transitions_keep_application_path_test :: proc(t: ^testing.T) {
 	app := Application {resource_root = "resources.test"}
 	init_game(&app.game)
+	app.game.settings.tutorial_complete = true
 	show_main_menu(&app.game)
 	for _ in 0 ..< 12 {
-		update_game(&app.game, Game_Input {any_key_pressed = true}, 0)
+		update_game(&app.game, Game_Input {confirm = true}, 0)
 		testing.expect_value(t, app.game.screen, App_Screen.Playing)
 		update_game(&app.game, Game_Input {back = true}, 0)
 		testing.expect_value(t, app.game.screen, App_Screen.Main_Menu)
@@ -312,8 +313,9 @@ game_update_requests_level_load_at_application_boundary_test :: proc(t: ^testing
 
 	app := Application {resource_root = resource_root}
 	init_game(&app.game)
+	app.game.settings.tutorial_complete = true
 	update_game(&app.game, Game_Input {back = true}, 0)
-	update_game(&app.game, Game_Input {any_key_pressed = true}, 0)
+	update_game(&app.game, Game_Input {confirm = true}, 0)
 
 	result := update_game(&app.game, {}, 0)
 	testing.expect(t, result.load_level_requested)
@@ -333,11 +335,12 @@ deterministic_complete_run_smoke_test :: proc(t: ^testing.T) {
 
 	app := Application {resource_root = resource_root}
 	init_game(&app.game)
+	app.game.settings.tutorial_complete = true
 	game := &app.game
 	testing.expect_value(t, game.screen, App_Screen.Intro)
 	update_application(&app, Game_Input {back = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
-	update_application(&app, Game_Input {any_key_pressed = true}, 0)
+	update_application(&app, Game_Input {confirm = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Playing)
 	update_application(&app, {}, 0)
 	if !testing.expect_value(t, game.gameplay.state, Gameplay_State.Playing) do return
@@ -382,9 +385,9 @@ deterministic_complete_run_smoke_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, game.screen, App_Screen.Playing)
 	testing.expect_value(t, game.gameplay.state, Gameplay_State.Game_Over)
 
-	update_application(&app, Game_Input {any_key_pressed = true}, 0)
+	update_application(&app, Game_Input {confirm = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
-	update_application(&app, Game_Input {any_key_pressed = true}, 0)
+	update_application(&app, Game_Input {confirm = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Playing)
 	testing.expect_value(t, game.gameplay.player.score, 0)
 }

@@ -5,7 +5,6 @@ INTRO_LAST_IMAGE        :: 6
 MAIN_MENU_FIRST_IMAGE   :: 7
 MAIN_MENU_LAST_IMAGE    :: 8
 FRONT_END_IMAGE_COUNT   :: 9
-MAIN_MENU_IMAGE_SECONDS :: 5.0
 FRONT_END_TRANSITION_SECONDS :: 0.5
 
 // Each story panel remains visible for the length of its matching music track.
@@ -109,23 +108,6 @@ advance_intro :: proc(front_end: ^Front_End_State, frame_seconds: f64) -> bool {
 	return true
 }
 
-// advance_main_menu alternates the title and controls screens every five
-// seconds for as long as the player remains on the main menu.
-advance_main_menu :: proc(front_end: ^Front_End_State, frame_seconds: f64) {
-	if front_end.transition_active {
-		advance_front_end_transition(front_end, frame_seconds)
-		return
-	}
-	front_end.elapsed_seconds += clamp(frame_seconds, 0, MAX_FRAME_DELTA_SECONDS)
-	if front_end.elapsed_seconds < MAIN_MENU_IMAGE_SECONDS do return
-
-	front_end.elapsed_seconds -= MAIN_MENU_IMAGE_SECONDS
-	if front_end.image_index == MAIN_MENU_FIRST_IMAGE {
-		begin_front_end_transition(front_end, MAIN_MENU_LAST_IMAGE)
-	} else {
-		begin_front_end_transition(front_end, MAIN_MENU_FIRST_IMAGE)
-	}
-}
 
 // front_end_visual returns the texture and opacity for the current transition
 // phase: old image to black, then black to the new image.
@@ -140,10 +122,4 @@ front_end_visual :: proc(front_end: Front_End_State) -> (image_index: int, alpha
 		return front_end.previous_image_index, f32(1 - progress * 2)
 	}
 	return front_end.image_index, f32((progress - 0.5) * 2)
-}
-
-// main_menu_start_requested accepts the title screen's advertised keyboard
-// behavior without coupling the front end to specific key bindings.
-main_menu_start_requested :: proc(input: Game_Input) -> bool {
-	return input.any_key_pressed
 }

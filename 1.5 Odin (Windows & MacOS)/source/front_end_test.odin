@@ -59,35 +59,18 @@ intro_advances_zero_through_six_then_completes_test :: proc(t: ^testing.T) {
 }
 
 @(test)
-main_menu_alternates_seven_and_eight_every_five_seconds_test :: proc(t: ^testing.T) {
+main_menu_keeps_stable_title_art_for_navigation_test :: proc(t: ^testing.T) {
 	front_end: Front_End_State
 	begin_main_menu(&front_end)
 	testing.expect_value(t, front_end.image_index, MAIN_MENU_FIRST_IMAGE)
-
-	for _ in 0 ..< int(MAIN_MENU_IMAGE_SECONDS / MAX_FRAME_DELTA_SECONDS) {
-		advance_main_menu(&front_end, MAX_FRAME_DELTA_SECONDS)
-	}
-	testing.expect_value(t, front_end.image_index, MAIN_MENU_LAST_IMAGE)
-	testing.expect(t, front_end.transition_active)
+	testing.expect(t, !front_end.transition_active)
 	visual_image, alpha := front_end_visual(front_end)
 	testing.expect_value(t, visual_image, MAIN_MENU_FIRST_IMAGE)
 	testing.expect_value(t, alpha, f32(1))
-
-	advance_main_menu(&front_end, FRONT_END_TRANSITION_SECONDS / 2)
-	visual_image, alpha = front_end_visual(front_end)
-	testing.expect_value(t, visual_image, MAIN_MENU_LAST_IMAGE)
-	testing.expect_value(t, alpha, f32(0))
-	advance_main_menu(&front_end, FRONT_END_TRANSITION_SECONDS / 2)
-	testing.expect(t, !front_end.transition_active)
-
-	for _ in 0 ..< int(MAIN_MENU_IMAGE_SECONDS / MAX_FRAME_DELTA_SECONDS) {
-		advance_main_menu(&front_end, MAX_FRAME_DELTA_SECONDS)
-	}
-	testing.expect_value(t, front_end.image_index, MAIN_MENU_FIRST_IMAGE)
 }
 
 @(test)
-escape_skips_intro_and_any_main_menu_input_starts_game_test :: proc(t: ^testing.T) {
+escape_skips_intro_and_menu_requires_explicit_confirm_test :: proc(t: ^testing.T) {
 	game: Game
 	init_game(&game)
 	testing.expect_value(t, game.screen, App_Screen.Intro)
@@ -97,7 +80,8 @@ escape_skips_intro_and_any_main_menu_input_starts_game_test :: proc(t: ^testing.
 	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
 	testing.expect_value(t, game.front_end.image_index, MAIN_MENU_FIRST_IMAGE)
 
-	update_game(&game, Game_Input {any_key_pressed = true}, 0)
+	game.settings.tutorial_complete = true
+	update_game(&game, Game_Input {confirm = true}, 0)
 	testing.expect_value(t, game.screen, App_Screen.Playing)
 }
 

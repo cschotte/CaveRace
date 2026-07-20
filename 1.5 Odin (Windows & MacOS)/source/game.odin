@@ -1,63 +1,104 @@
 package caverace
 
-// App_Screen identifies the top-level update and render route currently owned
-// by Game.
 App_Screen :: enum {
 	Intro,
 	Main_Menu,
+	Tutorial,
 	Playing,
 }
 
-// Game owns all screen-level state. Filesystem paths and platform resources are
-// owned by Application and are deliberately absent from this domain state.
+// Game owns all platform-independent screen, menu, settings and run state.
+// Filesystem paths and raylib resources remain Application-owned.
 Game :: struct {
-	screen:          App_Screen,
-	front_end:       Front_End_State,
-	gameplay:        Gameplay,
-	feedback:        Game_Feedback,
-	cheats_enabled:  bool,
-	pause:           Pause_State,
+	screen:                App_Screen,
+	front_end:             Front_End_State,
+	menu:                  Menu_State,
+	tutorial:              Tutorial_State,
+	gameplay:              Gameplay,
+	settings:              Settings,
+	last_input_device:     Input_Device,
+	feedback:              Game_Feedback,
+	cheats_enabled:        bool,
+	pause:                 Pause_State,
 	debug_overlay_visible: bool,
 }
 
-// Game_Update_Result carries transient effects and explicit I/O requests to the
-// application boundary. The game update itself never touches the filesystem.
 Game_Update_Result :: struct {
 	gameplay:             Gameplay_Frame_Result,
 	load_level_requested: bool,
+	settings_changed:     bool,
+	display_changed:      bool,
+	quit_requested:       bool,
 }
 
-// init_game establishes platform-independent front-end and gameplay state.
-// Application supplies only the gameplay policy it parsed at launch.
-init_game :: proc(game: ^Game, cheats_enabled := false) {
+init_game :: proc(
+	game: ^Game,
+	cheats_enabled := false,
+	loaded_settings: ^Settings = nil,
+) {
+	settings := default_settings()
+	if loaded_settings != nil do settings = loaded_settings^
 	game^ = Game {
 		screen         = .Intro,
 		cheats_enabled = cheats_enabled,
+		settings       = settings,
 	}
+	game.feedback.reduced_flashes = settings.reduced_flashes
 	begin_intro(&game.front_end)
-	init_gameplay(&game.gameplay)
+	begin_menu(&game.menu)
+	init_gameplay(&game.gameplay, settings.difficulty)
 }
 
-// start_new_game resets all run progress and enters Playing after any start
-// input on the main menu.
 start_new_game :: proc(game: ^Game) {
-	init_gameplay(&game.gameplay)
+	init_gameplay(&game.gameplay, game.settings.difficulty)
 	game.pause = {}
 	game.screen = .Playing
 }
 
-// show_main_menu skips or completes the story and resets the looping title
-// presentation whenever play returns to the front end.
+start_game_tutorial :: proc(game: ^Game) {
+	game.gameplay.difficulty = game.settings.difficulty
+	setup_tutorial_level(&game.gameplay, &game.tutorial)
+	game.pause = {}
+	game.screen = .Tutorial
+}
+
 show_main_menu :: proc(game: ^Game) {
 	begin_main_menu(&game.front_end)
+	begin_menu(&game.menu)
 	game.pause = {}
 	game.screen = .Main_Menu
 }
 
-// update_game routes one frame to the active screen, performs state transitions,
-// and returns transient effects plus any work for the application boundary.
+complete_or_skip_tutorial :: proc(game: ^Game) -> bool {
+	if game.settings.tutorial_complete do return false
+	game.settings.tutorial_complete = true
+	return true
+}
+
+update_local_record :: proc(game: ^Game) -> bool {
+	record := record_for_profile(&game.settings.records, game.gameplay.difficulty)
+	changed := false
+	if game.gameplay.player.score > record.best_run_score {
+		record.best_run_score = game.gameplay.player.score
+		changed = true
+	}
+	cave_reached := clamp(game.gameplay.level_index + 1, 0, LEVEL_COUNT)
+	if cave_reached > record.best_cave {
+		record.best_cave = cave_reached
+		changed = true
+	}
+	return changed
+}
+
 update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_Update_Result {
 	result: Game_Update_Result
+	game.last_input_device = resolve_last_input_device(
+		game.last_input_device,
+		input.keyboard_activity,
+		input.controller_activity,
+		input.controller_connected,
+	)
+	game.feedback.reduced_flashes = game.settings.reduced_flashes
 	advance_game_feedback(&game.feedback, frame_seconds)
 	when ODIN_DEBUG {
 		if input.debug_toggle_pressed {
@@ -71,17 +112,65 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 	case .Intro:
 		if input.back {
 			show_main_menu(game)
-		} else if input.space_pressed {
+		} else if input.space_pressed || input.confirm {
 			if skip_intro_image(&game.front_end) do show_main_menu(game)
 		} else if advance_intro(&game.front_end, frame_seconds) {
 			show_main_menu(game)
 		}
 	case .Main_Menu:
-		advance_main_menu(&game.front_end, frame_seconds)
-		if main_menu_start_requested(input) do start_new_game(game)
+		menu_result := update_menu(&game.menu, &game.settings, input, frame_seconds)
+		result.settings_changed = menu_result.settings_changed
+		result.display_changed = menu_result.display_changed
+		if menu_result.start_campaign {
+			start_new_game(game)
+			result.load_level_requested = true
+		} else if menu_result.start_tutorial {
+			start_game_tutorial(game)
+		} else if menu_result.replay_story {
+			begin_intro(&game.front_end)
+			game.screen = .Intro
+		} else if menu_result.quit_requested {
+			result.quit_requested = true
+		}
+	case .Tutorial:
+		if game.pause.open {
+			pause_result := update_pause_menu(game, input)
+			result.settings_changed = pause_result.settings_changed
+			result.display_changed = pause_result.display_changed
+			if pause_result.restart_level {
+				setup_tutorial_level(&game.gameplay, &game.tutorial)
+			} else if pause_result.main_menu {
+				result.settings_changed = complete_or_skip_tutorial(game)
+				show_main_menu(game)
+			}
+		} else if input.pause_pressed {
+			open_game_pause(game)
+		} else if input.back {
+			result.settings_changed = complete_or_skip_tutorial(game)
+			show_main_menu(game)
+		} else if game.tutorial.step == .Complete {
+			if input.confirm {
+				result.settings_changed = complete_or_skip_tutorial(game)
+				start_new_game(game)
+				result.load_level_requested = true
+			}
+		} else {
+			result.gameplay = update_gameplay(
+				&game.gameplay,
+				input,
+				frame_seconds,
+				false,
+			)
+			advance_tutorial(&game.tutorial, &game.gameplay, result.gameplay.ticks)
+			if result.gameplay.ticks.player_died {
+				setup_tutorial_level(&game.gameplay, &game.tutorial)
+			}
+		}
 	case .Playing:
 		if game.pause.open {
 			pause_result := update_pause_menu(game, input)
+			result.settings_changed = pause_result.settings_changed
+			result.display_changed = pause_result.display_changed
 			if pause_result.restart_level {
 				begin_level_restart(&game.gameplay)
 				result.load_level_requested = true
@@ -96,6 +185,10 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 		} else if previous_gameplay_state == .Game_Over && input.restart_pressed {
 			start_new_game(game)
 			result.load_level_requested = true
+		} else if previous_gameplay_state == .Game_Over && input.confirm {
+			show_main_menu(game)
+		} else if previous_gameplay_state == .Game_Won && input.confirm {
+			show_main_menu(game)
 		} else {
 			result.gameplay = update_gameplay(
 				&game.gameplay,
@@ -106,23 +199,19 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			if !result.gameplay.back_requested && game.gameplay.state == .Load_Level {
 				result.load_level_requested = true
 			}
-			if result.gameplay.back_requested {
-				show_main_menu(game)
-			} else if (previous_gameplay_state == .Game_Over ||
-			           previous_gameplay_state == .Game_Won) &&
-			          main_menu_start_requested(input) {
-				show_main_menu(game)
-			}
+			if result.gameplay.back_requested do show_main_menu(game)
 		}
 	}
 
 	request_gameplay_feedback(&game.feedback, &result.gameplay.ticks)
-	screen_changed := game.screen != previous_screen
-	gameplay_state_changed := previous_screen == .Playing && game.screen == .Playing &&
-		game.gameplay.state != previous_gameplay_state
-	if screen_changed || gameplay_state_changed {
-		start_transition_fade(&game.feedback)
+	if previous_screen == .Playing && game.screen == .Playing &&
+	   previous_gameplay_state != game.gameplay.state &&
+	   (game.gameplay.state == .Game_Over || game.gameplay.state == .Game_Won) {
+		result.settings_changed = update_local_record(game) || result.settings_changed
 	}
-
+	screen_changed := game.screen != previous_screen
+	gameplay_state_changed := (previous_screen == .Playing || previous_screen == .Tutorial) &&
+		game.screen == previous_screen && game.gameplay.state != previous_gameplay_state
+	if screen_changed || gameplay_state_changed do start_transition_fade(&game.feedback)
 	return result
 }

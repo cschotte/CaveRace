@@ -73,6 +73,7 @@ finish_gameplay_action_interval :: proc(
 	if pickup.item_collected do result.items_collected += 1
 	if pickup.item_salvaged do result.items_salvaged += 1
 	if pickup.treasure_collected do result.treasures_collected += 1
+	if pickup.treasure_collected do gameplay.treasure_collected += 1
 	if pickup.item_collected || pickup.item_salvaged || pickup.treasure_collected {
 		result.item_sound_requests += 1
 	}
@@ -110,6 +111,9 @@ run_gameplay_ticks :: proc(
 
 		if gameplay.player.contact_grace_ticks > 0 {
 			gameplay.player.contact_grace_ticks -= 1
+		}
+		if gameplay.player.blast_grace_ticks > 0 {
+			gameplay.player.blast_grace_ticks -= 1
 		}
 		player_was_alive := gameplay.player.energy > 0
 		if gameplay.player.contact_grace_ticks == 0 && player_touches_enemy(gameplay) {

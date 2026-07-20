@@ -9,8 +9,14 @@ Application :: struct {
 	assets:        Assets,
 	game:          Game,
 	resource_root: string,
+	settings_path: string,
 	audio_ready:   bool,
 	active_music:  Maybe(Music_Cue),
+	input_poll:    Input_Poll_State,
+	canvas:        rl.RenderTexture2D,
+	applied_display_mode: Display_Mode,
+	quit_requested: bool,
+	controller_connected: bool,
 }
 
 // run_application owns platform startup, resource lifetimes, and the main
@@ -25,7 +31,15 @@ run_application :: proc(options: Launch_Options) -> bool {
 	app.resource_root = resource_root
 	defer delete(app.resource_root)
 
-	init_game(&app.game, options.cheats_enabled)
+	settings := default_settings()
+	if path, path_ok := settings_path(); path_ok {
+		app.settings_path = path
+		if loaded, loaded_ok := load_settings_from_path(path); loaded_ok {
+			settings = loaded
+		}
+	}
+	defer delete(app.settings_path)
+	init_game(&app.game, options.cheats_enabled, &settings)
 
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
 	if !rl.IsWindowReady() {
@@ -33,6 +47,12 @@ run_application :: proc(options: Launch_Options) -> bool {
 		return false
 	}
 	defer rl.CloseWindow()
+	app.canvas = rl.LoadRenderTexture(WINDOW_WIDTH, WINDOW_HEIGHT)
+	if !rl.IsRenderTextureValid(app.canvas) {
+		fmt.eprintln("Failed to create the fixed-resolution presentation canvas.")
+		return false
+	}
+	defer rl.UnloadRenderTexture(app.canvas)
 
 	rl.InitAudioDevice()
 	app.audio_ready = rl.IsAudioDeviceReady()
@@ -52,13 +72,27 @@ run_application :: proc(options: Launch_Options) -> bool {
 
 	// Disable the default exit key (ESC) to allow custom handling
 	rl.SetExitKey(.KEY_NULL)
+	apply_display_settings(&app)
+	if app.audio_ready do apply_sfx_volume(&app.assets, app.game.settings.sfx_volume)
 
 	// Slow mode reduces rendering work only. Gameplay always advances at the
 	// fixed GAMEPLAY_TICK_HZ rate through its accumulator.
 	rl.SetTargetFPS(target_render_fps(options))
 
-	for !rl.WindowShouldClose() {
-		input := poll_game_input()
+	for !rl.WindowShouldClose() && !app.quit_requested {
+		input := poll_game_input(
+			app.game.settings.bindings,
+			app.game.settings.controller_bindings,
+			&app.input_poll,
+		)
+		if input.controller_connected != app.controller_connected {
+			app.controller_connected = input.controller_connected
+			if input.controller_connected {
+				fmt.println("Controller detected: ", rl.GetGamepadName(GAMEPAD_INDEX))
+			} else {
+				fmt.println("Controller disconnected; keyboard prompts restored.")
+			}
+		}
 		frame_seconds := f64(rl.GetFrameTime())
 		input, frame_seconds = prepare_application_frame(
 			&app.game,
@@ -66,19 +100,55 @@ run_application :: proc(options: Launch_Options) -> bool {
 			frame_seconds,
 			rl.IsWindowFocused(),
 		)
+		previous_input_device := app.game.last_input_device
 		update_result := update_application(&app, input, frame_seconds)
+		if app.game.last_input_device != previous_input_device {
+			if app.game.last_input_device == .Controller {
+				fmt.println("Input prompts switched to controller.")
+			} else {
+				fmt.println("Input prompts switched to keyboard.")
+			}
+		}
 		if app.audio_ready {
 			update_game_music(&app)
 			play_frame_audio(&app.assets, &update_result)
 		}
 
-		rl.BeginDrawing()
-			rl.ClearBackground(rl.BLACK)
-			draw_game(&app.game, &app.assets)
-		rl.EndDrawing()
+		draw_application_frame(&app)
 	}
 
 	return true
+}
+
+presentation_rectangle :: proc(screen_width, screen_height: int) -> rl.Rectangle {
+	scale_x := f32(screen_width) / WINDOW_WIDTH
+	scale_y := f32(screen_height) / WINDOW_HEIGHT
+	scale := min(scale_x, scale_y)
+	width := f32(WINDOW_WIDTH) * scale
+	height := f32(WINDOW_HEIGHT) * scale
+	return {
+		x      = (f32(screen_width) - width) / 2,
+		y      = (f32(screen_height) - height) / 2,
+		width  = width,
+		height = height,
+	}
+}
+
+draw_application_frame :: proc(app: ^Application) {
+	rl.BeginTextureMode(app.canvas)
+		rl.ClearBackground(rl.BLACK)
+		draw_game(&app.game, &app.assets)
+	rl.EndTextureMode()
+
+	destination := presentation_rectangle(int(rl.GetScreenWidth()), int(rl.GetScreenHeight()))
+	source := rl.Rectangle {
+		width  = WINDOW_WIDTH,
+		height = -WINDOW_HEIGHT,
+	}
+	rl.BeginDrawing()
+		rl.ClearBackground(rl.BLACK)
+		rl.DrawTexturePro(app.canvas.texture, source, destination, {}, 0, rl.WHITE)
+	rl.EndDrawing()
 }
 
 // music_cue_for_game maps the current platform-independent state to one active
@@ -92,6 +162,8 @@ music_cue_for_game :: proc(game: ^Game) -> Music_Cue {
 		return Music_Cue(int(Music_Cue.Intro_Space) + game.front_end.image_index)
 	case .Main_Menu:
 		return .Main_Menu
+	case .Tutorial:
+		return .Cave_A
 	case .Playing:
 		switch game.gameplay.state {
 		case .Won:
@@ -136,7 +208,10 @@ update_game_music :: proc(app: ^Application) {
 	desired := music_cue_for_game(&app.game)
 	if active, ok := app.active_music.?; ok {
 		if active == desired {
-			rl.SetMusicVolume(app.assets.music[active], music_gain_for_game(&app.game))
+			rl.SetMusicVolume(
+				app.assets.music[active],
+				music_gain_for_game(&app.game) * f32(app.game.settings.music_volume) / 100,
+			)
 			rl.UpdateMusicStream(app.assets.music[active])
 			return
 		}
@@ -144,7 +219,10 @@ update_game_music :: proc(app: ^Application) {
 	}
 
 	app.assets.music[desired].looping = music_cue_loops(desired)
-	rl.SetMusicVolume(app.assets.music[desired], music_gain_for_game(&app.game))
+	rl.SetMusicVolume(
+		app.assets.music[desired],
+		music_gain_for_game(&app.game) * f32(app.game.settings.music_volume) / 100,
+	)
 	rl.PlayMusicStream(app.assets.music[desired])
 	app.active_music = desired
 	rl.UpdateMusicStream(app.assets.music[desired])
@@ -168,6 +246,14 @@ process_game_requests :: proc(app: ^Application, result: ^Game_Update_Result) {
 	if result.load_level_requested {
 		load_gameplay_level(&app.game.gameplay, app.resource_root)
 	}
+	if result.settings_changed {
+		if len(app.settings_path) > 0 && !save_settings_to_path(app.settings_path, app.game.settings) {
+			fmt.eprintln("Could not save settings; play can continue.")
+		}
+		if app.audio_ready do apply_sfx_volume(&app.assets, app.game.settings.sfx_volume)
+	}
+	if result.display_changed do apply_display_settings(app)
+	if result.quit_requested do app.quit_requested = true
 }
 
 // prepare_application_frame opens the gameplay pause overlay on focus loss and
@@ -179,9 +265,48 @@ prepare_application_frame :: proc(
 	window_focused: bool,
 ) -> (Game_Input, f64) {
 	if window_focused do return input, frame_seconds
-	open_game_pause(game)
 	game.gameplay.tick_state.input = {}
-	return {}, 0
+	if game.settings.pause_on_focus_loss {
+		open_game_pause(game)
+		return {}, 0
+	}
+	return {}, frame_seconds
+}
+
+supported_window_scale :: proc(requested, monitor_width, monitor_height: int) -> int {
+	requested_scale := clamp(requested, 1, 3)
+	for scale := requested_scale; scale >= 1; scale -= 1 {
+		if WINDOW_WIDTH * scale <= monitor_width && WINDOW_HEIGHT * scale <= monitor_height {
+			return scale
+		}
+	}
+	return 1
+}
+
+apply_display_settings :: proc(app: ^Application) {
+	desired := app.game.settings.display_mode
+	if desired != app.applied_display_mode {
+		rl.ToggleBorderlessWindowed()
+		app.applied_display_mode = desired
+	}
+	if desired == .Windowed {
+		monitor := rl.GetCurrentMonitor()
+		scale := supported_window_scale(
+			app.game.settings.window_scale,
+			int(rl.GetMonitorWidth(monitor)),
+			int(rl.GetMonitorHeight(monitor)),
+		)
+		rl.SetWindowSize(i32(WINDOW_WIDTH * scale), i32(WINDOW_HEIGHT * scale))
+	}
+}
+
+apply_sfx_volume :: proc(assets: ^Assets, volume_percent: int) {
+	volume := f32(clamp(volume_percent, 0, 100)) / 100
+	for &sound in assets.sounds.bomb do rl.SetSoundVolume(sound, volume)
+	rl.SetSoundVolume(assets.sounds.item, volume)
+	rl.SetSoundVolume(assets.sounds.hit, volume)
+	rl.SetSoundVolume(assets.sounds.squish, volume)
+	rl.SetSoundVolume(assets.sounds.ticking, volume)
 }
 
 // play_frame_audio translates gameplay events from the latest update into
