@@ -27,7 +27,7 @@ find_free_bomb_slot :: proc(gameplay: ^Gameplay) -> (slot: int, ok: bool) {
 }
 
 // try_place_bomb captures the player's current position and power into a fixed
-// slot when a Place_Bomb action begins, applying the legacy score cost once.
+// slot. Placement is score-neutral and independent from movement in Standard.
 try_place_bomb :: proc(gameplay: ^Gameplay) -> bool {
 	position := gameplay.player.position
 	if !is_in_map(position) do return false
@@ -40,16 +40,15 @@ try_place_bomb :: proc(gameplay: ^Gameplay) -> bool {
 	gameplay.bombs[slot] = Bomb_State {
 		active       = true,
 		position     = position,
-		fuse_actions = BOMB_FUSE_ACTIONS,
+		fuse_ticks   = gameplay_tuning(gameplay.difficulty).bomb_fuse_ticks,
 		power        = gameplay.player.bomb_power,
 	}
 	gameplay.bomb_occupancy[position.x][position.y] = BOMB_TICKING_SPRITE
-	apply_score_event(&gameplay.player, .Bomb_Placed)
 	return true
 }
 
 // clear_bomb_slot releases bomb occupancy and its paired explosion record when
-// a fuse finishes or an explosion completes.
+// an explosion completes or lifecycle cleanup explicitly releases a slot.
 clear_bomb_slot :: proc(gameplay: ^Gameplay, bomb_index: int) {
 	if bomb_index < 0 || bomb_index >= MAX_BOMBS do return
 	bomb := &gameplay.bombs[bomb_index]
@@ -61,17 +60,58 @@ clear_bomb_slot :: proc(gameplay: ^Gameplay, bomb_index: int) {
 	gameplay.explosions[bomb_index] = {}
 }
 
-// advance_bomb_fuses decrements every active fuse at an action boundary and
-// releases expired slots. Placement runs first, so a new BOMBTIME=12 bomb ends
-// its placement action at 11, matching GetPlayerMove -> CheckBombs ordering.
-advance_bomb_fuses :: proc(gameplay: ^Gameplay) -> (expired_count: int) {
+// bomb_is_in_danger_window selects bombs whose exact blast footprint should be
+// previewed. Exploding bombs render their explosion instead of a preview.
+bomb_is_in_danger_window :: proc(
+	bomb: ^Bomb_State,
+	difficulty: Difficulty_Profile = .Standard,
+) -> bool {
+	if !bomb.active || bomb.fuse_ticks <= 0 do return false
+	return bomb.fuse_ticks <= gameplay_tuning(difficulty).bomb_danger_preview_ticks
+}
+
+// bomb_danger_footprint reuses the detonation builder so previews cannot drift
+// from the cells that explosion damage will consume.
+bomb_danger_footprint :: proc(
+	bomb: ^Bomb_State,
+	difficulty: Difficulty_Profile = .Standard,
+) -> (footprint: Explosion_State, visible: bool) {
+	if !bomb_is_in_danger_window(bomb, difficulty) do return {}, false
+	return build_explosion_state(bomb), true
+}
+
+// bomb_tick_interval accelerates the warning cadence during the final second.
+bomb_tick_interval :: proc(fuse_ticks: int) -> int {
+	if fuse_ticks > GAMEPLAY_TICK_HZ * 2 do return 30
+	if fuse_ticks > GAMEPLAY_TICK_HZ do return 15
+	return 6
+}
+
+// bomb_flash_alpha returns a smooth 0..1 glow intensity for the ticking bomb
+// sprite itself, rising and falling once per bomb_tick_interval so the fuse
+// reads as the bomb glowing rather than a border blinking on and off. It
+// shares the same accelerating cadence, so the glow quickens with the fuse.
+bomb_flash_alpha :: proc(fuse_ticks: int) -> f32 {
+	if fuse_ticks <= 0 do return 0
+	interval := bomb_tick_interval(fuse_ticks)
+	phase := f32(fuse_ticks % interval) / f32(interval)
+	if phase < 0.5 do return phase * 2
+	return (1 - phase) * 2
+}
+
+// advance_bomb_fuses runs every fixed tick, independent from movement cadence,
+// and reports warning clicks. Ready bombs remain owned until their explosion
+// animation completes and start_ready_explosions consumes fuse_ticks == 0.
+advance_bomb_fuses :: proc(gameplay: ^Gameplay) -> (ticking_requests: int) {
 	for bomb_index in 0 ..< MAX_BOMBS {
 		bomb := &gameplay.bombs[bomb_index]
-		if !bomb.active do continue
-		if bomb.fuse_actions > 0 do bomb.fuse_actions -= 1
-		if bomb.fuse_actions == 0 {
-			clear_bomb_slot(gameplay, bomb_index)
-			expired_count += 1
+		if !bomb.active || gameplay.explosions[bomb_index].active do continue
+		if bomb.fuse_ticks > 0 {
+			bomb.fuse_ticks -= 1
+			interval := bomb_tick_interval(bomb.fuse_ticks)
+			if bomb.fuse_ticks > 0 && bomb.fuse_ticks % interval == 0 {
+				ticking_requests += 1
+			}
 		}
 	}
 	return

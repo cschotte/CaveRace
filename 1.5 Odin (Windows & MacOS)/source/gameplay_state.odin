@@ -2,45 +2,21 @@ package caverace
 
 import "core:math/rand"
 
-// Fixed gameplay capacities and legacy rule values. Active state is kept
-// inline and bounded so ownership and memory use remain visible in Gameplay.
+// Fixed gameplay capacities. Active state is kept inline and bounded so
+// ownership and memory use remain visible in Gameplay; tuneables are centralized
+// in tuning.odin.
 MAX_ENEMIES :: 16
 MAX_BOMBS   :: 4
-
-PLAYER_START_LIVES         :: 4
-PLAYER_MAX_LIVES           :: 4
-PLAYER_START_ENERGY        :: 8
-PLAYER_MAX_ENERGY          :: 8
-PLAYER_START_BOMB_CAPACITY :: 1
-PLAYER_MAX_BOMB_CAPACITY   :: 4
-PLAYER_START_BOMB_POWER    :: 1
-PLAYER_MAX_BOMB_POWER      :: 10
-
-ENEMY_CONTACT_DAMAGE :: 2
-BOMB_FUSE_ACTIONS    :: 12
 BOMB_SOUND_COUNT     :: 4
 
 MAX_EXPLOSION_CELLS :: 1 + 4 * PLAYER_MAX_BOMB_POWER
-EXPLOSION_STEPS     :: MOVEMENT_STEPS_PER_TILE
+EXPLOSION_STEPS     :: 12
 
 INDESTRUCTIBLE_ITEM_FIRST :: 9
 
 EXPLOSION_SET_1_FIRST_SPRITE :: 2
 EXPLOSION_SET_2_FIRST_SPRITE :: 7
 EXPLOSION_SET_3_FIRST_SPRITE :: 12
-
-WALKABLE_TERRAIN_LIMIT :: 25
-PASSABLE_ITEM_LIMIT     :: 4
-
-MOVEMENT_STEPS_PER_TILE  :: 16
-MOVEMENT_PIXELS_PER_STEP :: 2
-
-SCORE_BOMB_COST       :: 5
-SCORE_ITEM_PICKUP     :: 50
-SCORE_ENEMY_DESTROYED :: 75
-SCORE_TREASURE_PICKUP :: 100
-SCORE_LEVEL_WON       :: 100
-SCORE_DEATH_PENALTY   :: 50
 
 ITEM_POWER         :: 1
 ITEM_BOMB_CAPACITY :: 2
@@ -58,8 +34,7 @@ PLAYER_RIGHT_FIRST_SPRITE    :: 13
 PLAYER_DIRECTION_FRAME_COUNT :: 4
 
 #assert(MAX_BOMBS == PLAYER_MAX_BOMB_CAPACITY)
-#assert(MOVEMENT_STEPS_PER_TILE * MOVEMENT_PIXELS_PER_STEP == MAP_TILE_SIZE)
-#assert(MAX_GAMEPLAY_TICKS_PER_FRAME < MOVEMENT_STEPS_PER_TILE)
+#assert(MAX_GAMEPLAY_TICKS_PER_FRAME >= MOVEMENT_STEPS_PER_TILE)
 #assert(PLAYER_IDLE_SPRITE < PLAYER_SPRITE_COUNT)
 #assert(PLAYER_RIGHT_FIRST_SPRITE + PLAYER_DIRECTION_FRAME_COUNT == PLAYER_SPRITE_COUNT)
 #assert(BOMB_TICKING_SPRITE < BOMB_SPRITE_COUNT)
@@ -83,11 +58,10 @@ Direction :: enum {
 	Left,
 }
 
-// Gameplay_Action is the single prioritized command selected at each sixteen-
-// step action boundary.
+// Gameplay_Action is the movement command selected at each action boundary.
+// Bomb placement is an independent latched edge and never consumes movement.
 Gameplay_Action :: enum {
 	None,
-	Place_Bomb,
 	Move_Down,
 	Move_Up,
 	Move_Right,
@@ -106,11 +80,10 @@ Gameplay_Input_Buffer :: struct {
 }
 
 // Gameplay_Tick_State persists the fixed-clock accumulator, current action
-// progress, contact guard, and queued input across render frames.
+// progress and queued input across render frames.
 Gameplay_Tick_State :: struct {
 	accumulator_seconds:    f64,
 	action_step:            int,
-	contact_damage_applied: bool,
 	input:                  Gameplay_Input_Buffer,
 }
 
@@ -118,23 +91,23 @@ Gameplay_Tick_State :: struct {
 // all fixed ticks processed during one render-frame update.
 Gameplay_Tick_Result :: struct {
 	ticks_run:               int,
-	action_decisions:        int,
 	last_action:             Gameplay_Action,
-	bomb_action_started:     bool,
 	bomb_placed:             bool,
-	bombs_expired:           int,
-	ticking_requested:       bool,
+	ticking_requests:        int,
+	contact_hit_requests:    int,
 	player_damaged:          bool,
 	player_died:             bool,
 	explosions_started:      int,
+	explosion_positions:     [MAX_BOMBS]Grid_Position,
 	explosion_sound_indices: [MAX_BOMBS]u8,
 	explosion_sound_count:   int,
 	enemies_destroyed:       int,
+	enemy_destroyed_positions: [MAX_ENEMIES]Grid_Position,
 	squish_requests:         int,
 	items_collected:         int,
+	items_salvaged:          int,
 	treasures_collected:     int,
 	item_sound_requests:     int,
-	cheat_pressed:           [Cheat_Key]bool,
 }
 
 // Player_State owns run-wide resources together with current level position,
@@ -150,6 +123,8 @@ Player_State :: struct {
 	bomb_capacity: int,
 	bomb_power:    int,
 	score:         int,
+	contact_grace_ticks: int,
+	blast_grace_ticks:   int,
 }
 
 // Enemy_State represents one fixed enemy slot, including activity, sprite kind,
@@ -169,7 +144,7 @@ Enemy_State :: struct {
 Bomb_State :: struct {
 	active:       bool,
 	position:     Grid_Position,
-	fuse_actions: int,
+	fuse_ticks:   int,
 	power:        int,
 }
 
@@ -224,17 +199,26 @@ Gameplay_State :: enum {
 // bounded active entities, fixed clock, and session random generator.
 Gameplay :: struct {
 	state:                    Gameplay_State,
+	mode:                     Run_Mode,
+	difficulty:               Difficulty_Profile,
 	level:                    Level,
 	level_index:              int,
 	theme:                    Tile_Theme,
 	player:                   Player_State,
 	enemies:                  [MAX_ENEMIES]Enemy_State,
 	enemy_count:              int,
+	treasure_total:           int,
+	treasure_collected:       int,
+	level_stats:              Level_Stats,
+	level_result:             Level_Result,
+	level_tracking_active:    bool,
 	bombs:                    [MAX_BOMBS]Bomb_State,
 	explosions:               [MAX_BOMBS]Explosion_State,
 	bomb_occupancy:           Map_Grid,
 	tick_state:               Gameplay_Tick_State,
-	random_state:             rand.Xoshiro256_Random_State,
+	run_seed:                 u64,
+	ai_random_state:          rand.Xoshiro256_Random_State,
+	cosmetic_random_state:    rand.Xoshiro256_Random_State,
 	// Enabled only after a validated level has supplied its enemy objective.
 	level_completion_enabled: bool,
 }
@@ -248,10 +232,15 @@ Gameplay_Frame_Result :: struct {
 
 // init_gameplay creates a fresh run with default player resources and a new
 // random seed; Game calls it at application startup and for Start Game.
-init_gameplay :: proc(gameplay: ^Gameplay) {
+init_gameplay :: proc(
+	gameplay: ^Gameplay,
+	difficulty: Difficulty_Profile = .Standard,
+) {
 	gameplay^ = Gameplay {
-		state  = .Load_Level,
-		player = new_player_state(),
+		state      = .Load_Level,
+		mode       = .Campaign,
+		difficulty = difficulty,
+		player     = new_player_state(difficulty),
 	}
 	seed_gameplay_random(gameplay, rand.uint64())
 }
@@ -271,23 +260,32 @@ grid_position_to_screen :: proc(position: Grid_Position) -> (x, y: i32) {
 
 // new_player_state returns the run-wide defaults used whenever a new game is
 // initialized before the first level is loaded.
-new_player_state :: proc() -> Player_State {
+new_player_state :: proc(
+	difficulty: Difficulty_Profile = .Standard,
+) -> Player_State {
+	tuning := gameplay_tuning(difficulty)
 	return Player_State {
-		lives         = PLAYER_START_LIVES,
-		energy        = PLAYER_START_ENERGY,
-		bomb_capacity = PLAYER_START_BOMB_CAPACITY,
-		bomb_power    = PLAYER_START_BOMB_POWER,
+		lives         = tuning.player_start_lives,
+		energy        = tuning.player_start_energy,
+		bomb_capacity = tuning.player_start_bomb_capacity,
+		bomb_power    = tuning.player_start_bomb_power,
 	}
 }
 
-// reset_player_for_level_start preserves run-wide lives and score while restoring
-// energy and bomb upgrades before a retry or next-level load.
-reset_player_for_level_start :: proc(player: ^Player_State) {
+// reset_player_for_level_start preserves run-wide lives and score while
+// restoring energy and base upgrades for Standard's death retry rule.
+reset_player_for_level_start :: proc(
+	player: ^Player_State,
+	difficulty: Difficulty_Profile = .Standard,
+) {
+	tuning := gameplay_tuning(difficulty)
 	player.move_from = player.position
 	player.move_to = player.position
 	player.movement_step = 0
 	player.direction = .None
-	player.energy = PLAYER_START_ENERGY
-	player.bomb_capacity = PLAYER_START_BOMB_CAPACITY
-	player.bomb_power = PLAYER_START_BOMB_POWER
+	player.contact_grace_ticks = 0
+	player.blast_grace_ticks = 0
+	player.energy = tuning.player_start_energy
+	player.bomb_capacity = tuning.player_start_bomb_capacity
+	player.bomb_power = tuning.player_start_bomb_power
 }

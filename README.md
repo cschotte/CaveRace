@@ -29,7 +29,7 @@ as you can, and drive out every alien. Your bombs can clear softer stone and
 destroy nearby monsters, but the caves reward careful planning: dense rock will
 not move, and a careless blast can destroy treasure or a valuable power-up.
 
-Every explosion can reveal a route—or create a new danger. Clear the mines,
+Every explosion can reveal a route or create a new danger. Clear the mines,
 protect Eldora's riches, and make the caves safe for its people again.
 
 ## The modern rewrite
@@ -87,7 +87,7 @@ Start the MS-DOS game with `-powerblast` to enable the function-key cheats.
 | 1 | Save a screenshot as `screen.raw` |
 | % | Show rendering time |
 
-The `-slow` option speeds up the game on older, slower systems. The Odin port
+The `-slow` option speeds up the game on older, slower systems. The 1.5 port
 recognizes both original command-line options for compatibility.
 
 ## Original graphics
@@ -118,10 +118,10 @@ art uses the IFF (Interchange File Format). For the MS-DOS game, screens and
 Original CaveRace 1.0 team:
 
 - [Clemens Schotte](https://www.linkedin.com/in/cschotte/) — code and concept
-- Harro Lock — code
-- [Marijn Schotte](https://www.linkedin.com/in/marijn-schotte-a224a2216/) — artwork
+- [Marijn Schotte](https://www.linkedin.com/in/marijn-schotte-a224a2216/) — artwork and concept
 - [Paul Bosselaar](https://www.linkedin.com/in/paul-bosselaar/) — documentation
 - [Paul van Croonenburg](https://www.linkedin.com/in/paul-van-croonenburg-0a389843/) — documentation
+- Harro Lock — code
 
 From version 1.3 onward, CaveRace was developed by Clemens Schotte with artwork
 by Marijn Schotte.

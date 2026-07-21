@@ -21,15 +21,14 @@ direction_delta :: proc(direction: Direction) -> Grid_Position {
 	return {}
 }
 
-// action_direction converts only movement actions to directions; non-movement
-// actions keep the player idle for the current action interval.
+// action_direction converts only movement actions to directions.
 action_direction :: proc(action: Gameplay_Action) -> Direction {
 	switch action {
 	case .Move_Down:  return .Down
 	case .Move_Up:    return .Up
 	case .Move_Right: return .Right
 	case .Move_Left:  return .Left
-	case .None, .Place_Bomb: return .None
+	case .None: return .None
 	}
 	return .None
 }
@@ -129,15 +128,16 @@ advance_player_action_step :: proc(player: ^Player_State, completed_steps: int) 
 	}
 }
 
-// movement_screen_position converts simulation-space interpolation into the
-// pixel coordinate used only for actor rendering.
+// movement_screen_position converts simulation-space interpolation into pixels.
+// Division supports the selected 12-tick cadence without requiring a whole
+// number of pixels per fixed tick and lands exactly on every cell boundary.
 movement_screen_position :: proc(
 	move_from, move_to: Grid_Position,
 	movement_step: int,
 ) -> (x, y: i32) {
 	subtile := movement_subtile_position(move_from, move_to, movement_step)
-	return i32(MAP_OFFSET_X + subtile.x * MOVEMENT_PIXELS_PER_STEP),
-	       i32(MAP_OFFSET_Y + subtile.y * MOVEMENT_PIXELS_PER_STEP)
+	return i32(MAP_OFFSET_X + subtile.x * MAP_TILE_SIZE / MOVEMENT_STEPS_PER_TILE),
+	       i32(MAP_OFFSET_Y + subtile.y * MAP_TILE_SIZE / MOVEMENT_STEPS_PER_TILE)
 }
 
 // player_subtile_position exposes the player's interpolated simulation

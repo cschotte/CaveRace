@@ -10,18 +10,33 @@ enemy_slots :: proc(gameplay: ^Gameplay) -> []Enemy_State {
 	return gameplay.enemies[:gameplay.enemy_count]
 }
 
-// seed_gameplay_random initializes the session-owned generator at startup and
-// lets deterministic tests replay enemy choices and sound selection.
+COSMETIC_RANDOM_SEED_XOR :: u64(0x9e3779b97f4a7c15)
+
+// seed_gameplay_random initializes independent session-owned AI and cosmetic
+// streams. Audio/visual variation can advance without changing enemy choices.
 seed_gameplay_random :: proc(gameplay: ^Gameplay, seed: u64) {
-	generator := rand.xoshiro256_random_generator(&gameplay.random_state)
-	rand.reset_u64(seed, generator)
+	gameplay.run_seed = seed
+	ai_generator := rand.xoshiro256_random_generator(&gameplay.ai_random_state)
+	rand.reset_u64(seed, ai_generator)
+	cosmetic_generator := rand.xoshiro256_random_generator(
+		&gameplay.cosmetic_random_state,
+	)
+	rand.reset_u64(seed ~ COSMETIC_RANDOM_SEED_XOR, cosmetic_generator)
 }
 
 // gameplay_random_max draws a bounded value from the session generator for
 // deterministic gameplay decisions that must not use global random state.
 gameplay_random_max :: proc(gameplay: ^Gameplay, upper_bound: int) -> int {
 	assert(upper_bound > 0)
-	generator := rand.xoshiro256_random_generator(&gameplay.random_state)
+	generator := rand.xoshiro256_random_generator(&gameplay.ai_random_state)
+	return rand.int_max(upper_bound, generator)
+}
+
+// gameplay_cosmetic_random_max is reserved for presentation choices that must
+// never influence deterministic enemy movement or future challenge seeds.
+gameplay_cosmetic_random_max :: proc(gameplay: ^Gameplay, upper_bound: int) -> int {
+	assert(upper_bound > 0)
+	generator := rand.xoshiro256_random_generator(&gameplay.cosmetic_random_state)
 	return rand.int_max(upper_bound, generator)
 }
 
@@ -45,6 +60,56 @@ enemy_direction_from_roll :: proc(roll: int) -> Direction {
 	case 3: return .Left
 	}
 	return .None
+}
+
+manhattan_distance :: proc(a, b: Grid_Position) -> int {
+	return abs(a.x - b.x) + abs(a.y - b.y)
+}
+
+opposite_direction :: proc(direction: Direction) -> Direction {
+	switch direction {
+	case .Down:  return .Up
+	case .Up:    return .Down
+	case .Right: return .Left
+	case .Left:  return .Right
+	case .None:  return .None
+	}
+	return .None
+}
+
+// enemy_pursuit_chance reads the current cave's per-level pursuit bias, halved
+// under Assisted difficulty, and clamped to a bounded window.
+enemy_pursuit_chance :: proc(gameplay: ^Gameplay) -> f32 {
+	chance := level_metadata(gameplay.level_index).enemy_pursuit_chance
+	if gameplay.difficulty == .Assisted do chance *= 0.5
+	return clamp(chance, 0, 0.35)
+}
+
+// pursuit_direction selects only walkable steps that reduce Manhattan
+// distance. It is called after a metadata chance succeeds, so early caves keep
+// the original fully random behavior.
+pursuit_direction :: proc(gameplay: ^Gameplay, enemy: ^Enemy_State) -> Direction {
+	directions := [4]Direction{.Down, .Up, .Right, .Left}
+	candidates: [4]Direction
+	candidate_count := 0
+	reverse_candidate := Direction.None
+	reverse := opposite_direction(enemy.direction)
+	current_distance := manhattan_distance(enemy.position, gameplay.player.position)
+	for direction in directions {
+		delta := direction_delta(direction)
+		target := Grid_Position{enemy.position.x + delta.x, enemy.position.y + delta.y}
+		if is_walkable(&gameplay.level.data, &gameplay.bomb_occupancy, target) &&
+		   manhattan_distance(target, gameplay.player.position) < current_distance {
+			if direction == reverse {
+				reverse_candidate = direction
+				continue
+			}
+			candidates[candidate_count] = direction
+			candidate_count += 1
+		}
+	}
+	if candidate_count == 0 do return reverse_candidate
+	return candidates[gameplay_random_max(gameplay, candidate_count)]
 }
 
 // begin_enemy_action chooses the enemy's target cell for the next movement
@@ -76,7 +141,14 @@ begin_enemy_actions :: proc(gameplay: ^Gameplay) {
 	for &enemy in enemy_slots(gameplay) {
 		if !enemy.active do continue
 		roll := gameplay_random_max(gameplay, 4)
-		begin_enemy_action(gameplay, &enemy, enemy_direction_from_roll(roll))
+		direction := enemy_direction_from_roll(roll)
+		chance := enemy_pursuit_chance(gameplay)
+		if chance > 0 && gameplay_random_max(gameplay, 1000) < int(chance * 1000) {
+			if pursued := pursuit_direction(gameplay, &enemy); pursued != .None {
+				direction = pursued
+			}
+		}
+		begin_enemy_action(gameplay, &enemy, direction)
 	}
 }
 
@@ -125,8 +197,12 @@ player_touches_enemy :: proc(gameplay: ^Gameplay) -> bool {
 
 // apply_enemy_contact_damage applies one capped legacy damage event after the
 // gameplay clock has ensured contact is charged only once per action.
-apply_enemy_contact_damage :: proc(player: ^Player_State) -> bool {
+apply_enemy_contact_damage :: proc(
+	player: ^Player_State,
+	difficulty: Difficulty_Profile = .Standard,
+) -> bool {
 	if player.energy <= 0 do return false
-	player.energy = max(player.energy - ENEMY_CONTACT_DAMAGE, 0)
+	tuning := gameplay_tuning(difficulty)
+	player.energy = max(player.energy - tuning.enemy_contact_damage, 0)
 	return true
 }

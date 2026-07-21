@@ -3,14 +3,24 @@ package caverace
 import "core:fmt"
 import rl "vendor:raylib"
 
+MUSIC_CROSSFADE_SECONDS :: 0.45
+
 // Application owns platform resources and allocated paths for the complete
 // process lifetime managed by run_application.
 Application :: struct {
 	assets:        Assets,
 	game:          Game,
 	resource_root: string,
+	settings_path: string,
 	audio_ready:   bool,
 	active_music:  Maybe(Music_Cue),
+	outgoing_music: Maybe(Music_Cue),
+	music_fade_elapsed: f64,
+	input_poll:    Input_Poll_State,
+	canvas:        rl.RenderTexture2D,
+	applied_display_mode: Display_Mode,
+	quit_requested: bool,
+	controller_connected: bool,
 }
 
 // run_application owns platform startup, resource lifetimes, and the main
@@ -25,7 +35,15 @@ run_application :: proc(options: Launch_Options) -> bool {
 	app.resource_root = resource_root
 	defer delete(app.resource_root)
 
-	init_game(&app.game, options.cheats_enabled)
+	settings := default_settings()
+	if path, path_ok := settings_path(); path_ok {
+		app.settings_path = path
+		if loaded, loaded_ok := load_settings_from_path(path); loaded_ok {
+			settings = loaded
+		}
+	}
+	defer delete(app.settings_path)
+	init_game(&app.game, options.cheats_enabled, &settings)
 
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
 	if !rl.IsWindowReady() {
@@ -33,6 +51,12 @@ run_application :: proc(options: Launch_Options) -> bool {
 		return false
 	}
 	defer rl.CloseWindow()
+	app.canvas = rl.LoadRenderTexture(WINDOW_WIDTH, WINDOW_HEIGHT)
+	if !rl.IsRenderTextureValid(app.canvas) {
+		fmt.eprintln("Failed to create the fixed-resolution presentation canvas.")
+		return false
+	}
+	defer rl.UnloadRenderTexture(app.canvas)
 
 	rl.InitAudioDevice()
 	app.audio_ready = rl.IsAudioDeviceReady()
@@ -52,13 +76,27 @@ run_application :: proc(options: Launch_Options) -> bool {
 
 	// Disable the default exit key (ESC) to allow custom handling
 	rl.SetExitKey(.KEY_NULL)
+	apply_display_settings(&app)
+	if app.audio_ready do apply_sfx_volume(&app.assets, app.game.settings.sfx_volume)
 
 	// Slow mode reduces rendering work only. Gameplay always advances at the
 	// fixed GAMEPLAY_TICK_HZ rate through its accumulator.
 	rl.SetTargetFPS(target_render_fps(options))
 
-	for !rl.WindowShouldClose() {
-		input := poll_game_input()
+	for !rl.WindowShouldClose() && !app.quit_requested {
+		input := poll_game_input(
+			app.game.settings.bindings,
+			app.game.settings.controller_bindings,
+			&app.input_poll,
+		)
+		if input.controller_connected != app.controller_connected {
+			app.controller_connected = input.controller_connected
+			if input.controller_connected {
+				fmt.println("Controller detected: ", rl.GetGamepadName(GAMEPAD_INDEX))
+			} else {
+				fmt.println("Controller disconnected; keyboard prompts restored.")
+			}
+		}
 		frame_seconds := f64(rl.GetFrameTime())
 		input, frame_seconds = prepare_application_frame(
 			&app.game,
@@ -66,32 +104,83 @@ run_application :: proc(options: Launch_Options) -> bool {
 			frame_seconds,
 			rl.IsWindowFocused(),
 		)
+		input.presentation_music_controls_timing = app.audio_ready
+		input.presentation_music_finished = presentation_music_stream_finished(&app)
+		previous_input_device := app.game.last_input_device
 		update_result := update_application(&app, input, frame_seconds)
+		if app.game.last_input_device != previous_input_device {
+			if app.game.last_input_device == .Controller {
+				fmt.println("Input prompts switched to controller.")
+			} else {
+				fmt.println("Input prompts switched to keyboard.")
+			}
+		}
 		if app.audio_ready {
-			update_game_music(&app)
+			update_game_music(&app, frame_seconds)
 			play_frame_audio(&app.assets, &update_result)
+			apply_frame_rumble(&app, update_result.rumble)
 		}
 
-		rl.BeginDrawing()
-			rl.ClearBackground(rl.BLACK)
-			draw_game(&app.game, &app.assets)
-		rl.EndDrawing()
+		draw_application_frame(&app)
 	}
 
 	return true
 }
 
-// music_cue_for_game maps the current platform-independent state to one active
-// streamed track. Intro panels use matching tracks, cave music rotates by
-// level, and completing the tenth level receives the victory cue.
-music_cue_for_game :: proc(game: ^Game) -> Music_Cue {
+// presentation_rectangle centers and letterboxes the fixed-resolution canvas
+// inside the actual window, preserving aspect ratio at any window size.
+presentation_rectangle :: proc(screen_width, screen_height: int) -> rl.Rectangle {
+	scale_x := f32(screen_width) / WINDOW_WIDTH
+	scale_y := f32(screen_height) / WINDOW_HEIGHT
+	scale := min(scale_x, scale_y)
+	width := f32(WINDOW_WIDTH) * scale
+	height := f32(WINDOW_HEIGHT) * scale
+	return {
+		x      = (f32(screen_width) - width) / 2,
+		y      = (f32(screen_height) - height) / 2,
+		width  = width,
+		height = height,
+	}
+}
+
+// draw_application_frame renders the game to the fixed-resolution canvas,
+// then blits that canvas to the real window, scaled and letterboxed, with any
+// active screen shake applied only to this final presentation step.
+draw_application_frame :: proc(app: ^Application) {
+	rl.BeginTextureMode(app.canvas)
+		rl.ClearBackground(rl.BLACK)
+		draw_game(&app.game, &app.assets)
+	rl.EndTextureMode()
+
+	destination := presentation_rectangle(int(rl.GetScreenWidth()), int(rl.GetScreenHeight()))
+	shake_x, shake_y := screen_shake_offset(app.game.feedback, app.game.settings.screen_shake)
+	presentation_scale := destination.width / WINDOW_WIDTH
+	destination.x += f32(shake_x) * presentation_scale
+	destination.y += f32(shake_y) * presentation_scale
+	source := rl.Rectangle {
+		width  = WINDOW_WIDTH,
+		height = -WINDOW_HEIGHT,
+	}
+	rl.BeginDrawing()
+		rl.ClearBackground(rl.BLACK)
+		rl.DrawTexturePro(app.canvas.texture, source, destination, {}, 0, rl.WHITE)
+	rl.EndDrawing()
+}
+
+// music_cue_for_game maps presentation/menu/outcome states to streamed audio.
+// Active cave and tutorial play intentionally have no music.
+music_cue_for_game :: proc(game: ^Game) -> Maybe(Music_Cue) {
 	switch game.screen {
+	case .Branding:
+		return .Branding
 	case .Intro:
 		assert(game.front_end.image_index >= INTRO_FIRST_IMAGE)
 		assert(game.front_end.image_index <= INTRO_LAST_IMAGE)
 		return Music_Cue(int(Music_Cue.Intro_Eldora) + game.front_end.image_index)
 	case .Main_Menu:
-		return .Main_Menu
+		return .Menu
+	case .Tutorial:
+		return {}
 	case .Playing:
 		switch game.gameplay.state {
 		case .Won:
@@ -101,46 +190,107 @@ music_cue_for_game :: proc(game: ^Game) -> Music_Cue {
 		case .Game_Over:
 			return .Game_Over
 		case .Load_Level, .Playing, .Dead, .Load_Failed:
-			switch game.gameplay.level_index % 3 {
-			case 0: return .Cave_A
-			case 1: return .Cave_B
-			case 2: return .Cave_C
-			}
+			return {}
 		}
 	}
-	return .Main_Menu
+	return {}
 }
 
 // music_cue_loops distinguishes ambient screen/gameplay songs from finite
 // story and outcome cues.
 music_cue_loops :: proc(cue: Music_Cue) -> bool {
 	switch cue {
-	case .Main_Menu, .Cave_A, .Cave_B, .Cave_C:
+	case .Menu:
 		return true
-	case .Intro_Eldora, .Intro_Mining, .Intro_Aliens, .Intro_Defense,
-	     .Intro_Hero, .Intro_Bombs, .Intro_Protect, .Level_Complete,
+	case .Branding, .Intro_Eldora, .Intro_Mining, .Intro_Aliens,
+	     .Intro_Defense, .Intro_Hero, .Intro_Bombs, .Intro_Protect, .Level_Complete,
 	     .You_Won, .Game_Over:
 		return false
 	}
 	return false
 }
 
+// music_gain_for_game ducks music to half volume while paused, without
+// stopping the stream (avoiding a restart glitch on resume).
+music_gain_for_game :: proc(game: ^Game) -> f32 {
+	if game_is_paused(game) do return 0.5
+	return 1
+}
+
+music_crossfade_gains :: proc(elapsed_seconds: f64) -> (incoming, outgoing: f32) {
+	progress := f32(clamp(elapsed_seconds / MUSIC_CROSSFADE_SECONDS, 0, 1))
+	return progress, 1 - progress
+}
+
+// presentation_music_watches_finish limits presentation_music_stream_finished
+// to the screens/states that actually auto-advance on their music ending:
+// branding, story panels, and the Game Over / Game Won outcome screens.
+presentation_music_watches_finish :: proc(game: ^Game) -> bool {
+	switch game.screen {
+	case .Branding:
+		return true
+	case .Intro:
+		return !game.front_end.transition_active
+	case .Playing:
+		return game.gameplay.state == .Game_Over || game.gameplay.state == .Game_Won
+	case .Main_Menu, .Tutorial:
+		return false
+	}
+	return false
+}
+
+// presentation_music_stream_finished reports a natural end only after the expected
+// finite cue has actually been started. This prevents the first frame, cue
+// changes, and silent startup from being mistaken for completed playback.
+presentation_music_stream_finished :: proc(app: ^Application) -> bool {
+	if !app.audio_ready || !presentation_music_watches_finish(&app.game) do return false
+	active, active_ok := app.active_music.?
+	desired, desired_ok := music_cue_for_game(&app.game).?
+	if !active_ok || !desired_ok || active != desired do return false
+	return !rl.IsMusicStreamPlaying(app.assets.music[active])
+}
+
 // update_game_music switches tracks only when the requested cue changes and
 // services the active raylib stream every frame.
-update_game_music :: proc(app: ^Application) {
-	desired := music_cue_for_game(&app.game)
-	if active, ok := app.active_music.?; ok {
-		if active == desired {
-			rl.UpdateMusicStream(app.assets.music[active])
-			return
+update_game_music :: proc(app: ^Application, frame_seconds: f64) {
+	desired, desired_ok := music_cue_for_game(&app.game).?
+	active, active_ok := app.active_music.?
+	if active_ok && (!desired_ok || active != desired) {
+		if outgoing, outgoing_ok := app.outgoing_music.?; outgoing_ok {
+			rl.StopMusicStream(app.assets.music[outgoing])
 		}
-		rl.StopMusicStream(app.assets.music[active])
+		app.outgoing_music = active
+		app.active_music = {}
+		app.music_fade_elapsed = 0
+		active_ok = false
+	}
+	if desired_ok && (!active_ok || active != desired) {
+		app.assets.music[desired].looping = music_cue_loops(desired)
+		rl.SetMusicVolume(app.assets.music[desired], 0)
+		rl.PlayMusicStream(app.assets.music[desired])
+		app.active_music = desired
 	}
 
-	app.assets.music[desired].looping = music_cue_loops(desired)
-	rl.PlayMusicStream(app.assets.music[desired])
-	app.active_music = desired
-	rl.UpdateMusicStream(app.assets.music[desired])
+	base_gain := music_gain_for_game(&app.game) *
+		f32(clamp(app.game.settings.music_volume, 0, 100)) / 100
+	active, active_ok = app.active_music.?
+	if outgoing, outgoing_ok := app.outgoing_music.?; outgoing_ok {
+		app.music_fade_elapsed += clamp(frame_seconds, 0, MAX_FRAME_DELTA_SECONDS)
+		incoming_gain, outgoing_gain := music_crossfade_gains(app.music_fade_elapsed)
+		if active_ok {
+			rl.SetMusicVolume(app.assets.music[active], base_gain * incoming_gain)
+			rl.UpdateMusicStream(app.assets.music[active])
+		}
+		rl.SetMusicVolume(app.assets.music[outgoing], base_gain * outgoing_gain)
+		rl.UpdateMusicStream(app.assets.music[outgoing])
+		if app.music_fade_elapsed >= MUSIC_CROSSFADE_SECONDS {
+			rl.StopMusicStream(app.assets.music[outgoing])
+			app.outgoing_music = {}
+		}
+	} else if active_ok {
+		rl.SetMusicVolume(app.assets.music[active], base_gain)
+		rl.UpdateMusicStream(app.assets.music[active])
+	}
 }
 
 // update_application advances platform-independent game state, then fulfills
@@ -161,10 +311,18 @@ process_game_requests :: proc(app: ^Application, result: ^Game_Update_Result) {
 	if result.load_level_requested {
 		load_gameplay_level(&app.game.gameplay, app.resource_root)
 	}
+	if result.settings_changed {
+		if len(app.settings_path) > 0 && !save_settings_to_path(app.settings_path, app.game.settings) {
+			fmt.eprintln("Could not save settings; play can continue.")
+		}
+		if app.audio_ready do apply_sfx_volume(&app.assets, app.game.settings.sfx_volume)
+	}
+	if result.display_changed do apply_display_settings(app)
+	if result.quit_requested do app.quit_requested = true
 }
 
-// prepare_application_frame suppresses input and elapsed time while focus is
-// lost so returning to the window cannot replay queued actions or catch up.
+// prepare_application_frame opens the gameplay pause overlay on focus loss and
+// suppresses input/time so recovery cannot replay actions or catch up.
 prepare_application_frame :: proc(
 	game: ^Game,
 	input: Game_Input,
@@ -172,28 +330,115 @@ prepare_application_frame :: proc(
 	window_focused: bool,
 ) -> (Game_Input, f64) {
 	if window_focused do return input, frame_seconds
-	// Stop held and queued actions while preserving the current gameplay state.
 	game.gameplay.tick_state.input = {}
-	return {}, 0
+	if game.settings.pause_on_focus_loss {
+		open_game_pause(game)
+		return {}, 0
+	}
+	return {}, frame_seconds
+}
+
+// supported_window_scale steps a requested 1x-3x window scale down until it
+// fits the current monitor, so an oversized request never leaves the window
+// larger than the screen.
+supported_window_scale :: proc(requested, monitor_width, monitor_height: int) -> int {
+	requested_scale := clamp(requested, 1, 3)
+	for scale := requested_scale; scale >= 1; scale -= 1 {
+		if WINDOW_WIDTH * scale <= monitor_width && WINDOW_HEIGHT * scale <= monitor_height {
+			return scale
+		}
+	}
+	return 1
+}
+
+// apply_display_settings pushes the current display mode and window scale to
+// raylib. It only toggles borderless mode on an actual change, since toggling
+// it every call would fight the window manager each frame.
+apply_display_settings :: proc(app: ^Application) {
+	desired := app.game.settings.display_mode
+	if desired != app.applied_display_mode {
+		rl.ToggleBorderlessWindowed()
+		app.applied_display_mode = desired
+	}
+	if desired == .Windowed {
+		monitor := rl.GetCurrentMonitor()
+		scale := supported_window_scale(
+			app.game.settings.window_scale,
+			int(rl.GetMonitorWidth(monitor)),
+			int(rl.GetMonitorHeight(monitor)),
+		)
+		rl.SetWindowSize(i32(WINDOW_WIDTH * scale), i32(WINDOW_HEIGHT * scale))
+	}
+}
+
+apply_sfx_volume :: proc(assets: ^Assets, volume_percent: int) {
+	volume := f32(clamp(volume_percent, 0, 100)) / 100
+	for &sound in assets.sounds.bomb do rl.SetSoundVolume(sound, volume)
+	rl.SetSoundVolume(assets.sounds.item, volume)
+	rl.SetSoundVolume(assets.sounds.hit, volume)
+	rl.SetSoundVolume(assets.sounds.squish, volume)
+	rl.SetSoundVolume(assets.sounds.ticking, volume)
+	rl.SetSoundVolume(assets.sounds.menu, volume)
+}
+
+// limited_audio_request_count caps a per-frame event count to a fixed voice
+// budget, so a burst of simultaneous game events (e.g. several bombs
+// finishing at once) can't queue more sound calls than intended.
+limited_audio_request_count :: proc(requested, maximum: int) -> int {
+	return clamp(requested, 0, maximum)
 }
 
 // play_frame_audio translates gameplay events from the latest update into
 // raylib sound calls after game state has advanced.
 play_frame_audio :: proc(assets: ^Assets, result: ^Game_Update_Result) {
-	if result.gameplay.ticks.ticking_requested {
+	for _ in 0 ..< limited_audio_request_count(result.gameplay.ticks.ticking_requests, 1) {
+		if rl.IsSoundPlaying(assets.sounds.ticking) do break
 		rl.PlaySound(assets.sounds.ticking)
 	}
-	for sound_index in 0 ..< result.gameplay.ticks.explosion_sound_count {
+	for _ in 0 ..< limited_audio_request_count(result.gameplay.ticks.contact_hit_requests, 1) {
+		if rl.IsSoundPlaying(assets.sounds.hit) do break
+		rl.PlaySound(assets.sounds.hit)
+	}
+	for sound_index in 0 ..< limited_audio_request_count(result.gameplay.ticks.explosion_sound_count, MAX_BOMBS) {
 		bomb_sound := result.gameplay.ticks.explosion_sound_indices[sound_index]
 		assert(bomb_sound < BOMB_SOUND_COUNT)
-		rl.PlaySound(assets.sounds.bomb[bomb_sound])
+		if !rl.IsSoundPlaying(assets.sounds.bomb[bomb_sound]) {
+			rl.PlaySound(assets.sounds.bomb[bomb_sound])
+		}
 	}
-	for _ in 0 ..< result.gameplay.ticks.squish_requests {
+	for _ in 0 ..< limited_audio_request_count(result.gameplay.ticks.squish_requests, 1) {
+		if rl.IsSoundPlaying(assets.sounds.squish) do break
 		rl.PlaySound(assets.sounds.squish)
 	}
-	for _ in 0 ..< result.gameplay.ticks.item_sound_requests {
+	for _ in 0 ..< limited_audio_request_count(result.gameplay.ticks.item_sound_requests, 1) {
+		if rl.IsSoundPlaying(assets.sounds.item) do break
 		rl.PlaySound(assets.sounds.item)
 	}
+	if result.menu_sound_requests > 0 && !rl.IsSoundPlaying(assets.sounds.menu) {
+		rl.PlaySound(assets.sounds.menu)
+	}
+}
+
+rumble_parameters :: proc(event: Rumble_Event) -> (left, right, duration: f32) {
+	switch event {
+	case .None:      return 0, 0, 0
+	case .Light:     return 0.12, 0.18, 0.08
+	case .Damage:    return 0.55, 0.75, 0.18
+	case .Explosion: return 0.35, 0.55, 0.12
+	case .Victory:   return 0.35, 0.65, 0.45
+	}
+	return 0, 0, 0
+}
+
+// apply_frame_rumble fires controller vibration for the frame's highest-
+// priority event, respecting both controller presence and the rumble setting.
+apply_frame_rumble :: proc(app: ^Application, event: Rumble_Event) {
+	if event == .None || !app.controller_connected ||
+	   !app.game.settings.controller_rumble {
+		return
+	}
+	left, right, duration := rumble_parameters(event)
+	rl.SetGamepadVibration(GAMEPAD_INDEX, left, right, duration)
 }
 
 // target_render_fps selects the normal or legacy slow-mode presentation rate;

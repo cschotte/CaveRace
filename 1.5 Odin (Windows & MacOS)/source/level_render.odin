@@ -2,6 +2,10 @@ package caverace
 
 import rl "vendor:raylib"
 
+// BOMB_FLASH_MAX_ALPHA caps the additive glow's peak intensity so the ticking
+// bomb reads as glowing hotter, not as flashing blown-out white.
+BOMB_FLASH_MAX_ALPHA :: f32(0.6)
+
 // draw_level_tiles draws only persistent map layers. Spawn grids remain part of
 // the loaded file data, while active entities are rendered separately.
 draw_level_tiles :: proc(level: ^Level, terrain: rl.Texture, sprites: ^Sprite_Assets) {
@@ -23,16 +27,56 @@ draw_level_tiles :: proc(level: ^Level, terrain: rl.Texture, sprites: ^Sprite_As
 
 // draw_level_entities renders bombs, player, enemies, and explosion overlays in
 // the legacy layer order after persistent map tiles are drawn.
-draw_level_entities :: proc(gameplay: ^Gameplay, sprites: ^Sprite_Assets) {
+draw_level_entities :: proc(
+	gameplay: ^Gameplay,
+	sprites: ^Sprite_Assets,
+	high_contrast_preview := false,
+) {
+	for &bomb in gameplay.bombs {
+		preview, visible := bomb_danger_footprint(&bomb, gameplay.difficulty)
+		if !visible do continue
+		for cell_index in 0 ..< preview.cell_count {
+			x, y := grid_position_to_screen(preview.cells[cell_index].position)
+			rl.DrawRectangle(x, y, MAP_TILE_SIZE, MAP_TILE_SIZE, rl.Fade(rl.RED, 0.20))
+			rl.DrawRectangleLines(x, y, MAP_TILE_SIZE, MAP_TILE_SIZE, rl.GOLD)
+			if high_contrast_preview {
+				for offset: i32 = 4; offset < MAP_TILE_SIZE; offset += 8 {
+					rl.DrawLine(x + offset, y, x, y + offset, rl.WHITE)
+					rl.DrawLine(x + MAP_TILE_SIZE, y + offset, x + offset, y + MAP_TILE_SIZE, rl.WHITE)
+				}
+			}
+		}
+	}
+
 	for &bomb in gameplay.bombs {
 		if !bomb.active do continue
 		screen_x, screen_y := grid_position_to_screen(bomb.position)
 		draw_vertical_sprite(sprites.bomb, BOMB_TICKING_SPRITE, screen_x, screen_y)
+		if flash := bomb_flash_alpha(bomb.fuse_ticks); flash > 0 {
+			// Additive blending only lights up the bomb's own opaque pixels,
+			// so the fuse reads as the sprite itself glowing hotter rather
+			// than a border blinking on the tile behind it.
+			rl.BeginBlendMode(.ADDITIVE)
+			draw_vertical_sprite(
+				sprites.bomb,
+				BOMB_TICKING_SPRITE,
+				screen_x,
+				screen_y,
+				rl.Fade(rl.GOLD, flash * BOMB_FLASH_MAX_ALPHA),
+			)
+			rl.EndBlendMode()
+		}
 	}
 
 	player_screen_x, player_screen_y := player_screen_position(&gameplay.player)
 	player_sprite := player_sprite_index(&gameplay.player)
-	draw_vertical_sprite(sprites.player, player_sprite, player_screen_x, player_screen_y)
+	player_visible := contact_grace_player_visible(max(
+		gameplay.player.contact_grace_ticks,
+		gameplay.player.blast_grace_ticks,
+	))
+	if player_visible {
+		draw_vertical_sprite(sprites.player, player_sprite, player_screen_x, player_screen_y)
+	}
 
 	for &enemy in enemy_slots(gameplay) {
 		if !enemy.active do continue
@@ -60,7 +104,9 @@ draw_level_entities :: proc(gameplay: ^Gameplay, sprites: ^Sprite_Assets) {
 
 // draw_vertical_sprite renders one row from the converted 32x32 vertical sheets;
 // all level, actor, explosion, and HUD drawing shares this bounds-checked helper.
-draw_vertical_sprite :: proc(texture: rl.Texture, sprite_index: u8, x, y: i32) {
+// tint defaults to opaque white (the sprite's own colors, unmodified); callers
+// that need a colored glow pass a translucent tint instead.
+draw_vertical_sprite :: proc(texture: rl.Texture, sprite_index: u8, x, y: i32, tint: rl.Color = rl.WHITE) {
 	index := i32(sprite_index)
 	sprite_count := texture.height / MAP_TILE_SIZE
 	if texture.width != MAP_TILE_SIZE || index >= sprite_count do return
@@ -72,5 +118,5 @@ draw_vertical_sprite :: proc(texture: rl.Texture, sprite_index: u8, x, y: i32) {
 		height = MAP_TILE_SIZE,
 	}
 	position := rl.Vector2 {f32(x), f32(y)}
-	rl.DrawTextureRec(texture, source, position, rl.WHITE)
+	rl.DrawTextureRec(texture, source, position, tint)
 }

@@ -3,6 +3,9 @@ package caverace
 import "core:strconv"
 import rl "vendor:raylib"
 
+// These coordinates are the original CaveRace 1.3 HUD compartments baked into
+// border.png. Keep gameplay information inside that lower frame so the
+// 19x11 playfield remains completely unobstructed.
 HUD_LIVES_X       :: 16
 HUD_LIVES_Y       :: 374
 HUD_LIVES_SPACING :: 20
@@ -33,8 +36,6 @@ TOOLS_BOMB_SPRITE   :: 3
 #assert(TOOLS_POWER_SPRITE < TOOLS_SPRITE_COUNT)
 #assert(TOOLS_BOMB_SPRITE < TOOLS_SPRITE_COUNT)
 
-// Gameplay_Hud_State is a render-only snapshot derived from player and bomb
-// state so HUD layout code cannot mutate gameplay.
 Gameplay_Hud_State :: struct {
 	lives:           int,
 	energy:          int,
@@ -43,8 +44,8 @@ Gameplay_Hud_State :: struct {
 	score:           int,
 }
 
-// gameplay_hud_state takes a read-only snapshot of the player values needed by
-// the HUD, keeping layout code independent of gameplay mutation.
+// gameplay_hud_state snapshots exactly the fields the legacy 1.3 HUD draws;
+// it intentionally carries nothing beyond that.
 gameplay_hud_state :: proc(gameplay: ^Gameplay) -> Gameplay_Hud_State {
 	return {
 		lives           = gameplay.player.lives,
@@ -55,8 +56,8 @@ gameplay_hud_state :: proc(gameplay: ^Gameplay) -> Gameplay_Hud_State {
 	}
 }
 
-// draw_gameplay_hud renders legacy status icons and score after the level and
-// actors have been drawn for an active gameplay screen.
+// draw_gameplay_hud deliberately restores the version 1.3 presentation: only
+// the original bottom-frame icons and score.
 draw_gameplay_hud :: proc(gameplay: ^Gameplay, tools: rl.Texture) {
 	hud := gameplay_hud_state(gameplay)
 	for icon_index in 0 ..< hud.lives {
@@ -75,6 +76,16 @@ draw_gameplay_hud :: proc(gameplay: ^Gameplay, tools: rl.Texture) {
 			HUD_ENERGY_Y,
 		)
 	}
+
+	if gameplay.player.contact_grace_ticks > 0 || gameplay.player.blast_grace_ticks > 0 {
+		pulse_ticks := max(
+			gameplay.player.contact_grace_ticks,
+			gameplay.player.blast_grace_ticks,
+		)
+		pulse_color := rl.RED
+		if (pulse_ticks / 4) % 2 == 0 do pulse_color = rl.YELLOW
+		rl.DrawRectangleLines(HUD_ENERGY_X - 3, HUD_ENERGY_Y - 3, 85, 37, pulse_color)
+	}
 	for icon_index in 0 ..< hud.available_bombs {
 		draw_vertical_sprite(
 			tools,
@@ -92,8 +103,8 @@ draw_gameplay_hud :: proc(gameplay: ^Gameplay, tools: rl.Texture) {
 		)
 	}
 
-	// The target uses raylib's allocation-free default font in the original
-	// score box; the final byte stays zero for the C API.
+	// The original fifth compartment is retained for the live score. Using the
+	// default font keeps this allocation-free and does not change score logic.
 	score_buffer: [32]byte
 	score_text := strconv.write_int(score_buffer[:len(score_buffer) - 1], i64(hud.score), 10)
 	score_cstring := cstring(raw_data(score_text))
