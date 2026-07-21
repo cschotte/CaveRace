@@ -1,7 +1,2 @@
 # Generated files
 .DS_Store
-/1.5 Odin (Windows & MacOS)/build
-/1.5 Odin (Windows & MacOS)/dist
-
-# Release archives are attached to GitHub Releases, not committed
-/releases/*.zip
