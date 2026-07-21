@@ -19,6 +19,7 @@ if ($Mode -eq "debug") {
     $BuildFlags += "-debug"
 } else {
     $BuildFlags += "-o:speed"
+    $BuildFlags += "-extra-linker-flags:/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
 }
 
 Push-Location $SourceDirectory
