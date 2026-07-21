@@ -104,8 +104,8 @@ Gameplay uses these explicit lifecycle states:
 | Playing | Queue frame input and advance deterministic 60 Hz gameplay ticks |
 | Dead | Wait for Confirm or Quick Retry, preserve score, reset level upgrades, and reload the same level |
 | Won | Show time, objective, damage, medal, and an exact score ledger; Confirm loads the next level |
-| Game won | Show the final victory screen after level 10; Confirm returns to the menu |
-| Game over | Show the game-over screen after the last life; Quick Retry starts a run and Confirm returns to menu |
+| Game won | Show the final victory screen after level 10; Confirm, or its music finishing, returns to the menu |
+| Game over | Show the game-over screen after the last life; Quick Retry starts a run, and Confirm, or its music finishing, returns to menu |
 | Load failed | Preserve valid state and allow Enter to retry or Escape to return to the menu |
 
 P or controller Start opens a simulation-freezing pause menu with Resume,

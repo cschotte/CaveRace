@@ -215,9 +215,11 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 		} else if previous_gameplay_state == .Game_Over && input.restart_pressed {
 			start_new_game(game)
 			result.load_level_requested = true
-		} else if previous_gameplay_state == .Game_Over && input.confirm {
+		} else if previous_gameplay_state == .Game_Over &&
+		          (input.confirm || input.presentation_music_finished) {
 			show_main_menu(game)
-		} else if previous_gameplay_state == .Game_Won && input.confirm {
+		} else if previous_gameplay_state == .Game_Won &&
+		          (input.confirm || input.presentation_music_finished) {
 			show_main_menu(game)
 		} else {
 			result.gameplay = update_gameplay(

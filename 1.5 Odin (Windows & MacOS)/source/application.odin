@@ -215,15 +215,28 @@ music_crossfade_gains :: proc(elapsed_seconds: f64) -> (incoming, outgoing: f32)
 	return progress, 1 - progress
 }
 
+// presentation_music_watches_finish limits presentation_music_stream_finished
+// to the screens/states that actually auto-advance on their music ending:
+// branding, story panels, and the Game Over / Game Won outcome screens.
+presentation_music_watches_finish :: proc(game: ^Game) -> bool {
+	switch game.screen {
+	case .Branding:
+		return true
+	case .Intro:
+		return !game.front_end.transition_active
+	case .Playing:
+		return game.gameplay.state == .Game_Over || game.gameplay.state == .Game_Won
+	case .Main_Menu, .Tutorial:
+		return false
+	}
+	return false
+}
+
 // presentation_music_stream_finished reports a natural end only after the expected
 // finite cue has actually been started. This prevents the first frame, cue
 // changes, and silent startup from being mistaken for completed playback.
 presentation_music_stream_finished :: proc(app: ^Application) -> bool {
-	if !app.audio_ready ||
-	   (app.game.screen != .Branding && app.game.screen != .Intro) ||
-	   (app.game.screen == .Intro && app.game.front_end.transition_active) {
-		return false
-	}
+	if !app.audio_ready || !presentation_music_watches_finish(&app.game) do return false
 	active, active_ok := app.active_music.?
 	desired, desired_ok := music_cue_for_game(&app.game).?
 	if !active_ok || !desired_ok || active != desired do return false

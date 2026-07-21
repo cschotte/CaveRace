@@ -146,28 +146,6 @@ draw_game_pause :: proc(game: ^Game) {
 	}
 }
 
-// draw_ken_burns_texture draws a full-canvas texture with a slow, subtle zoom
-// and drift instead of a static blit, giving story and outcome screens a
-// gentle sense of camera movement without any new gameplay-facing state.
-draw_ken_burns_texture :: proc(texture: rl.Texture, zoom: f32, drift_right: bool, tint: rl.Color) {
-	if zoom <= 0 || !rl.IsTextureValid(texture) {
-		rl.DrawTexture(texture, 0, 0, tint)
-		return
-	}
-	crop_width := f32(texture.width) * (1 - zoom)
-	crop_height := f32(texture.height) * (1 - zoom)
-	drift_x: f32 = 0.35
-	if drift_right do drift_x = 0.65
-	source := rl.Rectangle {
-		x      = (f32(texture.width) - crop_width) * drift_x,
-		y      = (f32(texture.height) - crop_height) * 0.5,
-		width  = crop_width,
-		height = crop_height,
-	}
-	dest := rl.Rectangle{width = WINDOW_WIDTH, height = WINDOW_HEIGHT}
-	rl.DrawTexturePro(texture, source, dest, {}, 0, tint)
-}
-
 // draw_front_end displays the story, title, or controls image selected by the
 // platform-independent front-end state.
 draw_front_end :: proc(front_end: Front_End_State, screens: ^Screen_Assets) {
@@ -236,18 +214,6 @@ draw_selection_glow :: proc(x, y, width, height: i32, pulse: f32) {
 	rl.DrawRectangle(x, y, 3, height, rl.Fade(rl.GOLD, 0.85 + pulse * 0.15))
 }
 
-draw_menu_row :: proc(label: cstring, index, selected, y: int, pulse: f32 = 0) {
-	color := rl.LIGHTGRAY
-	prefix: cstring = "  "
-	if index == selected {
-		draw_selection_glow(163, i32(y) - 3, 320, 24, pulse)
-		color = rl.GOLD
-		prefix = "> "
-	}
-	rl.DrawText(prefix, 177, i32(y), 18, color)
-	rl.DrawText(label, 203, i32(y), 18, color)
-}
-
 // draw_menu_panel draws a horizontally centered panel and returns its
 // resolved left edge so callers can place rows relative to its actual width
 // and position instead of assuming the original fixed 480-wide layout.
@@ -264,14 +230,9 @@ draw_menu_panel :: proc(title: cstring, height: i32 = 310, width: i32 = 480, pan
 	return panel_x
 }
 
-// MENU_PANEL_CONTENT_TOP sits just below draw_menu_panel's fixed title band
-// (which ends at y=101) when panel_y keeps its default of 58, so content
-// never draws under the panel title on the First-Run page.
-MENU_PANEL_CONTENT_TOP :: 106
-
-// MENU_PANEL_CONTENT_GAP is the same title-band clearance as
-// MENU_PANEL_CONTENT_TOP, expressed relative to panel_y instead of assuming
-// the default panel_y=58, for panels placed elsewhere on screen.
+// MENU_PANEL_CONTENT_GAP is the clearance below draw_menu_panel's fixed
+// title band (band height 42, plus a small gap), expressed relative to
+// panel_y so it works no matter where a panel is placed on screen.
 MENU_PANEL_CONTENT_GAP :: 48
 
 // draw_menu_value_row draws a label flush left and its value right-aligned to
@@ -364,30 +325,6 @@ draw_main_menu_page :: proc(game: ^Game) {
 		}
 		rl.DrawText(main_menu_item_label(Main_Menu_Item(item_index)), label_x, y, 16, color)
 	}
-}
-
-draw_device_footer :: proc(game: ^Game, text_y: i32 = 372) {
-	buffer: [180]byte
-	footer: cstring
-	if game.last_input_device == .Keyboard {
-		footer = format_cstring(
-			buffer[:],
-			"ARROWS / %s/%s/%s/%s    %s: SELECT    ESC: BACK",
-			keyboard_key_label(game.settings.bindings[.Move_Up]),
-			keyboard_key_label(game.settings.bindings[.Move_Left]),
-			keyboard_key_label(game.settings.bindings[.Move_Down]),
-			keyboard_key_label(game.settings.bindings[.Move_Right]),
-			action_prompt(.Confirm, .Keyboard, game.settings.bindings),
-		)
-	} else {
-		footer = format_cstring(
-			buffer[:],
-			"LEFT STICK / MOVE BUTTONS    %s: SELECT    B: BACK",
-			action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
-		)
-	}
-	width := rl.MeasureText(footer, 14)
-	rl.DrawText(footer, (WINDOW_WIDTH - width) / 2, text_y, 14, rl.LIGHTGRAY)
 }
 
 // Shared geometry for the narrow, bottom-anchored, value-aligned menu panels
@@ -526,6 +463,47 @@ draw_how_to_play :: proc(game: ^Game) {
 	}
 }
 
+// First-Run needs a wider narrow panel than Settings/Bindings/Pause: its
+// instructional line alone measures ~357px, wider than MENU_NARROW_PANEL_WIDTH.
+FIRST_RUN_PANEL_WIDTH :: 400
+FIRST_RUN_ROW_SPACING :: 38
+FIRST_RUN_ROW_HEIGHT  :: 24
+
+// draw_first_run_menu shares the same narrow, bottom-anchored, no-footer-hint
+// treatment as Settings/Bindings/Pause, sized instead to fit its own wider
+// instructional line and larger item text.
+draw_first_run_menu :: proc(game: ^Game) {
+	items_top: i32 = MENU_PANEL_CONTENT_GAP + 22
+	last_row_offset := items_top + i32(len(First_Run_Item) - 1) * FIRST_RUN_ROW_SPACING
+	rules_offset := last_row_offset + FIRST_RUN_ROW_HEIGHT + 10
+	height := rules_offset + 14 + 16
+	panel_y := WINDOW_HEIGHT - height - MENU_PANEL_BOTTOM_MARGIN
+	panel_x := draw_menu_panel("CHOOSE YOUR START", height, FIRST_RUN_PANEL_WIDTH, panel_y)
+
+	instruction: cstring = "LEARN MOVEMENT, BOMBS, PICKUPS AND SAFETY."
+	instruction_width := rl.MeasureText(instruction, 14)
+	rl.DrawText(instruction, panel_x + (FIRST_RUN_PANEL_WIDTH - instruction_width) / 2, panel_y + MENU_PANEL_CONTENT_GAP, 14, rl.WHITE)
+
+	prefix_x := panel_x + MENU_SIDE_INSET
+	label_x := panel_x + MENU_SIDE_INSET + 16
+	glow_x := panel_x + MENU_GLOW_INSET
+	glow_width := i32(FIRST_RUN_PANEL_WIDTH) - MENU_GLOW_INSET * 2
+	pulse := ui_pulse(game.ui_clock, 1.6)
+	for item_index in 0 ..< len(First_Run_Item) {
+		color := rl.LIGHTGRAY
+		prefix: cstring = "  "
+		y := panel_y + items_top + i32(item_index) * FIRST_RUN_ROW_SPACING
+		if game.menu.selected == item_index {
+			draw_selection_glow(glow_x, y - 3, glow_width, FIRST_RUN_ROW_HEIGHT, pulse)
+			color = rl.GOLD
+			prefix = "> "
+		}
+		rl.DrawText(prefix, prefix_x, y, 18, color)
+		rl.DrawText(first_run_item_label(First_Run_Item(item_index)), label_x, y, 18, color)
+	}
+	draw_ui_format(prefix_x, panel_y + rules_offset, 14, rl.GOLD, "RULES: %s", difficulty_label(game.settings.difficulty))
+}
+
 draw_main_menu :: proc(game: ^Game) {
 	switch game.menu.page {
 	case .Settings:    draw_settings_menu(game)
@@ -534,14 +512,7 @@ draw_main_menu :: proc(game: ^Game) {
 	case .Main:
 		draw_main_menu_page(game)
 	case .First_Run:
-		draw_menu_panel("CHOOSE YOUR START", 254)
-		rl.DrawText("LEARN MOVEMENT, BOMBS, PICKUPS AND SAFETY.", 161, MENU_PANEL_CONTENT_TOP, 14, rl.WHITE)
-		pulse := ui_pulse(game.ui_clock, 1.6)
-		for item_index in 0 ..< len(First_Run_Item) {
-			draw_menu_row(first_run_item_label(First_Run_Item(item_index)), item_index, game.menu.selected, 145 + item_index * 42, pulse)
-		}
-		draw_ui_format(172, 292, 14, rl.GOLD, "RULES: %s", difficulty_label(game.settings.difficulty))
-		draw_device_footer(game)
+		draw_first_run_menu(game)
 	}
 }
 
@@ -627,36 +598,12 @@ draw_game_over_ambience :: proc(game: ^Game) {
 draw_gameplay :: proc(game: ^Game, assets: ^Assets) {
 	gameplay := &game.gameplay
 	if gameplay.state == .Game_Over {
-		draw_ken_burns_texture(assets.screens.game_over, ui_pulse(game.ui_clock, 16) * 0.03, false, rl.WHITE)
+		rl.DrawTexture(assets.screens.game_over, 0, 0, rl.WHITE)
 		draw_game_over_ambience(game)
-		if game.last_input_device == .Controller {
-			draw_gameplay_message_format(
-				"%s: NEW RUN     %s: MAIN MENU",
-				action_prompt(.Restart, .Controller, game.settings.bindings, &game.settings.controller_bindings),
-				action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
-			)
-		} else {
-			draw_gameplay_message_format(
-				"%s: NEW RUN     %s: MAIN MENU",
-				action_prompt(.Restart, .Keyboard, game.settings.bindings),
-				action_prompt(.Confirm, .Keyboard, game.settings.bindings),
-			)
-		}
 		return
 	}
 	if gameplay.state == .Game_Won {
-		draw_ken_burns_texture(assets.screens.you_won, ui_pulse(game.ui_clock, 16) * 0.03, true, rl.WHITE)
-		if game.last_input_device == .Controller {
-			draw_gameplay_message_format(
-				"%s: MAIN MENU",
-				action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
-			)
-		} else {
-			draw_gameplay_message_format(
-				"%s: MAIN MENU",
-				action_prompt(.Confirm, .Keyboard, game.settings.bindings),
-			)
-		}
+		rl.DrawTexture(assets.screens.you_won, 0, 0, rl.WHITE)
 		return
 	}
 
