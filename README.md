@@ -12,6 +12,15 @@ bombs, and defeat alien invaders.
 More screenshots, background information, and a download of the original
 MS-DOS release are available on the [CaveRace] website.
 
+## Download
+
+**[Download CaveRace 1.5 (beta)](https://github.com/cschotte/CaveRace/releases)**
+for Windows or macOS — the actively developed edition, and the one we
+recommend for most players over any of the older, archived releases below.
+It's still in beta, so expect rough edges; see the
+[CaveRace 1.5 README](<1.5 Odin (Windows & MacOS)/README.md>) for controls,
+requirements, and what's new.
+
 ## Story of CaveRace
 
 Far out in space lies Eldora, a small planet whose people have built their lives
@@ -34,18 +43,22 @@ protect Eldora's riches, and make the caves safe for its people again.
 
 ## The modern rewrite
 
-CaveRace 1.5 is an in-progress rewrite in [Odin] using the bundled [raylib]
-bindings. Its goal is to bring the game back to modern Windows and macOS
-systems while preserving the original levels, artwork, sounds, and feel.
+CaveRace 1.5 is a rewrite in [Odin] using the bundled [raylib] bindings,
+now available as a public beta for Windows and macOS. Its goal is to bring
+the game back to modern systems while preserving the original levels,
+artwork, sounds, and feel.
 
-See the [CaveRace 1.5 README](<1.5 Odin (Windows & MacOS)/README.md>) for the
-current status, controls, build instructions, and source layout.
+Get the latest build from the
+[GitHub Releases page](https://github.com/cschotte/CaveRace/releases), or see
+the [CaveRace 1.5 README](<1.5 Odin (Windows & MacOS)/README.md>) for
+controls, build instructions, and source layout.
 
 ## Version guides
 
 Every preserved CaveRace version has its own README with version-specific
 requirements, build instructions, controls, source layout, and compatibility
-notes.
+notes. **1.5 is the only actively developed edition and the recommended
+download**; 1.2, 1.3, 1.4, and 2.0 are kept for historical reference.
 
 | Version | Year | Platform and technology | Documentation |
 | --- | --- | --- | --- |
@@ -53,7 +66,7 @@ notes.
 | 1.3 | 2002 | Windows port using Visual C++ and DirectX 8.1 | [CaveRace 1.3 README](<1.3 DirectX (Windows)/README.md>) |
 | 1.4 | 2012 | Windows 8 Store app written in C# with SharpDX | [CaveRace 1.4 README](<1.4 SharpDX (Windows)/README.md>) |
 | 2.0 | 2012 | C# and XNA edition for Windows, Windows Phone, and Xbox 360 | [CaveRace 2.0 README](<2.0 XNA (Windows Phone & XBox)/README.md>) |
-| 1.5 | 2026 | Modern Windows and macOS rewrite using Odin and raylib | [CaveRace 1.5 README](<1.5 Odin (Windows & MacOS)/README.md>) |
+| **1.5 (beta)** | 2026 | Modern Windows and macOS rewrite using Odin and raylib — **[download](https://github.com/cschotte/CaveRace/releases)** | [CaveRace 1.5 README](<1.5 Odin (Windows & MacOS)/README.md>) |
 
 ## Original MS-DOS version
 
