@@ -24,8 +24,10 @@ begin_level_retry :: proc(gameplay: ^Gameplay) {
 	gameplay.state = .Load_Level
 }
 
-// begin_level_restart is the pause-menu restart path. It preserves run-wide
-// lives, score, and upgrades, restores energy, and reloads the same cave.
+// begin_level_restart is the pause-menu restart path. It always preserves
+// run-wide lives and score, applies the same Standard/Assisted upgrade rule
+// as advancing a level (see prepare_player_for_next_level), and reloads the
+// same cave.
 begin_level_restart :: proc(gameplay: ^Gameplay) {
 	assert(gameplay.state == .Playing)
 	prepare_player_for_next_level(&gameplay.player, gameplay.difficulty)
@@ -60,10 +62,13 @@ begin_next_level :: proc(gameplay: ^Gameplay) {
 }
 
 // prepare_player_for_next_level restores movement state and energy between
-// caves while preserving lives, score, bomb capacity, and power, both of
-// which carry forward on a clean level clear (unlike a death retry).
+// caves. Standard resets bomb capacity and power to their starting values on
+// every new cave, matching the original 1.2/1.3 games' CheckLevelComplete;
+// Assisted preserves both, mirroring the same split already used on a death
+// retry. Lives and score always carry forward regardless of difficulty.
 prepare_player_for_next_level :: proc(player: ^Player_State, difficulty: Difficulty_Profile) {
 	tuning := gameplay_tuning(difficulty)
+	capacity, power := player.bomb_capacity, player.bomb_power
 	player.move_from = player.position
 	player.move_to = player.position
 	player.movement_step = 0
@@ -71,6 +76,12 @@ prepare_player_for_next_level :: proc(player: ^Player_State, difficulty: Difficu
 	player.contact_grace_ticks = 0
 	player.blast_grace_ticks = 0
 	player.energy = tuning.player_start_energy
+	player.bomb_capacity = tuning.player_start_bomb_capacity
+	player.bomb_power = tuning.player_start_bomb_power
+	if difficulty == .Assisted {
+		player.bomb_capacity = capacity
+		player.bomb_power = power
+	}
 }
 
 // resolve_gameplay_outcome applies win or death transitions after each frame's

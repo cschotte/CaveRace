@@ -190,9 +190,11 @@ checked before treasure.
 | Complete at or under par | +150 |
 
 Bomb placement, empty actions, retries, and restarts do not mutate score. Score
-and remaining lives persist across levels. Energy is restored between caves;
-bomb capacity and power carry into the next cave. Death resets those upgrades
-on Standard, while Assisted preserves them.
+and remaining lives persist across levels. Energy is restored between caves.
+On Standard, bomb capacity and power reset to their starting values at the
+start of every cave — whether reached by clearing the previous one, a death
+retry, or a pause-menu restart — matching the original 1.2/1.3 games. Assisted
+preserves both across every one of those transitions instead.
 
 Every cave completion displays all point sources, active bonuses, elapsed/par
 time, treasure, hits, damage, deaths, final score, and medal. Bronze requires a
