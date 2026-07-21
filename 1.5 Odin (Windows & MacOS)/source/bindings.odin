@@ -62,6 +62,10 @@ keyboard_bindings_are_valid :: proc(bindings: Keyboard_Bindings) -> bool {
 	return true
 }
 
+// keyboard_key_is_bindable allows only printable/control keys that raylib
+// groups into contiguous enum ranges (letters, editing keys, navigation,
+// function keys, numpad); this assumes those ranges stay contiguous in the
+// vendored raylib bindings.
 keyboard_key_is_bindable :: proc(key: rl.KeyboardKey) -> bool {
 	value := int(key)
 	return value == int(rl.KeyboardKey.SPACE) ||
@@ -72,6 +76,9 @@ keyboard_key_is_bindable :: proc(key: rl.KeyboardKey) -> bool {
 	       (value >= int(rl.KeyboardKey.KP_0) && value <= int(rl.KeyboardKey.KP_EQUAL))
 }
 
+// controller_bindings_are_valid applies the same uniqueness rule as
+// keyboard_bindings_are_valid, with the same Bomb/Confirm exception since
+// controller A is contextually both in the real controller layout.
 controller_bindings_are_valid :: proc(bindings: Controller_Bindings) -> bool {
 	for button, action in bindings {
 		if button == .UNKNOWN || button == .RIGHT_FACE_RIGHT do return false
@@ -88,6 +95,9 @@ controller_bindings_are_valid :: proc(bindings: Controller_Bindings) -> bool {
 	return true
 }
 
+// try_rebind_controller_action rejects a button already bound to a different
+// action (except the Bomb/Confirm pair, which may share one), leaving
+// existing bindings untouched on rejection.
 try_rebind_controller_action :: proc(
 	bindings: ^Controller_Bindings,
 	action: Input_Action,
@@ -106,6 +116,9 @@ try_rebind_controller_action :: proc(
 	return true
 }
 
+// try_rebind_keyboard_action rejects an already-used key (every keyboard
+// action is exclusive, unlike the controller's Bomb/Confirm exception),
+// leaving existing bindings untouched on rejection.
 try_rebind_keyboard_action :: proc(
 	bindings: ^Keyboard_Bindings,
 	action: Input_Action,
@@ -203,6 +216,9 @@ controller_action_label :: proc(
 	return controller_button_label(bindings[action])
 }
 
+// action_prompt returns the current device's label for an action, used to
+// build on-screen hints. A nil controller falls back to the default layout,
+// letting call sites that only care about keyboard prompts omit it.
 action_prompt :: proc(
 	action: Input_Action,
 	device: Input_Device,
@@ -217,6 +233,9 @@ action_prompt :: proc(
 	return keyboard_key_label(bindings[action])
 }
 
+// resolve_last_input_device favors real controller activity while it's
+// connected, otherwise keyboard activity, and falls back to keyboard the
+// moment a controller disconnects so prompts never point at a dead device.
 resolve_last_input_device :: proc(
 	previous: Input_Device,
 	keyboard_activity, controller_activity, controller_connected: bool,

@@ -46,6 +46,10 @@ setup_tutorial_level :: proc(gameplay: ^Gameplay, tutorial: ^Tutorial_State) {
 	}
 }
 
+// advance_tutorial checks the current step's completion condition against
+// this frame's gameplay ticks and moves to the next step once satisfied.
+// Collect requires both an item and treasure before advancing; every other
+// step needs only its one triggering event.
 advance_tutorial :: proc(
 	tutorial: ^Tutorial_State,
 	gameplay: ^Gameplay,

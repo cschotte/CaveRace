@@ -14,7 +14,7 @@ if (Test-Path $DistDirectory) {
 }
 New-Item -ItemType Directory -Force $DistDirectory | Out-Null
 
-$BuildFlags = @()
+$BuildFlags = @("-vet", "-vet-cast", "-vet-style", "-vet-tabs", "-warnings-as-errors")
 if ($Mode -eq "debug") {
     $BuildFlags += "-debug"
 } else {

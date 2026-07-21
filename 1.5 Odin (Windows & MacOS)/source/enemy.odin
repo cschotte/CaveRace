@@ -77,6 +77,8 @@ opposite_direction :: proc(direction: Direction) -> Direction {
 	return .None
 }
 
+// enemy_pursuit_chance reads the current cave's per-level pursuit bias, halved
+// under Assisted difficulty, and clamped to a bounded window.
 enemy_pursuit_chance :: proc(gameplay: ^Gameplay) -> f32 {
 	chance := level_metadata(gameplay.level_index).enemy_pursuit_chance
 	if gameplay.difficulty == .Assisted do chance *= 0.5

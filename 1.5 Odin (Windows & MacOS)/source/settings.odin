@@ -23,6 +23,8 @@ Settings :: struct {
 	tutorial_complete:  bool,
 }
 
+// default_settings returns the baked-in defaults used for a fresh install and
+// as the fallback whenever a persisted settings file is missing or invalid.
 default_settings :: proc() -> Settings {
 	return {
 		music_volume         = 80,

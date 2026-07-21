@@ -59,6 +59,9 @@ begin_next_level :: proc(gameplay: ^Gameplay) {
 	gameplay.state = .Load_Level
 }
 
+// prepare_player_for_next_level restores movement state and energy between
+// caves while preserving lives, score, bomb capacity, and power, both of
+// which carry forward on a clean level clear (unlike a death retry).
 prepare_player_for_next_level :: proc(player: ^Player_State, difficulty: Difficulty_Profile) {
 	tuning := gameplay_tuning(difficulty)
 	player.move_from = player.position

@@ -127,6 +127,8 @@ run_application :: proc(options: Launch_Options) -> bool {
 	return true
 }
 
+// presentation_rectangle centers and letterboxes the fixed-resolution canvas
+// inside the actual window, preserving aspect ratio at any window size.
 presentation_rectangle :: proc(screen_width, screen_height: int) -> rl.Rectangle {
 	scale_x := f32(screen_width) / WINDOW_WIDTH
 	scale_y := f32(screen_height) / WINDOW_HEIGHT
@@ -141,6 +143,9 @@ presentation_rectangle :: proc(screen_width, screen_height: int) -> rl.Rectangle
 	}
 }
 
+// draw_application_frame renders the game to the fixed-resolution canvas,
+// then blits that canvas to the real window, scaled and letterboxed, with any
+// active screen shake applied only to this final presentation step.
 draw_application_frame :: proc(app: ^Application) {
 	rl.BeginTextureMode(app.canvas)
 		rl.ClearBackground(rl.BLACK)
@@ -205,6 +210,8 @@ music_cue_loops :: proc(cue: Music_Cue) -> bool {
 	return false
 }
 
+// music_gain_for_game ducks music to half volume while paused, without
+// stopping the stream (avoiding a restart glitch on resume).
 music_gain_for_game :: proc(game: ^Game) -> f32 {
 	if game_is_paused(game) do return 0.5
 	return 1
@@ -331,6 +338,9 @@ prepare_application_frame :: proc(
 	return {}, frame_seconds
 }
 
+// supported_window_scale steps a requested 1x-3x window scale down until it
+// fits the current monitor, so an oversized request never leaves the window
+// larger than the screen.
 supported_window_scale :: proc(requested, monitor_width, monitor_height: int) -> int {
 	requested_scale := clamp(requested, 1, 3)
 	for scale := requested_scale; scale >= 1; scale -= 1 {
@@ -341,6 +351,9 @@ supported_window_scale :: proc(requested, monitor_width, monitor_height: int) ->
 	return 1
 }
 
+// apply_display_settings pushes the current display mode and window scale to
+// raylib. It only toggles borderless mode on an actual change, since toggling
+// it every call would fight the window manager each frame.
 apply_display_settings :: proc(app: ^Application) {
 	desired := app.game.settings.display_mode
 	if desired != app.applied_display_mode {
@@ -368,6 +381,9 @@ apply_sfx_volume :: proc(assets: ^Assets, volume_percent: int) {
 	rl.SetSoundVolume(assets.sounds.menu, volume)
 }
 
+// limited_audio_request_count caps a per-frame event count to a fixed voice
+// budget, so a burst of simultaneous game events (e.g. several bombs
+// finishing at once) can't queue more sound calls than intended.
 limited_audio_request_count :: proc(requested, maximum: int) -> int {
 	return clamp(requested, 0, maximum)
 }
@@ -414,6 +430,8 @@ rumble_parameters :: proc(event: Rumble_Event) -> (left, right, duration: f32) {
 	return 0, 0, 0
 }
 
+// apply_frame_rumble fires controller vibration for the frame's highest-
+// priority event, respecting both controller presence and the rumble setting.
 apply_frame_rumble :: proc(app: ^Application, event: Rumble_Event) {
 	if event == .None || !app.controller_connected ||
 	   !app.game.settings.controller_rumble {

@@ -45,6 +45,9 @@ Game_Effects :: struct {
 	treasure_toast_total:     int,
 }
 
+// effect_particle_slot returns a free slot, or the slot nearest expiry if the
+// fixed pool is full, so a burst never allocates and never drops the newest
+// particle in favor of one about to disappear anyway.
 effect_particle_slot :: proc(effects: ^Game_Effects) -> ^Effect_Particle {
 	oldest_index := 0
 	oldest_remaining := effects.particles[0].remaining_seconds
@@ -58,6 +61,8 @@ effect_particle_slot :: proc(effects: ^Game_Effects) -> ^Effect_Particle {
 	return &effects.particles[oldest_index]
 }
 
+// score_popup_slot mirrors effect_particle_slot's recycle-oldest behavior for
+// the separate, smaller popup pool.
 score_popup_slot :: proc(effects: ^Game_Effects) -> ^Score_Popup {
 	oldest_index := 0
 	oldest_remaining := effects.popups[0].remaining_seconds
@@ -71,6 +76,9 @@ score_popup_slot :: proc(effects: ^Game_Effects) -> ^Score_Popup {
 	return &effects.popups[oldest_index]
 }
 
+// spawn_effect_burst fills count particle slots with randomized velocity and
+// lifetime, drawing only from the cosmetic RNG stream so purely visual
+// variation can never influence deterministic gameplay.
 spawn_effect_burst :: proc(
 	effects: ^Game_Effects,
 	gameplay: ^Gameplay,
@@ -254,6 +262,8 @@ treasure_toast_alpha :: proc(remaining_seconds: f64) -> f32 {
 	return 1
 }
 
+// draw_treasure_toast draws the "TREASURE x/y" readout only while its timer
+// is active, using treasure_toast_alpha's fade-in/hold/fade-out envelope.
 draw_treasure_toast :: proc(effects: ^Game_Effects) {
 	alpha := treasure_toast_alpha(effects.treasure_toast_remaining)
 	if alpha <= 0 do return

@@ -6,6 +6,17 @@ graphics, keyboard input, streamed music, and sound effects. The rewrite keeps
 the ten original level files and the recognizable pixel-art rules while giving
 the game a modern, cross-platform application loop.
 
+## Installation
+
+Prebuilt binaries, when published, are available from the
+[GitHub Releases page](https://github.com/cschotte/CaveRace/releases). Download
+the archive for your platform, extract it, and run `CaveRace.app` (macOS) or
+`CaveRace.exe` (Windows) — both come bundled with their required `media/` and
+`levels/` directories.
+
+To build from source instead, see [Requirements](#requirements) and
+[Build and run](#build-and-run) below.
+
 ## Requirements
 
 - A current [Odin compiler]

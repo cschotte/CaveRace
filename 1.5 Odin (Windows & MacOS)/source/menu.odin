@@ -80,6 +80,9 @@ move_menu_selection :: proc(menu: ^Menu_State, delta: int) {
 	menu.selected = (menu.selected + delta + count) % count
 }
 
+// open_menu_page switches pages and resets per-page transient state (the
+// selected row and any in-progress rebind), so nothing from the previous
+// page's interaction leaks into the next one.
 open_menu_page :: proc(menu: ^Menu_State, page: Menu_Page) {
 	menu.page = page
 	menu.selected = 0
@@ -134,6 +137,10 @@ adjust_setting :: proc(
 	return
 }
 
+// update_menu is the single per-frame input handler for every menu page
+// (Main, Settings, Bindings, Level info, First-Run). It handles rebind-
+// waiting and back navigation first, then falls through to page-specific
+// confirm handling, returning any settings/display/session changes to apply.
 update_menu :: proc(
 	menu: ^Menu_State,
 	settings: ^Settings,

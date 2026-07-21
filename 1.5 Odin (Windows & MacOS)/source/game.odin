@@ -48,12 +48,17 @@ Game_Update_Result :: struct {
 	rumble:               Rumble_Event,
 }
 
+// menu_audio_input reports whether this frame's input should trigger the
+// shared menu click sound, independent of which specific action fired.
 menu_audio_input :: proc(input: Game_Input) -> bool {
 	return input.confirm || input.back || input.pause_pressed ||
 	       input.menu_up_pressed || input.menu_down_pressed ||
 	       input.menu_left_pressed || input.menu_right_pressed
 }
 
+// init_game sets up a freshly started process: applies loaded settings (or
+// defaults), and starts on the branding screen. Called once at startup, never
+// mid-session, since it fully overwrites game^.
 init_game :: proc(
 	game: ^Game,
 	cheats_enabled := false,
@@ -72,6 +77,8 @@ init_game :: proc(
 	init_gameplay(&game.gameplay, settings.difficulty)
 }
 
+// start_new_game begins a fresh campaign run, clearing leftover pause and
+// cosmetic-effect state from whatever screen was active before.
 start_new_game :: proc(game: ^Game) {
 	init_gameplay(&game.gameplay, game.settings.difficulty)
 	game.gameplay.mode = .Campaign
@@ -80,6 +87,7 @@ start_new_game :: proc(game: ^Game) {
 	game.screen = .Playing
 }
 
+// start_game_tutorial builds the tutorial's own in-memory level and enters it.
 start_game_tutorial :: proc(game: ^Game) {
 	game.gameplay.difficulty = game.settings.difficulty
 	setup_tutorial_level(&game.gameplay, &game.tutorial)
@@ -89,6 +97,8 @@ start_game_tutorial :: proc(game: ^Game) {
 	game.screen = .Tutorial
 }
 
+// show_main_menu returns to the main menu from any other screen, always
+// clearing pause and cosmetic-effect state so nothing leaks in behind it.
 show_main_menu :: proc(game: ^Game) {
 	begin_main_menu(&game.front_end)
 	begin_menu(&game.menu)
@@ -97,12 +107,19 @@ show_main_menu :: proc(game: ^Game) {
 	game.screen = .Main_Menu
 }
 
+// complete_or_skip_tutorial marks the tutorial complete the first time it's
+// called and reports whether that changed anything, so callers can save
+// settings only on the actual transition rather than every call.
 complete_or_skip_tutorial :: proc(game: ^Game) -> bool {
 	if game.settings.tutorial_complete do return false
 	game.settings.tutorial_complete = true
 	return true
 }
 
+// update_game is the single per-frame entry point for all platform-independent
+// state: it routes input to the active screen, advances cosmetic timers, and
+// returns any filesystem/audio/quit requests for Application to fulfill. It
+// never touches raylib or the filesystem directly.
 update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_Update_Result {
 	result: Game_Update_Result
 	game.last_input_device = resolve_last_input_device(

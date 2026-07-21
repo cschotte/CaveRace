@@ -18,17 +18,25 @@ Story_Point :: struct {
 	x, y: i32,
 }
 
+// story_effect_kind maps a story image index to its effect, assuming
+// Story_Effect_Kind's declaration order exactly matches the intro panel
+// order (index 0 is the first panel, and so on).
 story_effect_kind :: proc(image_index: int) -> Story_Effect_Kind {
 	assert(image_index >= INTRO_FIRST_IMAGE && image_index <= INTRO_LAST_IMAGE)
 	return Story_Effect_Kind(image_index - INTRO_FIRST_IMAGE)
 }
 
+// story_effect_clock extends the panel's own elapsed time with the
+// transition's elapsed time while one is active, so effects keep animating
+// smoothly through a crossfade instead of resetting to zero.
 story_effect_clock :: proc(front_end: Front_End_State) -> f64 {
 	clock := front_end.elapsed_seconds
 	if front_end.transition_active do clock += front_end.transition_elapsed_seconds
 	return clock
 }
 
+// story_effect_count halves (rounding up, minimum 1) the number of accents
+// drawn under Reduced Flashes, so a panel keeps at least one live accent.
 story_effect_count :: proc(full_count: int, reduced_flashes: bool) -> int {
 	if reduced_flashes do return max(1, (full_count + 1) / 2)
 	return full_count
@@ -50,6 +58,9 @@ story_effect_pulse :: proc(
 	return clamp(1 - distance, 0, 1)
 }
 
+// draw_story_glint draws one pulsing sparkle: a bright center point, cardinal
+// rays that brighten with pulse, and a brief diagonal flare once pulse
+// crosses 0.45. Shared by every intro panel's twinkle-style accents.
 draw_story_glint :: proc(
 	point: Story_Point,
 	size: i32,
@@ -85,6 +96,9 @@ draw_story_glint :: proc(
 	}
 }
 
+// draw_story_smoke draws one looping, upward-drifting, fading puff from a
+// fixed origin; particle_index offsets its phase and drift side so a group
+// of calls reads as one continuous wisp rather than particles in lockstep.
 draw_story_smoke :: proc(
 	origin: Story_Point,
 	particle_index: int,
@@ -109,6 +123,9 @@ draw_story_smoke :: proc(
 	rl.DrawCircle(x, y, radius, rl.Fade(color, alpha))
 }
 
+// draw_story_ember draws one looping ember flying outward along a fixed
+// direction (chosen by particle_index from a small preset set) and fading as
+// it travels, with a trailing red tail opposite its direction of travel.
 draw_story_ember :: proc(
 	origin: Story_Point,
 	particle_index: int,
@@ -137,6 +154,9 @@ draw_story_ember :: proc(
 	rl.DrawRectangle(tail_x, y + 2, 2, 2, rl.Fade(rl.RED, alpha * 0.72))
 }
 
+// draw_story_effects draws the current story panel's hand-placed accent
+// (twinkles, glints, smoke, or embers, chosen by story_effect_kind) at its
+// fixed screen coordinates, fading with the panel's own crossfade alpha.
 draw_story_effects :: proc(front_end: Front_End_State, reduced_flashes: bool) {
 	visual_image, transition_alpha := front_end_visual(front_end)
 	if visual_image < INTRO_FIRST_IMAGE || visual_image > INTRO_LAST_IMAGE || transition_alpha <= 0 do return

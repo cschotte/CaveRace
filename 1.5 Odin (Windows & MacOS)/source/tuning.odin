@@ -116,6 +116,8 @@ GAMEPLAY_TUNING :: [Difficulty_Profile]Gameplay_Tuning {
 	},
 }
 
+// gameplay_tuning looks up the complete rule set for one difficulty profile;
+// every gameplay system reads its tunable numbers through this single call.
 gameplay_tuning :: proc(difficulty: Difficulty_Profile) -> Gameplay_Tuning {
 	profiles := GAMEPLAY_TUNING
 	return profiles[difficulty]

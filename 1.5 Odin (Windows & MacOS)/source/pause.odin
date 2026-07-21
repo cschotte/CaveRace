@@ -40,6 +40,9 @@ game_is_paused :: proc(game: ^Game) -> bool {
 	return game.pause.open
 }
 
+// open_game_pause only takes effect during active Playing/Tutorial gameplay,
+// and clears any queued movement/bomb input so it can't fire the instant
+// gameplay resumes.
 open_game_pause :: proc(game: ^Game) {
 	if game.pause.open do return
 	if (game.screen != .Playing && game.screen != .Tutorial) ||
@@ -50,6 +53,7 @@ open_game_pause :: proc(game: ^Game) {
 	game.gameplay.tick_state.input = {}
 }
 
+// close_game_pause mirrors open_game_pause's input flush on the way out.
 close_game_pause :: proc(game: ^Game) {
 	game.pause = {}
 	game.gameplay.tick_state.input = {}
@@ -61,6 +65,10 @@ move_pause_selection :: proc(state: ^Pause_State, delta: int) {
 	state.selected = Pause_Menu_Item(selected)
 }
 
+// update_pause_menu handles input while paused: the confirmation prompt for
+// destructive actions first, then the Resume/Restart/Settings/Controls/Main
+// Menu list, delegating to update_menu while a Settings or Controls sub-page
+// is open.
 update_pause_menu :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Pause_Update_Result {
 	assert(game.pause.open)
 	result: Pause_Update_Result

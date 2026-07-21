@@ -27,6 +27,9 @@ skip_intro_image :: proc(front_end: ^Front_End_State) -> bool {
 	return false
 }
 
+// intro_image_seconds looks up how long one story panel holds before
+// advancing; image_index must be a valid Intro-range index (the caller
+// asserts this, since only the Intro screen ever calls it).
 intro_image_seconds :: proc(image_index: int) -> f64 {
 	assert(image_index >= INTRO_FIRST_IMAGE && image_index <= INTRO_LAST_IMAGE)
 	durations := INTRO_IMAGE_SECONDS

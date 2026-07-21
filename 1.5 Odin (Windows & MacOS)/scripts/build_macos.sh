@@ -27,7 +27,8 @@ rm -rf "$APP_DIRECTORY"
 mkdir -p "$CONTENTS_DIRECTORY/MacOS" "$CONTENTS_DIRECTORY/Resources"
 
 cd "$SOURCE_DIRECTORY"
-odin build . $BUILD_FLAGS -out:../dist/macos/CaveRace.app/Contents/MacOS/CaveRace
+odin build . $BUILD_FLAGS -vet -vet-cast -vet-style -vet-tabs -warnings-as-errors \
+	-out:../dist/macos/CaveRace.app/Contents/MacOS/CaveRace
 cp "$PROJECT_DIRECTORY/packaging/macos/Info.plist" "$CONTENTS_DIRECTORY/Info.plist"
 cp -R "$SOURCE_DIRECTORY/media" "$CONTENTS_DIRECTORY/Resources/media"
 cp -R "$SOURCE_DIRECTORY/levels" "$CONTENTS_DIRECTORY/Resources/levels"

@@ -26,6 +26,8 @@ Persisted_Settings :: struct {
 	tutorial_complete:     bool,
 }
 
+// settings_to_document converts live Settings into the versioned JSON shape,
+// storing enums as plain ints so the schema stays stable across enum reorders.
 settings_to_document :: proc(settings: Settings) -> Persisted_Settings {
 	document := Persisted_Settings {
 		version                  = SETTINGS_VERSION,
@@ -99,6 +101,9 @@ settings_from_document :: proc(document: Persisted_Settings) -> (Settings, bool)
 	return settings, true
 }
 
+// settings_path resolves the OS-appropriate per-user config path (e.g.
+// %AppData% on Windows, ~/Library/Application Support on macOS). Failure
+// here just means settings won't persist; the caller falls back to defaults.
 settings_path :: proc(allocator := context.allocator) -> (string, bool) {
 	config_root, config_error := os.user_config_dir(allocator)
 	if config_error != nil do return "", false
@@ -110,6 +115,9 @@ settings_path :: proc(allocator := context.allocator) -> (string, bool) {
 	return path, path_error == nil
 }
 
+// load_settings_from_path always returns usable settings: a missing file,
+// unreadable data, or invalid JSON all fall back to defaults rather than
+// failing startup.
 load_settings_from_path :: proc(path: string) -> (Settings, bool) {
 	settings := default_settings()
 	data, read_error := os.read_entire_file_from_path(path, context.allocator)

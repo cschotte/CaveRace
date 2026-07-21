@@ -37,6 +37,9 @@ LEVEL_METADATA :: [LEVEL_COUNT]Level_Metadata {
 
 #assert(len(LEVEL_METADATA) == LEVEL_COUNT)
 
+// level_metadata looks up one cave's fixed presentation and tuning data.
+// level_index must already be validated (0..<LEVEL_COUNT); callers own that
+// bounds check since it comes from run-controlled state, never raw input.
 level_metadata :: proc(level_index: int) -> Level_Metadata {
 	assert(level_index >= 0 && level_index < LEVEL_COUNT)
 	metadata := LEVEL_METADATA

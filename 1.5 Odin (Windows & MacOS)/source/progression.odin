@@ -67,18 +67,26 @@ medal_label :: proc(medal: Medal) -> cstring {
 	return ""
 }
 
+// begin_level_tracking starts a fresh per-level stats ledger, recording the
+// player's current score as the baseline finalize_level_result later
+// subtracts from to report this level's score delta.
 begin_level_tracking :: proc(gameplay: ^Gameplay) {
 	gameplay.level_stats = {start_score = gameplay.player.score}
 	gameplay.level_result = {}
 	gameplay.level_tracking_active = true
 }
 
+// record_gameplay_damage tallies a hit only when it actually reduced energy,
+// so a blocked or zero-amount hit never inflates the level's hit count.
 record_gameplay_damage :: proc(gameplay: ^Gameplay, amount: int) {
 	if amount <= 0 do return
 	gameplay.level_stats.hits += 1
 	gameplay.level_stats.damage_taken += amount
 }
 
+// finalize_level_result computes medal conditions, applies the level-clear
+// score bonuses, and builds the exact ledger the level-result screen draws.
+// Called once, exactly when the last enemy is cleared.
 finalize_level_result :: proc(gameplay: ^Gameplay) {
 	metadata := level_metadata(gameplay.level_index)
 	all_treasure := gameplay.treasure_total > 0 &&

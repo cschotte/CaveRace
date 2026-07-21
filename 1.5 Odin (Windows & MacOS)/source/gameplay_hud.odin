@@ -44,6 +44,8 @@ Gameplay_Hud_State :: struct {
 	score:           int,
 }
 
+// gameplay_hud_state snapshots exactly the fields the legacy 1.3 HUD draws;
+// it intentionally carries nothing beyond that.
 gameplay_hud_state :: proc(gameplay: ^Gameplay) -> Gameplay_Hud_State {
 	return {
 		lives           = gameplay.player.lives,

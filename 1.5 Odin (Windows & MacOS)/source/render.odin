@@ -172,6 +172,8 @@ main_menu_item_label :: proc(item: Main_Menu_Item) -> cstring {
 	return ""
 }
 
+// draw_duration formats a tick count as mm:ss.t, or a "--:--.-" placeholder
+// for a zero or negative value (an unset par time, for example).
 draw_duration :: proc(x, y, size: i32, color: rl.Color, ticks: int) {
 	if ticks <= 0 {
 		rl.DrawText("--:--.-", x, y, size, color)
@@ -505,6 +507,7 @@ draw_first_run_menu :: proc(game: ^Game) {
 	draw_ui_format(prefix_x, panel_y + rules_offset, 14, rl.GOLD, "RULES: %s", difficulty_label(game.settings.difficulty))
 }
 
+// draw_main_menu dispatches to the active menu page's own drawing procedure.
 draw_main_menu :: proc(game: ^Game) {
 	switch game.menu.page {
 	case .Settings:    draw_settings_menu(game)
@@ -540,6 +543,9 @@ draw_level_result_row :: proc(y, size: i32, color: rl.Color, label: cstring, cou
 	rl.DrawText(total_text, LEVEL_RESULT_TOTAL_RIGHT - total_width, y, size, color)
 }
 
+// draw_level_result draws the full "cave complete" ledger from
+// gameplay.level_result: elapsed/par time, treasure, the itemized score
+// breakdown, and the final total, medal, and continue prompt.
 draw_level_result :: proc(game: ^Game) {
 	result := &game.gameplay.level_result
 	tuning := gameplay_tuning(game.gameplay.difficulty)
@@ -568,6 +574,9 @@ draw_level_result :: proc(game: ^Game) {
 	draw_ui_format(72, 348, 13, rl.LIGHTGRAY, "%s: CONTINUE", action_prompt(.Confirm, game.last_input_device, game.settings.bindings, &game.settings.controller_bindings))
 }
 
+// draw_tutorial_prompt shows the current step's instruction and a skip/pause
+// footer, swapping to a "start campaign" prompt once the tutorial reaches its
+// Complete step.
 draw_tutorial_prompt :: proc(game: ^Game) {
 	rl.DrawRectangle(92, 312, 456, 42, rl.Fade(rl.BLACK, 0.9))
 	rl.DrawRectangleLines(92, 312, 456, 42, rl.GOLD)
