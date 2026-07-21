@@ -20,7 +20,13 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 		draw_main_menu(game)
 	case .Tutorial:
 		draw_gameplay(game, assets)
-		draw_tutorial_prompt(game)
+		// The level-result panel takes over as soon as the tutorial's single
+		// enemy is destroyed (its Won transition and the tutorial's own
+		// Complete step land on the same tick), so the step prompt would
+		// otherwise sit on top of it.
+		if game.gameplay.state != .Won {
+			draw_tutorial_prompt(game)
+		}
 	case .Playing:
 		draw_gameplay(game, assets)
 	}
@@ -516,8 +522,32 @@ draw_main_menu :: proc(game: ^Game) {
 	}
 }
 
+// LEVEL_RESULT_LABEL_X, _MULT_RIGHT, and _TOTAL_RIGHT define the ledger's
+// three columns. Each row's multiplier and running total are measured and
+// right-aligned to these fixed edges, so they line up regardless of label
+// length or digit count — something embedding literal spaces in one format
+// string cannot guarantee with raylib's proportional default font.
+LEVEL_RESULT_LABEL_X    :: 72
+LEVEL_RESULT_MULT_RIGHT :: 280
+LEVEL_RESULT_TOTAL_RIGHT :: 380
+
+// draw_level_result_row draws one itemized ledger line: a left-aligned label,
+// a right-aligned "count x rate" multiplier, and a right-aligned "+subtotal".
+draw_level_result_row :: proc(y, size: i32, color: rl.Color, label: cstring, count, rate, subtotal: int) {
+	rl.DrawText(label, LEVEL_RESULT_LABEL_X, y, size, color)
+	mult_buffer: [24]byte
+	mult_text := format_cstring(mult_buffer[:], "%d x %d", count, rate)
+	mult_width := rl.MeasureText(mult_text, size)
+	rl.DrawText(mult_text, LEVEL_RESULT_MULT_RIGHT - mult_width, y, size, color)
+	total_buffer: [16]byte
+	total_text := format_cstring(total_buffer[:], "+%d", subtotal)
+	total_width := rl.MeasureText(total_text, size)
+	rl.DrawText(total_text, LEVEL_RESULT_TOTAL_RIGHT - total_width, y, size, color)
+}
+
 draw_level_result :: proc(game: ^Game) {
 	result := &game.gameplay.level_result
+	tuning := gameplay_tuning(game.gameplay.difficulty)
 	rl.DrawRectangle(38, 26, 564, 342, rl.Fade(rl.BLACK, 0.96))
 	rl.DrawRectangleLines(38, 26, 564, 342, rl.GOLD)
 	draw_ui_format(216, 40, 23, rl.GOLD, "CAVE %d COMPLETE", result.level_index + 1)
@@ -528,16 +558,16 @@ draw_level_result :: proc(game: ^Game) {
 	draw_ui_format(402, 73, 15, rl.WHITE, "TREASURE %d/%d", result.treasure_collected, result.treasure_total)
 	draw_ui_format(72, 96, 14, rl.LIGHTGRAY, "HITS %d   DAMAGE %d   DEATHS %d", result.hits, result.damage_taken, result.deaths)
 
-	draw_ui_format(72, 126, 14, rl.WHITE, "ALIENS             %3d x %3d     +%4d", result.enemies_destroyed, gameplay_tuning(game.gameplay.difficulty).score_enemy_destroyed, result.enemy_points)
-	draw_ui_format(72, 147, 14, rl.WHITE, "TREASURE           %3d x %3d     +%4d", result.treasure_pickups, gameplay_tuning(game.gameplay.difficulty).score_treasure_pickup, result.treasure_points)
-	draw_ui_format(72, 168, 14, rl.WHITE, "ITEMS              %3d x %3d     +%4d", result.items_collected, gameplay_tuning(game.gameplay.difficulty).score_item_pickup, result.item_points)
-	draw_ui_format(72, 189, 14, rl.WHITE, "SALVAGED ITEMS     %3d x %3d     +%4d", result.items_salvaged, gameplay_tuning(game.gameplay.difficulty).score_capped_item_salvage, result.salvage_points)
-	draw_ui_format(72, 210, 14, rl.WHITE, "CAVE CLEAR                         +%4d", result.clear_bonus)
-	draw_ui_format(72, 231, 14, rl.WHITE, "ALL TREASURE                       +%4d", result.all_treasure_bonus)
-	draw_ui_format(72, 252, 14, rl.WHITE, "NO DAMAGE                          +%4d", result.no_damage_bonus)
-	draw_ui_format(72, 273, 14, rl.WHITE, "UNDER PAR                          +%4d", result.par_bonus)
+	draw_level_result_row(126, 14, rl.WHITE, "ALIENS", result.enemies_destroyed, tuning.score_enemy_destroyed, result.enemy_points)
+	draw_level_result_row(147, 14, rl.WHITE, "TREASURE", result.treasure_pickups, tuning.score_treasure_pickup, result.treasure_points)
+	draw_level_result_row(168, 14, rl.WHITE, "ITEMS", result.items_collected, tuning.score_item_pickup, result.item_points)
+	draw_level_result_row(189, 14, rl.WHITE, "SALVAGED ITEMS", result.items_salvaged, tuning.score_capped_item_salvage, result.salvage_points)
+	draw_menu_value_row(LEVEL_RESULT_LABEL_X, LEVEL_RESULT_TOTAL_RIGHT, 210, 14, rl.WHITE, "CAVE CLEAR", "+%d", result.clear_bonus)
+	draw_menu_value_row(LEVEL_RESULT_LABEL_X, LEVEL_RESULT_TOTAL_RIGHT, 231, 14, rl.WHITE, "ALL TREASURE", "+%d", result.all_treasure_bonus)
+	draw_menu_value_row(LEVEL_RESULT_LABEL_X, LEVEL_RESULT_TOTAL_RIGHT, 252, 14, rl.WHITE, "NO DAMAGE", "+%d", result.no_damage_bonus)
+	draw_menu_value_row(LEVEL_RESULT_LABEL_X, LEVEL_RESULT_TOTAL_RIGHT, 273, 14, rl.WHITE, "UNDER PAR", "+%d", result.par_bonus)
 	if result.score_adjustment != 0 {
-		draw_ui_format(72, 294, 13, rl.RED, "SCORE ADJUSTMENT                    %+d", result.score_adjustment)
+		draw_menu_value_row(LEVEL_RESULT_LABEL_X, LEVEL_RESULT_TOTAL_RIGHT, 294, 13, rl.RED, "SCORE ADJUSTMENT", "%+d", result.score_adjustment)
 	}
 	draw_ui_format(72, 314, 16, rl.GOLD, "TOTAL +%d     SCORE %08d     MEDAL %s", result.score_delta, result.final_score, medal_label(result.medal))
 	draw_ui_format(72, 348, 13, rl.LIGHTGRAY, "%s: CONTINUE", action_prompt(.Confirm, game.last_input_device, game.settings.bindings, &game.settings.controller_bindings))
