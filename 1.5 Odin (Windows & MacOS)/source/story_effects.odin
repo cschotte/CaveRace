@@ -170,7 +170,7 @@ draw_story_effects :: proc(front_end: Front_End_State, reduced_flashes: bool) {
 		}
 
 	case .Alien_Eyes:
-		eyes := [3]Story_Point {{357, 284}, {484, 219}, {565, 320}}
+		eyes := [3]Story_Point {{357, 284}, {484, 219}, {547, 325}}
 		count := story_effect_count(len(eyes), reduced_flashes)
 		for eye, eye_index in eyes[:count] {
 			pulse := story_effect_pulse(clock, eye_index * 6, 26, reduced_flashes)

@@ -462,11 +462,6 @@ draw_bindings_menu :: proc(game: ^Game) {
 
 draw_how_to_play :: proc(game: ^Game) {
 	rl.DrawRectangle(0, 374, WINDOW_WIDTH, 26, rl.Fade(rl.BLACK, 0.86))
-	if game.last_input_device == .Controller {
-		rl.DrawText("B  BACK", 292, 381, 13, rl.GOLD)
-	} else {
-		rl.DrawText("ESC  BACK", 283, 381, 13, rl.GOLD)
-	}
 }
 
 // First-Run needs a wider narrow panel than Settings/Bindings/Pause: its

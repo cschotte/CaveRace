@@ -87,6 +87,18 @@ bomb_tick_interval :: proc(fuse_ticks: int) -> int {
 	return 6
 }
 
+// bomb_flash_alpha returns a smooth 0..1 glow intensity for the ticking bomb
+// sprite itself, rising and falling once per bomb_tick_interval so the fuse
+// reads as the bomb glowing rather than a border blinking on and off. It
+// shares the same accelerating cadence, so the glow quickens with the fuse.
+bomb_flash_alpha :: proc(fuse_ticks: int) -> f32 {
+	if fuse_ticks <= 0 do return 0
+	interval := bomb_tick_interval(fuse_ticks)
+	phase := f32(fuse_ticks % interval) / f32(interval)
+	if phase < 0.5 do return phase * 2
+	return (1 - phase) * 2
+}
+
 // advance_bomb_fuses runs every fixed tick, independent from movement cadence,
 // and reports warning clicks. Ready bombs remain owned until their explosion
 // animation completes and start_ready_explosions consumes fuse_ticks == 0.

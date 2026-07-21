@@ -2,6 +2,10 @@ package caverace
 
 import rl "vendor:raylib"
 
+// BOMB_FLASH_MAX_ALPHA caps the additive glow's peak intensity so the ticking
+// bomb reads as glowing hotter, not as flashing blown-out white.
+BOMB_FLASH_MAX_ALPHA :: f32(0.6)
+
 // draw_level_tiles draws only persistent map layers. Spawn grids remain part of
 // the loaded file data, while active entities are rendered separately.
 draw_level_tiles :: proc(level: ^Level, terrain: rl.Texture, sprites: ^Sprite_Assets) {
@@ -48,17 +52,19 @@ draw_level_entities :: proc(
 		if !bomb.active do continue
 		screen_x, screen_y := grid_position_to_screen(bomb.position)
 		draw_vertical_sprite(sprites.bomb, BOMB_TICKING_SPRITE, screen_x, screen_y)
-		if bomb.fuse_ticks > 0 {
-			interval := bomb_tick_interval(bomb.fuse_ticks)
-			if bomb.fuse_ticks % interval < interval / 2 {
-				rl.DrawRectangleLines(
-					screen_x + 2,
-					screen_y + 2,
-					MAP_TILE_SIZE - 4,
-					MAP_TILE_SIZE - 4,
-					rl.YELLOW,
-				)
-			}
+		if flash := bomb_flash_alpha(bomb.fuse_ticks); flash > 0 {
+			// Additive blending only lights up the bomb's own opaque pixels,
+			// so the fuse reads as the sprite itself glowing hotter rather
+			// than a border blinking on the tile behind it.
+			rl.BeginBlendMode(.ADDITIVE)
+			draw_vertical_sprite(
+				sprites.bomb,
+				BOMB_TICKING_SPRITE,
+				screen_x,
+				screen_y,
+				rl.Fade(rl.GOLD, flash * BOMB_FLASH_MAX_ALPHA),
+			)
+			rl.EndBlendMode()
 		}
 	}
 
@@ -98,7 +104,9 @@ draw_level_entities :: proc(
 
 // draw_vertical_sprite renders one row from the converted 32x32 vertical sheets;
 // all level, actor, explosion, and HUD drawing shares this bounds-checked helper.
-draw_vertical_sprite :: proc(texture: rl.Texture, sprite_index: u8, x, y: i32) {
+// tint defaults to opaque white (the sprite's own colors, unmodified); callers
+// that need a colored glow pass a translucent tint instead.
+draw_vertical_sprite :: proc(texture: rl.Texture, sprite_index: u8, x, y: i32, tint: rl.Color = rl.WHITE) {
 	index := i32(sprite_index)
 	sprite_count := texture.height / MAP_TILE_SIZE
 	if texture.width != MAP_TILE_SIZE || index >= sprite_count do return
@@ -110,5 +118,5 @@ draw_vertical_sprite :: proc(texture: rl.Texture, sprite_index: u8, x, y: i32) {
 		height = MAP_TILE_SIZE,
 	}
 	position := rl.Vector2 {f32(x), f32(y)}
-	rl.DrawTextureRec(texture, source, position, rl.WHITE)
+	rl.DrawTextureRec(texture, source, position, tint)
 }
