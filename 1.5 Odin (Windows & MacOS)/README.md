@@ -79,6 +79,7 @@ independently, and Screen Shake at 0% is exactly still.
 | F3 | Grant four-bomb capacity when cheats are enabled |
 | F4 | Increase bomb power, up to 10, when cheats are enabled |
 | F5 | Double the score when cheats are enabled |
+| 1 | Save a timestamped PNG screenshot of the current frame when cheats are enabled |
 
 The original command-line switches remain supported:
 
@@ -87,7 +88,7 @@ The original command-line switches remain supported:
 ../build/caverace -slow
 ```
 
-- `-powerblast` enables F1–F5. Without it, those keys do not change game state.
+- `-powerblast` enables F1–F5 and the 1 screenshot key. Without it, those keys do not change game state.
 - `-slow` limits presentation to 30 FPS. Simulation still runs at a fixed 60 Hz.
 - Unknown arguments are reported and ignored.
 

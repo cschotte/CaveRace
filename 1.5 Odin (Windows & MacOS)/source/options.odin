@@ -34,12 +34,12 @@ parse_launch_options :: proc() -> Launch_Options {
 print_launch_options :: proc(options: Launch_Options) {
 	if len(os.args) == 1 {
 		fmt.println()
-		fmt.println("Use: -powerblast for cheats, key F1 to F5.")
+		fmt.println("Use: -powerblast for cheats, key F1 to F5, key 1 for a screenshot.")
 		fmt.println("     -slow for slow PCs.")
 	}
 
 	if options.cheats_enabled {
-		fmt.println("Cheats enabled! Press F1 to F5 for powerups.")
+		fmt.println("Cheats enabled! Press F1 to F5 for powerups, 1 for a screenshot.")
 	}
 
 	if options.slow_mode {

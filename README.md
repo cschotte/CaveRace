@@ -53,6 +53,10 @@ Get the latest build from the
 the [CaveRace 1.5 README](<1.5 Odin (Windows & MacOS)/README.md>) for
 controls, build instructions, and source layout.
 
+| Story | Main menu | Controls |
+| --- | --- | --- |
+| ![Story panel](images/intro.png) | ![Main menu](images/menu.png) | ![Controls screen](images/controls.png) |
+
 ## Version guides
 
 Every preserved CaveRace version has its own README with version-specific

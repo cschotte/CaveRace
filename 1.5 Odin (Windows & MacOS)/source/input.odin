@@ -40,6 +40,7 @@ Game_Input :: struct {
 	presentation_music_finished: bool,
 	debug_toggle_pressed: bool,
 	cheat_pressed:   [Cheat_Key]bool,
+	screenshot_requested: bool,
 }
 
 key_pressed_for_action :: proc(bindings: Keyboard_Bindings, action: Input_Action) -> bool {
@@ -138,5 +139,6 @@ poll_game_input :: proc(
 	input.cheat_pressed[.F3] = rl.IsKeyPressed(.F3)
 	input.cheat_pressed[.F4] = rl.IsKeyPressed(.F4)
 	input.cheat_pressed[.F5] = rl.IsKeyPressed(.F5)
+	input.screenshot_requested = rl.IsKeyPressed(.ONE)
 	return input
 }

@@ -1,6 +1,9 @@
 package caverace
 
 import "core:fmt"
+import "core:os"
+import "core:path/filepath"
+import "core:time"
 import rl "vendor:raylib"
 
 MUSIC_CROSSFADE_SECONDS :: 0.45
@@ -122,9 +125,47 @@ run_application :: proc(options: Launch_Options) -> bool {
 		}
 
 		draw_application_frame(&app)
+
+		if input.screenshot_requested && app.game.cheats_enabled {
+			save_gameplay_screenshot(app.canvas)
+		}
 	}
 
 	return true
+}
+
+// save_gameplay_screenshot exports the current canvas as a timestamped PNG on
+// the user's Desktop, reviving the original 1.2 cheat-mode "1" key. Falling
+// back to the working directory keeps the cheat usable even if the OS-specific
+// Desktop lookup fails.
+save_gameplay_screenshot :: proc(canvas: rl.RenderTexture2D) {
+	image := rl.LoadImageFromTexture(canvas.texture)
+	defer rl.UnloadImage(image)
+	rl.ImageFlipVertical(&image)
+
+	now := time.now()
+	year, month, day := time.date(now)
+	hour, minute, second := time.clock_from_time(now)
+
+	name_buffer: [64]byte
+	name := fmt.bprintf(
+		name_buffer[:],
+		"caverace-%04d%02d%02d-%02d%02d%02d.png",
+		year, int(month), day, hour, minute, second,
+	)
+
+	path := name
+	if desktop, desktop_error := os.user_desktop_dir(context.temp_allocator); desktop_error == nil {
+		if joined, join_error := filepath.join({desktop, name}, context.temp_allocator); join_error == nil {
+			path = joined
+		}
+	}
+
+	path_buffer: [512]byte
+	filename := format_cstring(path_buffer[:], "%s", path)
+	if rl.ExportImage(image, filename) {
+		fmt.println("Screenshot saved:", path)
+	}
 }
 
 // presentation_rectangle centers and letterboxes the fixed-resolution canvas
