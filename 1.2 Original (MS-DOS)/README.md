@@ -14,7 +14,8 @@ enemies in the mines of Eldora.
 The easiest way to run this historical version is with DOSBox or a comparable
 MS-DOS environment:
 
-1. Extract `/releases/caverace-1.2-dos.zip`.
+1. Download and extract `caverace-1.2-dos.zip` from the
+   [v1.2-dos release](https://github.com/cschotte/CaveRace/releases/tag/v1.2-dos).
 2. Mount the extracted directory in DOSBox.
 3. Run `CAVERACE.EXE`.
 
