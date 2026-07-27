@@ -58,7 +58,7 @@ download**; 1.2, 1.3, 1.4, and 2.0 are kept for historical reference.
 | 1.3 | 2002 | Windows port using Visual C++ and DirectX 8.1 | [CaveRace 1.3 README](<1.3 DirectX (Windows)/README.md>) |
 | 1.4 | 2012 | Windows 8 Store app written in C# with SharpDX | [CaveRace 1.4 README](<1.4 SharpDX (Windows)/README.md>) |
 | 2.0 | 2012 | C# and XNA edition for Windows, Windows Phone, and Xbox 360 | [CaveRace 2.0 README](<2.0 XNA (Windows Phone & XBox)/README.md>) |
-| **[1.5](<1.5 Odin (Windows & MacOS)/README.md>)** | 2026 | Modern Windows and macOS rewrite using Odin and raylib |
+| **1.5** | **2026** | **Modern Windows and macOS rewrite using Odin and raylib** | **[CaveRace 1.5 README](<1.5 Odin (Windows & MacOS)/README.md>)** |
 
 ## Original MS-DOS version
 
@@ -106,7 +106,7 @@ art uses the IFF (Interchange File Format). For the MS-DOS game, screens and
 | BOM | 17 tiles (16×16) | 4,352 | Bombs |
 | CAR | 320×200 screen | 64,000 | Title card |
 | ENM | 16 tiles (16×16) | 4,096 | Enemies |
-| FNT | 36 glyphs (3×5) | 540 | Font |
+| FNT | 38 glyphs (3×5) | 570 | Font |
 | HIS | 320×200 screen | 64,000 | High scores |
 | ITM | 13 tiles (16×16) | 3,328 | Items |
 | MAN | 18 tiles (16×16) | 4,608 | Player |
@@ -114,7 +114,7 @@ art uses the IFF (Interchange File Format). For the MS-DOS game, screens and
 | MN2 | 320×200 screen | 64,000 | Menu 2 |
 | PAL | 256 RGB entries | 768 | Palette |
 | STS | 4 tiles (16×16) | 1,024 | Status |
-| TRS | 6 tiles (16×16) | 1,536 | Treasure |
+| TRS | 7 tiles (16×16) | 1,792 | Treasure |
 
 ## Credits
 

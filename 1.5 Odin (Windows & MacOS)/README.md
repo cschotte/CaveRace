@@ -1,6 +1,6 @@
 # CaveRace 1.5
 
-CaveRace 1.5, the current desktop edition of the 1997
+CaveRace 1.5 is the current desktop edition of the 1997
 maze-action game. This edition is a from-scratch rewrite in [Odin] using
 Odin's bundled [raylib] bindings for windowing, graphics, keyboard/controller
 input, streamed music, and sound effects. It keeps the ten original level
@@ -17,16 +17,14 @@ the source imports `vendor:raylib` from the Odin distribution.
 
 ## Build and run
 
-Reproducible package scripts build the executable and copy every runtime
-resource into the platform layout the game expects:
+From this directory, the reproducible package scripts build the executable and
+copy every runtime resource into the platform layout the game expects:
 
 ```sh
-cd "source"
 ./scripts/build_macos.sh release   # or debug
 ```
 
 ```powershell
-Set-Location "source"
 .\scripts\build_windows.ps1 release   # or debug
 ```
 
@@ -51,10 +49,12 @@ optionally reads `CAVERACE_WINDOWS_CERT_SHA1` for Authenticode signing.
 Correctness checks used during development:
 
 ```sh
+cd source
 odin check . -vet -vet-cast -vet-style -vet-tabs -warnings-as-errors
 ```
 
-Distributable builds (via [Releases](./releases/) folder or in the *Microsoft Store* or *Apple App Store*)
+Distributable builds are available in the repository's
+[releases](../releases/) folder.
 
 ## Controls and launch options
 
@@ -81,12 +81,19 @@ be disabled independently, and Screen Shake at 0% is exactly still.
 | F5 | Double the score when cheats are enabled |
 | 1 | Save a timestamped PNG screenshot of the current frame when cheats are enabled |
 
-The original command-line switches remain supported:
+The original `-powerblast` and `-slow` switches remain supported, and 1.5 adds
+`-log`:
 
 ```sh
-../build/caverace -powerblast
-../build/caverace -slow
-../build/caverace -log
+./dist/macos/CaveRace.app/Contents/MacOS/CaveRace -powerblast
+./dist/macos/CaveRace.app/Contents/MacOS/CaveRace -slow
+./dist/macos/CaveRace.app/Contents/MacOS/CaveRace -log
+```
+
+```powershell
+.\dist\windows\CaveRace.exe -powerblast
+.\dist\windows\CaveRace.exe -slow
+.\dist\windows\CaveRace.exe -log
 ```
 
 - `-powerblast` enables F1–F5 and the 1 screenshot key. Without it, those keys do not change game state.
@@ -115,7 +122,7 @@ explosions, and bomb occupancy are maintained separately from the stored
 spawn grids.
 
 Each level has fixed metadata for its display name, tile theme, treasure
-total, par time, tutorial-hint flag, and future AI-bias field. Reloading or
+total, par time, tutorial-hint flag, and enemy-pursuit bias. Reloading or
 retrying a cave therefore preserves its visual identity. Themes remain
 visual and do not change map rules.
 

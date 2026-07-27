@@ -2,8 +2,8 @@
 
 CaveRace 1.4 is a C# port created for Windows 8 in 2012. It is packaged as a
 Windows Store app and uses SharpDX with Direct3D 11, Direct2D, and XAudio2.
-This edition expands the game to more than 25 Forest, Desert, Winter, and Lava
-levels.
+This edition contains 23 playable Forest, Desert, Winter, and Lava levels,
+plus intro and ending level data.
 
 ## Historical toolchain
 
