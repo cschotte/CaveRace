@@ -33,6 +33,17 @@ their adjacent `media/` and `levels/` directories. Each script starts from a
 clean platform output directory and fails if the executable, screen marker,
 or final level is absent.
 
+### Debugging in VS Code
+
+Open the repository root in VS Code, make sure `odin` is available on `PATH`,
+and install the recommended CodeLLDB extension. Press F5 and select
+**Debug CaveRace**. The pre-launch task creates the build directory, builds a
+checked debug executable, and starts it with `source/` as its working directory
+so the development assets and levels can be found.
+
+The shared configuration emits `build/caverace` on macOS and
+`build/caverace.exe` on Windows, both inside this version's directory.
+
 Both packages carry the app icons from `icons/`: `build_macos.sh` copies
 `packaging/macos/CaveRace.icns` into the bundle alongside
 `packaging/macos/Info.plist` (`CFBundleIconFile`); `build_windows.ps1` passes
