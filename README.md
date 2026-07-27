@@ -1,7 +1,7 @@
 # CaveRace
 
 CaveRace is a maze-based action game created in 1997 by Clemens Schotte and
-fellow students. Inspired by *[Dyna Blaster]* (*Bomberman*), the game sends miners
+others. Inspired by *[Dyna Blaster]* (*Bomberman*), the game sends miners
 into the caves of Eldora to collect gold and diamonds, clear passages with
 bombs, and defeat alien invaders.
 
@@ -35,11 +35,11 @@ protect Eldora's riches, and make the caves safe for its people again.
 ## The modern rewrite
 
 CaveRace 1.5 is a rewrite in [Odin] using the bundled [raylib] bindings,
-now available as a public beta for Windows and macOS. Its goal is to bring
+now available for Windows and macOS. Its goal is to bring
 the game back to modern systems while preserving the original levels,
 artwork, sounds, and feel.
 
-Get the latest build from ... link follows
+Download from the [releases](releases/) folder!
 
 | Story | Main menu | Controls |
 | --- | --- | --- |
@@ -58,7 +58,7 @@ download**; 1.2, 1.3, 1.4, and 2.0 are kept for historical reference.
 | 1.3 | 2002 | Windows port using Visual C++ and DirectX 8.1 | [CaveRace 1.3 README](<1.3 DirectX (Windows)/README.md>) |
 | 1.4 | 2012 | Windows 8 Store app written in C# with SharpDX | [CaveRace 1.4 README](<1.4 SharpDX (Windows)/README.md>) |
 | 2.0 | 2012 | C# and XNA edition for Windows, Windows Phone, and Xbox 360 | [CaveRace 2.0 README](<2.0 XNA (Windows Phone & XBox)/README.md>) |
-| **1.5 (beta)** | 2026 | Modern Windows and macOS rewrite using Odin and raylib |
+| **[1.5](<1.5 Odin (Windows & MacOS)/README.md>)** | 2026 | Modern Windows and macOS rewrite using Odin and raylib |
 
 ## Original MS-DOS version
 
@@ -72,8 +72,7 @@ display refresh rate, and unlike later Windows versions, it has no sound.
 
 ### Building the original source
 
-Install [Borland C] 3.1, set the IDE working directory to the project folder, and
-build CaveRace or MapEditor from the sources in
+Install [Borland C] 3.1, set the IDE working directory to the project folder, and build CaveRace or MapEditor from the sources in
 [`1.2 Original (MS-DOS)/source/`](<1.2 Original (MS-DOS)/source/>). This is a
 historical toolchain intended for an MS-DOS environment or a compatible
 emulator.
