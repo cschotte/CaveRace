@@ -37,7 +37,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Odin build failed with exit code $LASTEXITCODE."
 }
 
-Copy-Item -Recurse (Join-Path $SourceDirectory "media") (Join-Path $DistDirectory "media")
+Copy-Item -Recurse -Exclude ".DS_Store" (Join-Path $SourceDirectory "media") (Join-Path $DistDirectory "media")
 Copy-Item -Recurse (Join-Path $SourceDirectory "levels") (Join-Path $DistDirectory "levels")
 
 $RequiredFiles = @(

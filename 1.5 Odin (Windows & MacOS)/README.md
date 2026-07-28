@@ -74,6 +74,9 @@ cd source
 odin check . -vet -vet-cast -vet-style -vet-tabs -warnings-as-errors
 ```
 
+The privacy policy used by the Microsoft Store listing is available at
+[navatron.com/privacy](https://navatron.com/privacy/).
+
 Distributable builds are available in the repository's
 [releases](../releases/) folder. See [CHANGELOG.md](CHANGELOG.md) for the
 1.5.x version history.

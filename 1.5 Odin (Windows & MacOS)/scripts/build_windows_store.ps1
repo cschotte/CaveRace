@@ -14,6 +14,9 @@ $MsixPath = Join-Path $DistDirectory "CaveRace.msix"
 # Keep the resource path relative to the source working directory. Odin's
 # -resource path validation rejects some absolute paths containing spaces.
 $RcSource = "../packaging/windows/caverace.rc"
+# The output path has the same restriction. The build runs from source/, so
+# use a relative path here and retain $ExecutablePath for subsequent checks.
+$OdinOutputPath = "../dist/windows-store/staging/CaveRace.exe"
 
 if (Test-Path $DistDirectory) {
     Remove-Item -Recurse -Force $DistDirectory
@@ -41,7 +44,7 @@ if ($Mode -eq "debug") {
 
 Push-Location $SourceDirectory
 try {
-    & odin build . @BuildFlags "-out:$ExecutablePath"
+    & odin build . @BuildFlags "-out:$OdinOutputPath"
 } finally {
     Pop-Location
 }
@@ -49,7 +52,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Odin build failed with exit code $LASTEXITCODE."
 }
 
-Copy-Item -Recurse (Join-Path $SourceDirectory "media") (Join-Path $StagingDirectory "media")
+Copy-Item -Recurse -Exclude ".DS_Store" (Join-Path $SourceDirectory "media") (Join-Path $StagingDirectory "media")
 Copy-Item -Recurse (Join-Path $SourceDirectory "levels") (Join-Path $StagingDirectory "levels")
 Copy-Item (Join-Path $PackagingDirectory "AppxManifest.xml") (Join-Path $StagingDirectory "AppxManifest.xml")
 Copy-Item -Recurse (Join-Path $PackagingDirectory "Assets") (Join-Path $StagingDirectory "Assets")
