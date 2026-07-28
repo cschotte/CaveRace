@@ -1,4 +1,12 @@
-IDI_ICON1 ICON "caverace.ico"
+// Named GLFW_ICON (not a numbered IDI_ constant) so GLFW's Win32 backend
+// auto-adopts it as the live window/taskbar/Alt-Tab icon, in addition to it
+// being the .exe file's icon in Explorer.
+GLFW_ICON ICON "caverace.ico"
+
+// CREATEPROCESS_MANIFEST_RESOURCE_ID (1), RT_MANIFEST (24): declares
+// Per-Monitor-V2 DPI awareness so Windows hands the process real pixels
+// instead of bitmap-stretching a low-DPI-rendered window on scaled displays.
+1 24 "caverace.manifest"
 
 1 VERSIONINFO
 FILEVERSION     1,5,1,0
@@ -16,6 +24,8 @@ BEGIN
 			VALUE "CompanyName", "NavaTron B.V."
 			VALUE "FileDescription", "CaveRace"
 			VALUE "FileVersion", "1.5.1.0"
+			VALUE "InternalName", "CaveRace"
+			VALUE "OriginalFilename", "CaveRace.exe"
 			VALUE "ProductName", "CaveRace"
 			VALUE "ProductVersion", "1.5.1.0"
 			VALUE "LegalCopyright", "Copyright 1997-2026 NavaTron B.V."

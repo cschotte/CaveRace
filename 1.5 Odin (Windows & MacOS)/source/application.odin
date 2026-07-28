@@ -62,6 +62,7 @@ run_application :: proc(options: Launch_Options) -> bool {
 	init_game(&app.game, options.cheats_enabled, &settings)
 	log_step(verbose, "Game state initialized.")
 
+	rl.SetConfigFlags({.WINDOW_HIGHDPI})
 	log_step(verbose, "Calling InitWindow(%d, %d)...", WINDOW_WIDTH, WINDOW_HEIGHT)
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
 	if !rl.IsWindowReady() {

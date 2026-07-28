@@ -6,6 +6,23 @@
   the platform's default position.
 - Changing the window scale in Settings re-centers the window at its new
   size instead of leaving it anchored to its previous top-left corner.
+- Windows: the executable now declares Per-Monitor-V2 DPI awareness
+  (`packaging/windows/caverace.manifest`) and enables raylib's
+  `WINDOW_HIGHDPI` flag, so the game renders at native resolution on scaled
+  displays instead of being bitmap-stretched by Windows, matching the
+  existing `NSHighResolutionCapable` behavior on macOS.
+- Windows: the embedded icon resource is now named `GLFW_ICON` so it is
+  adopted as the running window's title bar/taskbar/Alt-Tab icon, not just
+  the `.exe` file icon shown in Explorer.
+- Windows: the version resource now also sets `InternalName` and
+  `OriginalFilename`, shown in Explorer's file Properties → Details tab.
+- Windows Store package: `build_windows_store.ps1` now also passes
+  `packaging/windows/caverace.rc` to Odin's `-resource:` flag, so the
+  DPI-awareness manifest, `GLFW_ICON`, and version info above apply to the
+  `.msix` build too, not just the direct-distribution `.exe` (previously the
+  Store build compiled with no resource file at all).
+- Windows Store package: `MaxVersionTested` bumped from 10.0.22621.0 (22H2)
+  to 10.0.26100.0 (24H2).
 
 ## 1.5.0
 

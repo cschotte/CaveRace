@@ -11,6 +11,7 @@ $DistDirectory = Join-Path $ProjectDirectory "dist/windows-store"
 $StagingDirectory = Join-Path $DistDirectory "staging"
 $ExecutablePath = Join-Path $StagingDirectory "CaveRace.exe"
 $MsixPath = Join-Path $DistDirectory "CaveRace.msix"
+$RcSource = Join-Path $ProjectDirectory "packaging/windows/caverace.rc"
 
 if (Test-Path $DistDirectory) {
     Remove-Item -Recurse -Force $DistDirectory
@@ -28,6 +29,7 @@ if ($Manifest -match "TODO-PARTNER-CENTER") {
 }
 
 $BuildFlags = @("-vet", "-vet-cast", "-vet-style", "-vet-tabs", "-warnings-as-errors")
+$BuildFlags += "-resource:$RcSource"
 if ($Mode -eq "debug") {
     $BuildFlags += "-debug"
 } else {

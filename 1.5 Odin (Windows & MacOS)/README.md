@@ -46,11 +46,21 @@ The shared configuration emits `build/caverace` on macOS and
 
 Both packages carry the app icons from `icons/`: `build_macos.sh` copies
 `packaging/macos/CaveRace.icns` into the bundle alongside
-`packaging/macos/Info.plist` (`CFBundleIconFile`); `build_windows.ps1` passes
-`packaging/windows/caverace.rc` (which embeds `packaging/windows/caverace.ico`
+`packaging/macos/Info.plist` (`CFBundleIconFile`); `build_windows.ps1` and
+`build_windows_store.ps1` both pass `packaging/windows/caverace.rc` (which
+embeds `packaging/windows/caverace.ico`, `packaging/windows/caverace.manifest`,
 and version info) to Odin's `-resource:` flag, which compiles and links it
-into the executable. Regenerate the `.icns`/`.ico` from `icons/*.png` if the
-source artwork changes.
+into the executable, so the direct-distribution `.exe` and the Store `.msix`
+carry identical icon/DPI/version resources. Regenerate the `.icns`/`.ico` from
+`icons/*.png` if the source artwork changes.
+
+The icon resource is named `GLFW_ICON` rather than a numbered `IDI_` constant
+so raylib's GLFW backend adopts it as the live window/taskbar/Alt-Tab icon,
+not just the `.exe` file icon shown in Explorer. `caverace.manifest` declares
+Per-Monitor-V2 DPI awareness, matching `NSHighResolutionCapable` on macOS, so
+Windows hands the process real pixels on scaled displays instead of
+bitmap-stretching a low-DPI-rendered window; `rl.SetConfigFlags({.WINDOW_HIGHDPI})`
+before `InitWindow` in `application.odin` is the raylib-side half of that.
 
 For a credentialed release, `scripts/build_macos.sh` reads
 `CAVERACE_SIGN_IDENTITY` and `CAVERACE_NOTARY_PROFILE` to sign with hardened
