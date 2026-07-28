@@ -11,7 +11,9 @@ $DistDirectory = Join-Path $ProjectDirectory "dist/windows-store"
 $StagingDirectory = Join-Path $DistDirectory "staging"
 $ExecutablePath = Join-Path $StagingDirectory "CaveRace.exe"
 $MsixPath = Join-Path $DistDirectory "CaveRace.msix"
-$RcSource = Join-Path $ProjectDirectory "packaging/windows/caverace.rc"
+# Keep the resource path relative to the source working directory. Odin's
+# -resource path validation rejects some absolute paths containing spaces.
+$RcSource = "../packaging/windows/caverace.rc"
 
 if (Test-Path $DistDirectory) {
     Remove-Item -Recurse -Force $DistDirectory

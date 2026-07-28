@@ -14,7 +14,9 @@ if (Test-Path $DistDirectory) {
 }
 New-Item -ItemType Directory -Force $DistDirectory | Out-Null
 
-$RcSource = Join-Path $ProjectDirectory "packaging/windows/caverace.rc"
+# Keep the resource path relative to the source working directory. Odin's
+# -resource path validation rejects some absolute paths containing spaces.
+$RcSource = "../packaging/windows/caverace.rc"
 
 $BuildFlags = @("-vet", "-vet-cast", "-vet-style", "-vet-tabs", "-warnings-as-errors")
 $BuildFlags += "-resource:$RcSource"
