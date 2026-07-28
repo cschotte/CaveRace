@@ -70,6 +70,14 @@ run_application :: proc(options: Launch_Options) -> bool {
 	}
 	log_step(verbose, "Window ready.")
 	defer rl.CloseWindow()
+	{
+		monitor := rl.GetCurrentMonitor()
+		monitor_width := rl.GetMonitorWidth(monitor)
+		monitor_height := rl.GetMonitorHeight(monitor)
+		window_x := (monitor_width - i32(WINDOW_WIDTH)) / 2
+		window_y := (monitor_height - i32(WINDOW_HEIGHT)) / 2
+		rl.SetWindowPosition(window_x, window_y)
+	}
 	log_step(verbose, "Creating presentation render texture...")
 	app.canvas = rl.LoadRenderTexture(WINDOW_WIDTH, WINDOW_HEIGHT)
 	if !rl.IsRenderTextureValid(app.canvas) {
@@ -451,12 +459,20 @@ apply_display_settings :: proc(app: ^Application) {
 	}
 	if desired == .Windowed {
 		monitor := rl.GetCurrentMonitor()
+		monitor_width := rl.GetMonitorWidth(monitor)
+		monitor_height := rl.GetMonitorHeight(monitor)
 		scale := supported_window_scale(
 			app.game.settings.window_scale,
-			int(rl.GetMonitorWidth(monitor)),
-			int(rl.GetMonitorHeight(monitor)),
+			int(monitor_width),
+			int(monitor_height),
 		)
-		rl.SetWindowSize(i32(WINDOW_WIDTH * scale), i32(WINDOW_HEIGHT * scale))
+		window_width := i32(WINDOW_WIDTH * scale)
+		window_height := i32(WINDOW_HEIGHT * scale)
+		rl.SetWindowSize(window_width, window_height)
+		rl.SetWindowPosition(
+			(monitor_width - window_width) / 2,
+			(monitor_height - window_height) / 2,
+		)
 	}
 }
 

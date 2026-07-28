@@ -1,4 +1,4 @@
-# CaveRace 1.5
+# CaveRace 1.5.1
 
 CaveRace 1.5 is the current desktop edition of the 1997
 maze-action game. This edition is a from-scratch rewrite in [Odin] using
@@ -65,7 +65,8 @@ odin check . -vet -vet-cast -vet-style -vet-tabs -warnings-as-errors
 ```
 
 Distributable builds are available in the repository's
-[releases](../releases/) folder.
+[releases](../releases/) folder. See [CHANGELOG.md](CHANGELOG.md) for the
+1.5.x version history.
 
 ## Controls and launch options
 
