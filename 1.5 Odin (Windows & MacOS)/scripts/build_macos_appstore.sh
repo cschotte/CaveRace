@@ -44,12 +44,18 @@ mkdir -p "$CONTENTS_DIRECTORY/MacOS" "$CONTENTS_DIRECTORY/Resources"
 cd "$SOURCE_DIRECTORY"
 EXECUTABLE_PATH="$CONTENTS_DIRECTORY/MacOS/CaveRace"
 
+# odin's -out flag rejects '&' and '(' / ')' in the path string itself (even
+# quoted), and this repo's directory name ("...Windows & MacOS)") contains
+# both. Passing a path relative to SOURCE_DIRECTORY (our cwd here) instead of
+# the absolute path avoids ever putting those characters in the -out argument.
+RELATIVE_OUT_PREFIX="../dist/macos-appstore/CaveRace.app/Contents/MacOS/CaveRace"
+
 # The Mac App Store rejects an arm64-only bundle unless the deployment target
 # is 12.0+ (ours is 10.15, packaging/macos/Info.plist), so build both slices
 # and glue them into one universal executable with lipo.
 for target in darwin_arm64 darwin_amd64; do
 	odin build . $BUILD_FLAGS -vet -vet-cast -vet-style -vet-tabs -warnings-as-errors \
-		-target:$target -out:"$EXECUTABLE_PATH-$target"
+		-target:$target -out:"$RELATIVE_OUT_PREFIX-$target"
 done
 lipo -create "$EXECUTABLE_PATH-darwin_arm64" "$EXECUTABLE_PATH-darwin_amd64" -output "$EXECUTABLE_PATH"
 rm -f "$EXECUTABLE_PATH-darwin_arm64" "$EXECUTABLE_PATH-darwin_amd64"
