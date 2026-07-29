@@ -81,11 +81,7 @@ draw_game_pause :: proc(game: ^Game) {
 		draw_bindings_menu(game)
 		return
 	}
-	panel_width := i32(MENU_NARROW_PANEL_WIDTH)
-	last_row_offset := PAUSE_CONTENT_TOP + i32(len(Pause_Menu_Item) - 1) * PAUSE_ROW_SPACING
-	panel_height := last_row_offset + PAUSE_ROW_HEIGHT + 14
-	panel_x := (WINDOW_WIDTH - panel_width) / 2
-	panel_y := WINDOW_HEIGHT - panel_height - MENU_PANEL_BOTTOM_MARGIN
+	panel_x, panel_y, panel_width, panel_height := pause_panel_geometry()
 	ease := f32(clamp(game.pause.elapsed_seconds / 0.15, 0, 1))
 
 	rl.DrawRectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, rl.Fade(rl.BLACK, 0.72 * ease))
@@ -110,23 +106,37 @@ draw_game_pause :: proc(game: ^Game) {
 		}
 		prompt_width := rl.MeasureText(prompt, 18)
 		rl.DrawText(prompt, (WINDOW_WIDTH - prompt_width) / 2, panel_y + 70, 18, rl.WHITE)
-		confirm_buffer: [128]byte
-		confirm: cstring
+		confirm_rect, cancel_rect := pause_confirmation_rects()
+		confirm_hovered := ui_rect_contains(confirm_rect, game.pointer)
+		cancel_hovered := ui_rect_contains(cancel_rect, game.pointer)
+		confirm_color := rl.GOLD if confirm_hovered else rl.LIGHTGRAY
+		cancel_color := rl.GOLD if cancel_hovered else rl.LIGHTGRAY
+		rl.DrawRectangle(i32(confirm_rect.x), i32(confirm_rect.y), i32(confirm_rect.width), i32(confirm_rect.height), rl.Fade(rl.BLACK, 0.92))
+		rl.DrawRectangleLines(i32(confirm_rect.x), i32(confirm_rect.y), i32(confirm_rect.width), i32(confirm_rect.height), confirm_color)
+		rl.DrawRectangle(i32(cancel_rect.x), i32(cancel_rect.y), i32(cancel_rect.width), i32(cancel_rect.height), rl.Fade(rl.BLACK, 0.92))
+		rl.DrawRectangleLines(i32(cancel_rect.x), i32(cancel_rect.y), i32(cancel_rect.width), i32(cancel_rect.height), cancel_color)
+		confirm_label: cstring = "CONFIRM"
+		cancel_label: cstring = "CANCEL"
+		rl.DrawText(confirm_label, i32(confirm_rect.x) + (i32(confirm_rect.width) - rl.MeasureText(confirm_label, 16)) / 2, i32(confirm_rect.y) + 6, 16, confirm_color)
+		rl.DrawText(cancel_label, i32(cancel_rect.x) + (i32(cancel_rect.width) - rl.MeasureText(cancel_label, 16)) / 2, i32(cancel_rect.y) + 6, 16, cancel_color)
+
+		hint_buffer: [128]byte
+		hint: cstring
 		if game.last_input_device == .Keyboard {
-			confirm = format_cstring(
-				confirm_buffer[:],
+			hint = format_cstring(
+				hint_buffer[:],
 				"%s: CONFIRM    ESC: CANCEL",
 				action_prompt(.Confirm, .Keyboard, game.settings.bindings),
 			)
 		} else {
-			confirm = format_cstring(
-				confirm_buffer[:],
+			hint = format_cstring(
+				hint_buffer[:],
 				"%s: CONFIRM    B: CANCEL",
 				action_prompt(.Confirm, .Controller, game.settings.bindings, &game.settings.controller_bindings),
 			)
 		}
-		confirm_width := rl.MeasureText(confirm, 14)
-		rl.DrawText(confirm, (WINDOW_WIDTH - confirm_width) / 2, panel_y + 120, 14, rl.GOLD)
+		hint_width := rl.MeasureText(hint, 14)
+		rl.DrawText(hint, (WINDOW_WIDTH - hint_width) / 2, panel_y + 154, 14, rl.GOLD)
 		return
 	}
 
@@ -293,20 +303,27 @@ main_menu_content_height :: proc() -> i32 {
 
 MAIN_MENU_LIST_TOP :: 16
 
+main_menu_panel_geometry :: proc(elapsed_seconds: f64) -> (x, y, width, height: i32) {
+	x = 388
+	width = 200
+	height = main_menu_content_height()
+	y = (WINDOW_HEIGHT - height) / 2 + 50
+	ease := clamp(f32(elapsed_seconds) / 0.28, 0, 1)
+	ease = ease * ease * (3 - 2 * ease)
+	x += i32((1 - ease) * 22)
+	return
+}
+
 // draw_main_menu_page preserves the title scene by keeping navigation in a
 // compact command card on the quiet right side of the original artwork. A
 // soft vignette replaces the old flat panel so the art stays the focus, and
 // the card eases in when the menu is entered. The card has no title of its
 // own and is sized to fit exactly around the action list.
 draw_main_menu_page :: proc(game: ^Game) {
-	panel_x: i32 = 388
-	panel_width: i32 = 200
-	panel_height := main_menu_content_height()
-	panel_y := (WINDOW_HEIGHT - panel_height) / 2 + 50
+	panel_x, panel_y, panel_width, panel_height := main_menu_panel_geometry(game.menu.page_elapsed_seconds)
 
 	ease := clamp(f32(game.menu.page_elapsed_seconds) / 0.28, 0, 1)
 	ease = ease * ease * (3 - 2 * ease)
-	panel_x += i32((1 - ease) * 22)
 	pulse := ui_pulse(game.ui_clock, 1.6)
 
 	draw_main_menu_ambience(game)
@@ -353,6 +370,27 @@ menu_narrow_panel_height :: proc(row_count: int, row_spacing: i32 = MENU_ROW_SPA
 	return last_offset + row_height + 14
 }
 
+draw_setting_value_control :: proc(
+	panel_x, y: i32,
+	color: rl.Color,
+	value_format: string,
+	args: ..any,
+) {
+	left_x := panel_x + SETTINGS_DECREMENT_OFFSET
+	right_x := panel_x + SETTINGS_INCREMENT_OFFSET
+	left_label: cstring = "<"
+	right_label: cstring = ">"
+	arrow_size: i32 = 16
+	arrow_inset := (SETTINGS_CONTROL_WIDTH - rl.MeasureText(left_label, arrow_size)) / 2
+	rl.DrawText(left_label, left_x + arrow_inset, y, arrow_size, color)
+	rl.DrawText(right_label, right_x + arrow_inset, y, arrow_size, color)
+	value_buffer: [32]byte
+	value := format_cstring(value_buffer[:], value_format, ..args)
+	value_width := rl.MeasureText(value, 16)
+	value_center := panel_x + SETTINGS_VALUE_CENTER_OFFSET
+	rl.DrawText(value, value_center - value_width / 2, y, 16, color)
+}
+
 // draw_settings_menu anchors its panel to the bottom of the screen with a
 // small margin and keeps it narrower than the other menu panels, so the
 // title art stays visible above and beside it.
@@ -365,7 +403,6 @@ draw_settings_menu :: proc(game: ^Game) {
 
 	prefix_x := panel_x + MENU_SIDE_INSET
 	label_x := panel_x + MENU_SIDE_INSET + 16
-	value_right := panel_x + MENU_NARROW_PANEL_WIDTH - MENU_SIDE_INSET
 	glow_x := panel_x + MENU_GLOW_INSET
 	glow_width: i32 = MENU_NARROW_PANEL_WIDTH - MENU_GLOW_INSET * 2
 
@@ -381,19 +418,38 @@ draw_settings_menu :: proc(game: ^Game) {
 		}
 		rl.DrawText(prefix, prefix_x, y, 16, color)
 		switch item {
-		case .Music:             draw_menu_value_row(label_x, value_right, y, 16, color, "MUSIC", "%d%%", settings.music_volume)
-		case .Sfx:               draw_menu_value_row(label_x, value_right, y, 16, color, "SFX", "%d%%", settings.sfx_volume)
+		case .Music:
+			rl.DrawText("MUSIC", label_x, y, 16, color)
+			draw_setting_value_control(panel_x, y, color, "%d%%", settings.music_volume)
+		case .Sfx:
+			rl.DrawText("SFX", label_x, y, 16, color)
+			draw_setting_value_control(panel_x, y, color, "%d%%", settings.sfx_volume)
 		case .Display_Mode:
 			mode: cstring = "WINDOWED"
 			if settings.display_mode == .Borderless do mode = "BORDERLESS"
-			draw_menu_value_row(label_x, value_right, y, 16, color, "DISPLAY", "%s", mode)
-		case .Window_Scale:       draw_menu_value_row(label_x, value_right, y, 16, color, "WINDOW SCALE", "%dx", settings.window_scale)
-		case .Reduced_Flashes:    draw_menu_value_row(label_x, value_right, y, 16, color, "REDUCED FLASHES", "%s", "ON" if settings.reduced_flashes else "OFF")
-		case .Screen_Shake:       draw_menu_value_row(label_x, value_right, y, 16, color, "SCREEN SHAKE", "%d%%", settings.screen_shake)
-		case .Controller_Rumble:  draw_menu_value_row(label_x, value_right, y, 16, color, "CONTROLLER RUMBLE", "%s", "ON" if settings.controller_rumble else "OFF")
-		case .High_Contrast:      draw_menu_value_row(label_x, value_right, y, 16, color, "DANGER HATCHING", "%s", "ON" if settings.high_contrast_preview else "OFF")
-		case .Pause_On_Focus_Loss: draw_menu_value_row(label_x, value_right, y, 16, color, "FOCUS PAUSE", "%s", "ON" if settings.pause_on_focus_loss else "OFF")
-		case .Difficulty:         draw_menu_value_row(label_x, value_right, y, 16, color, "DIFFICULTY", "%s", difficulty_label(settings.difficulty))
+			rl.DrawText("DISPLAY", label_x, y, 16, color)
+			draw_setting_value_control(panel_x, y, color, "%s", mode)
+		case .Window_Scale:
+			rl.DrawText("WINDOW SCALE", label_x, y, 16, color)
+			draw_setting_value_control(panel_x, y, color, "%dx", settings.window_scale)
+		case .Reduced_Flashes:
+			rl.DrawText("REDUCED FLASHES", label_x, y, 16, color)
+			draw_setting_value_control(panel_x, y, color, "%s", "ON" if settings.reduced_flashes else "OFF")
+		case .Screen_Shake:
+			rl.DrawText("SCREEN SHAKE", label_x, y, 16, color)
+			draw_setting_value_control(panel_x, y, color, "%d%%", settings.screen_shake)
+		case .Controller_Rumble:
+			rl.DrawText("CONTROLLER RUMBLE", label_x, y, 16, color)
+			draw_setting_value_control(panel_x, y, color, "%s", "ON" if settings.controller_rumble else "OFF")
+		case .High_Contrast:
+			rl.DrawText("DANGER HATCHING", label_x, y, 16, color)
+			draw_setting_value_control(panel_x, y, color, "%s", "ON" if settings.high_contrast_preview else "OFF")
+		case .Pause_On_Focus_Loss:
+			rl.DrawText("FOCUS PAUSE", label_x, y, 16, color)
+			draw_setting_value_control(panel_x, y, color, "%s", "ON" if settings.pause_on_focus_loss else "OFF")
+		case .Difficulty:
+			rl.DrawText("DIFFICULTY", label_x, y, 16, color)
+			draw_setting_value_control(panel_x, y, color, "%s", difficulty_label(settings.difficulty))
 		case .Bindings:           rl.DrawText("REMAP CONTROLS", label_x, y, 16, color)
 		case .Back:               rl.DrawText("BACK", label_x, y, 16, color)
 		}
@@ -472,15 +528,21 @@ FIRST_RUN_PANEL_WIDTH :: 400
 FIRST_RUN_ROW_SPACING :: 38
 FIRST_RUN_ROW_HEIGHT  :: 24
 
+first_run_panel_geometry :: proc() -> (panel_x, panel_y, height, items_top, rules_offset: i32) {
+	items_top = MENU_PANEL_CONTENT_GAP + 22
+	last_row_offset := items_top + i32(len(First_Run_Item) - 1) * FIRST_RUN_ROW_SPACING
+	rules_offset = last_row_offset + FIRST_RUN_ROW_HEIGHT + 10
+	height = rules_offset + 14 + 16
+	panel_y = WINDOW_HEIGHT - height - MENU_PANEL_BOTTOM_MARGIN
+	panel_x = (WINDOW_WIDTH - FIRST_RUN_PANEL_WIDTH) / 2
+	return
+}
+
 // draw_first_run_menu shares the same narrow, bottom-anchored, no-footer-hint
 // treatment as Settings/Bindings/Pause, sized instead to fit its own wider
 // instructional line and larger item text.
 draw_first_run_menu :: proc(game: ^Game) {
-	items_top: i32 = MENU_PANEL_CONTENT_GAP + 22
-	last_row_offset := items_top + i32(len(First_Run_Item) - 1) * FIRST_RUN_ROW_SPACING
-	rules_offset := last_row_offset + FIRST_RUN_ROW_HEIGHT + 10
-	height := rules_offset + 14 + 16
-	panel_y := WINDOW_HEIGHT - height - MENU_PANEL_BOTTOM_MARGIN
+	_, panel_y, height, items_top, rules_offset := first_run_panel_geometry()
 	panel_x := draw_menu_panel("CHOOSE YOUR START", height, FIRST_RUN_PANEL_WIDTH, panel_y)
 
 	instruction: cstring = "LEARN MOVEMENT, BOMBS, PICKUPS AND SAFETY."

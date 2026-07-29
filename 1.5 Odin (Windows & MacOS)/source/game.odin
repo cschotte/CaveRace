@@ -26,6 +26,7 @@ Game :: struct {
 	gameplay:              Gameplay,
 	settings:              Settings,
 	last_input_device:     Input_Device,
+	pointer:               Pointer_Input,
 	feedback:              Game_Feedback,
 	effects:               Game_Effects,
 	cheats_enabled:        bool,
@@ -53,7 +54,8 @@ Game_Update_Result :: struct {
 menu_audio_input :: proc(input: Game_Input) -> bool {
 	return input.confirm || input.back || input.pause_pressed ||
 	       input.menu_up_pressed || input.menu_down_pressed ||
-	       input.menu_left_pressed || input.menu_right_pressed
+	       input.menu_left_pressed || input.menu_right_pressed ||
+	       input.pointer.primary_pressed || input.pointer.secondary_pressed
 }
 
 // init_game sets up a freshly started process: applies loaded settings (or
@@ -122,9 +124,10 @@ complete_or_skip_tutorial :: proc(game: ^Game) -> bool {
 // never touches raylib or the filesystem directly.
 update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_Update_Result {
 	result: Game_Update_Result
+	game.pointer = input.pointer
 	game.last_input_device = resolve_last_input_device(
 		game.last_input_device,
-		input.keyboard_activity,
+		input.keyboard_activity || pointer_activity(input.pointer),
 		input.controller_activity,
 		input.controller_connected,
 	)
@@ -154,7 +157,7 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 	case .Intro:
 		if input.back {
 			show_main_menu(game)
-		} else if input.space_pressed || input.confirm {
+		} else if input.space_pressed || input.confirm || input.pointer.any_button_pressed {
 			if skip_intro_image(&game.front_end) do show_main_menu(game)
 		} else if advance_intro(
 			&game.front_end,

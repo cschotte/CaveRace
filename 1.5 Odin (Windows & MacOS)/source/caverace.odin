@@ -5,7 +5,7 @@ import "core:fmt"
 // main prints launch information, delegates the complete application lifetime,
 // and reports the normal shutdown message to the terminal.
 main :: proc() {
-	fmt.println("CaveRace (1.5.1) Copyright 1997-2026 NavaTron B.V.")
+	fmt.println("CaveRace (1.5.2) Copyright 1997-2026 NavaTron B.V.")
 
 	options := parse_launch_options()
 	print_launch_options(options)

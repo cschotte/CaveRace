@@ -1,5 +1,18 @@
 # CaveRace 1.5 version history
 
+## 1.5.2
+
+- Added mouse hover and click support to the main menu, first-run choice,
+  Settings, control bindings, How to Play, pause menu, and pause confirmation
+  dialogs.
+- Clicking any mouse button now skips the current intro story panel.
+- Settings now show clickable decrease/increase controls; the mouse wheel can
+  also adjust the hovered setting.
+- Added mouse-wheel menu navigation and right-click Back behavior while
+  preserving all existing keyboard and controller controls.
+- Mouse hit testing uses the fixed 640x400 presentation space, so controls stay
+  aligned in scaled windows, borderless mode, and letterboxed aspect ratios.
+
 ## 1.5.1
 
 - The game window now opens centered on the current monitor instead of at

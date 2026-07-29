@@ -14,6 +14,24 @@ Input_Poll_State :: struct {
 	stick_right: bool,
 }
 
+// Pointer_Input stores mouse state in the fixed 640x400 presentation space.
+// Keeping window scaling and letterboxing out of menu logic gives every menu
+// the same hit-testing coordinates as its renderer.
+Pointer_Input :: struct {
+	x:                  f32,
+	y:                  f32,
+	valid:              bool,
+	moved:              bool,
+	primary_pressed:    bool,
+	secondary_pressed:  bool,
+	any_button_pressed: bool,
+	wheel:              f32,
+}
+
+pointer_activity :: proc(pointer: Pointer_Input) -> bool {
+	return pointer.moved || pointer.any_button_pressed || pointer.wheel != 0
+}
+
 // Game_Input is the semantic, allocation-free input snapshot passed unchanged
 // to the active screen. Platform key/button identities stop at poll_game_input.
 Game_Input :: struct {
@@ -41,6 +59,7 @@ Game_Input :: struct {
 	debug_toggle_pressed: bool,
 	cheat_pressed:   [Cheat_Key]bool,
 	screenshot_requested: bool,
+	pointer:            Pointer_Input,
 }
 
 key_pressed_for_action :: proc(bindings: Keyboard_Bindings, action: Input_Action) -> bool {
@@ -62,6 +81,28 @@ poll_game_input :: proc(
 	input.pressed_key = rl.GetKeyPressed()
 	input.any_key_pressed = input.pressed_key != .KEY_NULL
 	input.controller_connected = rl.IsGamepadAvailable(GAMEPAD_INDEX)
+
+	mouse := rl.GetMousePosition()
+	mouse_delta := rl.GetMouseDelta()
+	destination := presentation_rectangle(int(rl.GetScreenWidth()), int(rl.GetScreenHeight()))
+	if destination.width > 0 && destination.height > 0 {
+		input.pointer.x = (mouse.x - destination.x) * WINDOW_WIDTH / destination.width
+		input.pointer.y = (mouse.y - destination.y) * WINDOW_HEIGHT / destination.height
+		input.pointer.valid = mouse.x >= destination.x && mouse.y >= destination.y &&
+		                      mouse.x < destination.x + destination.width &&
+		                      mouse.y < destination.y + destination.height
+	}
+	input.pointer.moved = mouse_delta.x != 0 || mouse_delta.y != 0
+	input.pointer.primary_pressed = rl.IsMouseButtonPressed(.LEFT)
+	input.pointer.secondary_pressed = rl.IsMouseButtonPressed(.RIGHT)
+	input.pointer.any_button_pressed = input.pointer.primary_pressed ||
+	                                   input.pointer.secondary_pressed ||
+	                                   rl.IsMouseButtonPressed(.MIDDLE) ||
+	                                   rl.IsMouseButtonPressed(.SIDE) ||
+	                                   rl.IsMouseButtonPressed(.EXTRA) ||
+	                                   rl.IsMouseButtonPressed(.FORWARD) ||
+	                                   rl.IsMouseButtonPressed(.BACK)
+	input.pointer.wheel = rl.GetMouseWheelMove()
 
 	keyboard_confirm := key_pressed_for_action(bindings, .Confirm) || rl.IsKeyPressed(.SPACE)
 	keyboard_up := key_pressed_for_action(bindings, .Move_Up) || rl.IsKeyPressed(.UP)

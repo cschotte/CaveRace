@@ -9,8 +9,8 @@ GLFW_ICON ICON "caverace.ico"
 1 24 "caverace.manifest"
 
 1 VERSIONINFO
-FILEVERSION     1,5,1,0
-PRODUCTVERSION  1,5,1,0
+FILEVERSION     1,5,2,0
+PRODUCTVERSION  1,5,2,0
 FILEFLAGSMASK   0x3fL
 FILEFLAGS       0x0L
 FILEOS          0x40004L
@@ -23,11 +23,11 @@ BEGIN
 		BEGIN
 			VALUE "CompanyName", "NavaTron B.V."
 			VALUE "FileDescription", "CaveRace"
-			VALUE "FileVersion", "1.5.1.0"
+			VALUE "FileVersion", "1.5.2.0"
 			VALUE "InternalName", "CaveRace"
 			VALUE "OriginalFilename", "CaveRace.exe"
 			VALUE "ProductName", "CaveRace"
-			VALUE "ProductVersion", "1.5.1.0"
+			VALUE "ProductVersion", "1.5.2.0"
 			VALUE "LegalCopyright", "Copyright 1997-2026 NavaTron B.V."
 		END
 	END

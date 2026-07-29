@@ -1,4 +1,4 @@
-# CaveRace 1.5.1
+# CaveRace 1.5.2
 
 CaveRace 1.5 is the current desktop edition of the 1997
 maze-action game. This edition is a from-scratch rewrite in [Odin] using
@@ -83,14 +83,18 @@ Distributable builds are available in the repository's
 
 ## Controls and launch options
 
-All player-facing flows work without a mouse. Keyboard and controller
-bindings can be remapped from Settings; arrow keys and the left stick remain
-movement fallbacks, while Escape/controller B stay reserved for Back.
+All menus support mouse, keyboard, and controller navigation. Hovering a menu
+row selects it, left-click activates it, right-click goes back, and the mouse
+wheel navigates lists. Settings provide clickable decrease/increase controls
+and wheel adjustment. Keyboard and controller bindings can still be remapped;
+arrow keys and the left stick remain movement fallbacks, while
+Escape/controller B stay reserved for Back.
 Xbox-style labels below use raylib's standard layout. Controller rumble can
 be disabled independently, and Screen Shake at 0% is exactly still.
 
 | Input | Action |
 | --- | --- |
+| Mouse | Point and click menu actions or advance story panels; use the wheel to navigate or adjust the hovered setting; right-click to go back |
 | Arrow keys or WASD | Move; navigate menus (left stick/D-pad on controller) |
 | Space / controller A | Place a bomb during gameplay; skip the current story panel |
 | Enter or Space / controller A | Confirm menu and outcome actions |

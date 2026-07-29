@@ -59,6 +59,90 @@ Menu_Update_Result :: struct {
 	display_changed:  bool,
 }
 
+UI_Rect :: struct {
+	x, y, width, height: f32,
+}
+
+ui_rect_contains :: proc(rect: UI_Rect, pointer: Pointer_Input) -> bool {
+	return pointer.valid && pointer.x >= rect.x && pointer.y >= rect.y &&
+	       pointer.x < rect.x + rect.width && pointer.y < rect.y + rect.height
+}
+
+menu_item_rect :: proc(menu: ^Menu_State, item_index: int) -> (UI_Rect, bool) {
+	if item_index < 0 || item_index >= menu_item_count(menu.page) do return {}, false
+	switch menu.page {
+	case .Main:
+		panel_x, panel_y, panel_width, _ := main_menu_panel_geometry(menu.page_elapsed_seconds)
+		y := panel_y + MAIN_MENU_LIST_TOP + i32(item_index) * 24 + main_menu_item_gap(item_index)
+		return {f32(panel_x + 10), f32(y - 3), f32(panel_width - 20), 22}, true
+	case .First_Run:
+		panel_x, panel_y, _, items_top, _ := first_run_panel_geometry()
+		y := panel_y + items_top + i32(item_index) * FIRST_RUN_ROW_SPACING
+		return {
+			f32(panel_x + MENU_GLOW_INSET),
+			f32(y - 3),
+			f32(FIRST_RUN_PANEL_WIDTH - MENU_GLOW_INSET * 2),
+			f32(FIRST_RUN_ROW_HEIGHT),
+		}, true
+	case .Settings, .Bindings:
+		row_count := menu_item_count(menu.page)
+		height := menu_narrow_panel_height(row_count)
+		panel_y := WINDOW_HEIGHT - height - MENU_PANEL_BOTTOM_MARGIN
+		panel_x := (WINDOW_WIDTH - MENU_NARROW_PANEL_WIDTH) / 2
+		y := panel_y + MENU_PANEL_CONTENT_GAP + i32(item_index) * MENU_ROW_SPACING
+		return {
+			f32(panel_x + MENU_GLOW_INSET),
+			f32(y - 2),
+			f32(MENU_NARROW_PANEL_WIDTH - MENU_GLOW_INSET * 2),
+			f32(MENU_ROW_HEIGHT),
+		}, true
+	case .How_To_Play:
+	}
+	return {}, false
+}
+
+menu_hovered_item :: proc(menu: ^Menu_State, pointer: Pointer_Input) -> (int, bool) {
+	for item_index in 0 ..< menu_item_count(menu.page) {
+		if rect, ok := menu_item_rect(menu, item_index); ok && ui_rect_contains(rect, pointer) {
+			return item_index, true
+		}
+	}
+	return 0, false
+}
+
+SETTINGS_DECREMENT_OFFSET :: 198
+SETTINGS_INCREMENT_OFFSET :: 300
+SETTINGS_CONTROL_WIDTH     :: 28
+SETTINGS_VALUE_CENTER_OFFSET :: 254
+
+settings_adjustment_rects :: proc(menu: ^Menu_State, item_index: int) -> (UI_Rect, UI_Rect, bool) {
+	if menu.page != .Settings || item_index < 0 || item_index >= len(Settings_Menu_Item) {
+		return {}, {}, false
+	}
+	item := Settings_Menu_Item(item_index)
+	if item == .Bindings || item == .Back do return {}, {}, false
+	row, ok := menu_item_rect(menu, item_index)
+	if !ok do return {}, {}, false
+	panel_x := (WINDOW_WIDTH - MENU_NARROW_PANEL_WIDTH) / 2
+	left := UI_Rect {
+		x = f32(panel_x + SETTINGS_DECREMENT_OFFSET),
+		y = row.y,
+		width = SETTINGS_CONTROL_WIDTH,
+		height = row.height,
+	}
+	right := left
+	right.x = f32(panel_x + SETTINGS_INCREMENT_OFFSET)
+	return left, right, true
+}
+
+bindings_header_rect :: proc(menu: ^Menu_State) -> (UI_Rect, bool) {
+	if menu.page != .Bindings do return {}, false
+	height := menu_narrow_panel_height(menu_item_count(menu.page))
+	panel_y := WINDOW_HEIGHT - height - MENU_PANEL_BOTTOM_MARGIN
+	panel_x := (WINDOW_WIDTH - MENU_NARROW_PANEL_WIDTH) / 2
+	return {f32(panel_x), f32(panel_y), MENU_NARROW_PANEL_WIDTH, 42}, true
+}
+
 begin_menu :: proc(menu: ^Menu_State) {
 	menu^ = {}
 }
@@ -148,6 +232,8 @@ update_menu :: proc(
 	frame_seconds: f64,
 ) -> Menu_Update_Result {
 	result: Menu_Update_Result
+	back_pressed := input.back ||
+	                (input.pointer.valid && input.pointer.secondary_pressed)
 	menu.binding_conflict_seconds = max(
 		menu.binding_conflict_seconds - clamp(frame_seconds, 0, MAX_FRAME_DELTA_SECONDS),
 		0,
@@ -155,11 +241,14 @@ update_menu :: proc(
 	menu.page_elapsed_seconds += clamp(frame_seconds, 0, MAX_FRAME_DELTA_SECONDS)
 
 	if menu.page == .How_To_Play {
-		if input.back || input.confirm do open_menu_page(menu, .Main)
+		if back_pressed || input.confirm ||
+		   (input.pointer.valid && input.pointer.primary_pressed) {
+			open_menu_page(menu, .Main)
+		}
 		return result
 	}
 	if menu.page == .Bindings && menu.binding_waiting {
-		if input.back {
+		if back_pressed {
 			menu.binding_waiting = false
 			return result
 		}
@@ -188,7 +277,7 @@ update_menu :: proc(
 		return result
 	}
 
-	if input.back {
+	if back_pressed {
 		switch menu.page {
 		case .Main:
 		case .First_Run, .Settings:
@@ -198,6 +287,42 @@ update_menu :: proc(
 		case .How_To_Play:
 		}
 		return result
+	}
+
+	if input.pointer.moved {
+		if hovered, ok := menu_hovered_item(menu, input.pointer); ok {
+			menu.selected = hovered
+		}
+	}
+	if menu.page == .Bindings && input.pointer.primary_pressed {
+		if header, ok := bindings_header_rect(menu); ok && ui_rect_contains(header, input.pointer) {
+			menu.binding_device = .Controller if menu.binding_device == .Keyboard else .Keyboard
+			return result
+		}
+	}
+	if menu.page == .Settings && (input.pointer.primary_pressed || input.pointer.wheel != 0) {
+		if hovered, ok := menu_hovered_item(menu, input.pointer); ok {
+			menu.selected = hovered
+			item := Settings_Menu_Item(hovered)
+			if item != .Bindings && item != .Back {
+				delta := 0
+				if input.pointer.wheel != 0 {
+					delta = 1 if input.pointer.wheel > 0 else -1
+				} else if left, right, has_controls := settings_adjustment_rects(menu, hovered); has_controls {
+					if ui_rect_contains(left, input.pointer) do delta = -1
+					if ui_rect_contains(right, input.pointer) do delta = 1
+				}
+				if delta != 0 {
+					changed, display_changed := adjust_setting(settings, item, delta)
+					result.settings_changed = changed
+					result.display_changed = display_changed
+					return result
+				}
+			}
+		}
+	}
+	if menu.page != .Settings && input.pointer.wheel != 0 {
+		move_menu_selection(menu, -1 if input.pointer.wheel > 0 else 1)
 	}
 	if input.menu_up_pressed do move_menu_selection(menu, -1)
 	if input.menu_down_pressed do move_menu_selection(menu, 1)
@@ -218,7 +343,14 @@ update_menu :: proc(
 		return result
 	}
 
-	if !input.confirm do return result
+	confirm_pressed := input.confirm
+	if input.pointer.primary_pressed {
+		if hovered, ok := menu_hovered_item(menu, input.pointer); ok {
+			menu.selected = hovered
+			confirm_pressed = true
+		}
+	}
+	if !confirm_pressed do return result
 	switch menu.page {
 	case .Main:
 		switch Main_Menu_Item(menu.selected) {
