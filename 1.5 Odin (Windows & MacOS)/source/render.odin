@@ -693,10 +693,19 @@ draw_gameplay :: proc(game: ^Game, assets: ^Assets) {
 	if gameplay.state == .Game_Over {
 		rl.DrawTexture(assets.screens.game_over, 0, 0, rl.WHITE)
 		draw_game_over_ambience(game)
+		draw_gameplay_message_format(
+			"%s FOR A NEW GAME, %s FOR MENU",
+			action_prompt(.Restart, game.last_input_device, game.settings.bindings, &game.settings.controller_bindings),
+			action_prompt(.Confirm, game.last_input_device, game.settings.bindings, &game.settings.controller_bindings),
+		)
 		return
 	}
 	if gameplay.state == .Game_Won {
 		rl.DrawTexture(assets.screens.you_won, 0, 0, rl.WHITE)
+		draw_gameplay_message_format(
+			"%s TO CONTINUE",
+			action_prompt(.Confirm, game.last_input_device, game.settings.bindings, &game.settings.controller_bindings),
+		)
 		return
 	}
 

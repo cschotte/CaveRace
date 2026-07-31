@@ -227,8 +227,9 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			} else if pause_result.main_menu {
 				show_main_menu(game)
 			}
-		} else if previous_gameplay_state == .Playing && input.pause_pressed {
+		} else if previous_gameplay_state == .Playing && (input.pause_pressed || input.back) {
 			open_game_pause(game)
+			if input.back do game.pause.confirmation = .Main_Menu
 		} else if previous_gameplay_state == .Dead && input.restart_pressed {
 			begin_level_retry(&game.gameplay)
 			result.load_level_requested = true
@@ -261,7 +262,7 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 	if menu_audio_context && menu_audio_input(input) {
 		result.menu_sound_requests = 1
 	}
-	if !previous_pause_open && game.pause.open do result.menu_sound_requests = 1
+	if previous_pause_open != game.pause.open do result.menu_sound_requests = 1
 	result.victory_started = previous_screen == .Playing && game.screen == .Playing &&
 		previous_gameplay_state != .Game_Won && game.gameplay.state == .Game_Won
 	if result.victory_started {

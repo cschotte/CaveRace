@@ -485,6 +485,7 @@ apply_sfx_volume :: proc(assets: ^Assets, volume_percent: int) {
 	rl.SetSoundVolume(assets.sounds.squish, volume)
 	rl.SetSoundVolume(assets.sounds.ticking, volume)
 	rl.SetSoundVolume(assets.sounds.menu, volume)
+	rl.SetSoundVolume(assets.sounds.death, volume)
 }
 
 // limited_audio_request_count caps a per-frame event count to a fixed voice
@@ -519,6 +520,9 @@ play_frame_audio :: proc(assets: ^Assets, result: ^Game_Update_Result) {
 	for _ in 0 ..< limited_audio_request_count(result.gameplay.ticks.item_sound_requests, 1) {
 		if rl.IsSoundPlaying(assets.sounds.item) do break
 		rl.PlaySound(assets.sounds.item)
+	}
+	if result.gameplay.ticks.player_died && !rl.IsSoundPlaying(assets.sounds.death) {
+		rl.PlaySound(assets.sounds.death)
 	}
 	if result.menu_sound_requests > 0 && !rl.IsSoundPlaying(assets.sounds.menu) {
 		rl.PlaySound(assets.sounds.menu)

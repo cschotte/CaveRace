@@ -1,5 +1,17 @@
 # CaveRace 1.5 version history
 
+## 1.5.3
+
+- Pressing Escape (or controller B) during active gameplay now opens the pause
+  menu with its "abandon run?" confirmation, instead of leaving for the main
+  menu instantly; Pause's own Main Menu option worked this way already.
+- Closing pause now plays the same menu sound as opening it.
+- Dying now plays a distinct sound instead of only the controller rumble.
+- The Game Over and Victory screens now show a dynamic, binding-aware prompt
+  ("R FOR A NEW GAME, ENTER FOR MENU" / "ENTER TO CONTINUE") instead of
+  relying only on the baked artwork, matching the Dead and Load Failed
+  screens.
+
 ## 1.5.2
 
 - Added mouse hover and click support to the main menu, first-run choice,

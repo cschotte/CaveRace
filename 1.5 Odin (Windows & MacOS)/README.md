@@ -1,4 +1,4 @@
-# CaveRace 1.5.2
+# CaveRace 1.5.3
 
 CaveRace 1.5 is the current desktop edition of the 1997
 maze-action game. This edition is a from-scratch rewrite in [Odin] using
@@ -100,7 +100,7 @@ be disabled independently, and Screen Shake at 0% is exactly still.
 | Enter or Space / controller A | Confirm menu and outcome actions |
 | R / controller X | Quick-retry after death or start a new run from game over |
 | P / controller Start | Open/close pause during active campaign or tutorial play |
-| Escape / controller B | Go back; Escape retains direct active-gameplay-to-menu behavior |
+| Escape / controller B | Go back; during active gameplay it opens pause with an "abandon run" confirmation instead of leaving instantly |
 | Main-menu Quit or window close | Quit safely |
 | F10 | Toggle the diagnostics overlay in debug builds; absent from release builds |
 | F1 | Destroy all enemies and complete the level when cheats are enabled |

@@ -119,6 +119,28 @@ test_mouse_opens_pause_submenu :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_escape_during_gameplay_opens_pause_confirmation :: proc(t: ^testing.T) {
+	game: Game
+	init_game(&game)
+	game.screen = .Playing
+	game.gameplay.state = .Playing
+
+	update_game(&game, Game_Input {back = true}, 0)
+	testing.expect(t, game.pause.open)
+	testing.expect_value(t, game.pause.confirmation, Pause_Confirmation.Main_Menu)
+	testing.expect_value(t, game.screen, App_Screen.Playing)
+
+	update_game(&game, Game_Input {}, 0)
+	testing.expect(t, game.pause.open)
+	testing.expect_value(t, game.pause.confirmation, Pause_Confirmation.Main_Menu)
+	testing.expect_value(t, game.screen, App_Screen.Playing)
+
+	update_game(&game, Game_Input {confirm = true}, 0)
+	testing.expect_value(t, game.screen, App_Screen.Main_Menu)
+	testing.expect(t, !game.pause.open)
+}
+
+@(test)
 test_mouse_handles_pause_confirmation :: proc(t: ^testing.T) {
 	confirm_rect, cancel_rect := pause_confirmation_rects()
 

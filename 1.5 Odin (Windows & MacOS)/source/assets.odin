@@ -78,6 +78,7 @@ Sound_Assets :: struct {
 	squish:  rl.Sound,
 	ticking: rl.Sound,
 	menu:    rl.Sound,
+	death:   rl.Sound,
 }
 
 // Sprite_Assets groups the vertical sprite sheets consumed by level, actor,
@@ -168,8 +169,14 @@ load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true, 
 		assets.sounds.squish  = load_resource_sound(resource_root, "sounds/squish.ogg")
 		assets.sounds.ticking = load_resource_sound(resource_root, "sounds/ticking.ogg")
 		assets.sounds.menu    = load_resource_sound(resource_root, "sounds/menu.ogg")
+		assets.sounds.death   = load_resource_sound(resource_root, "sounds/squish.ogg")
 		if rl.IsSoundValid(assets.sounds.hit) {
 			rl.SetSoundPitch(assets.sounds.hit, 0.55)
+		}
+		// The player-death cue reuses the squish sample at a lower pitch so it
+		// reads as heavier than an ordinary enemy kill, without a new asset.
+		if rl.IsSoundValid(assets.sounds.death) {
+			rl.SetSoundPitch(assets.sounds.death, 0.6)
 		}
 		log_step(verbose, "Sound effects loaded.")
 
@@ -228,6 +235,7 @@ assets_are_valid :: proc(assets: ^Assets, require_audio := true) -> bool {
 		if !rl.IsSoundValid(assets.sounds.squish)  do return false
 		if !rl.IsSoundValid(assets.sounds.ticking) do return false
 		if !rl.IsSoundValid(assets.sounds.menu)    do return false
+		if !rl.IsSoundValid(assets.sounds.death)   do return false
 		for music in assets.music {
 			if !rl.IsMusicValid(music) do return false
 		}
@@ -290,6 +298,7 @@ unload_assets :: proc(assets: ^Assets) {
 	unload_sound(assets.sounds.squish)
 	unload_sound(assets.sounds.ticking)
 	unload_sound(assets.sounds.menu)
+	unload_sound(assets.sounds.death)
 	for music in assets.music {
 		unload_music(music)
 	}
