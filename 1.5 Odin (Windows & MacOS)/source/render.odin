@@ -10,6 +10,7 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 	switch game.screen {
 	case .Branding:
 		rl.DrawTexture(assets.screens.branding, 0, 0, rl.WHITE)
+		draw_branding_effects(game.branding_elapsed_seconds, game.settings.reduced_flashes)
 	case .Intro:
 		draw_front_end(game.front_end, &assets.screens)
 		draw_story_effects(game.front_end, game.settings.reduced_flashes)
