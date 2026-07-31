@@ -113,7 +113,7 @@ menu_hovered_item :: proc(menu: ^Menu_State, pointer: Pointer_Input) -> (int, bo
 SETTINGS_DECREMENT_OFFSET :: 198
 SETTINGS_INCREMENT_OFFSET :: 300
 SETTINGS_CONTROL_WIDTH     :: 28
-SETTINGS_VALUE_CENTER_OFFSET :: 254
+SETTINGS_VALUE_CENTER_OFFSET :: 263
 
 settings_adjustment_rects :: proc(menu: ^Menu_State, item_index: int) -> (UI_Rect, UI_Rect, bool) {
 	if menu.page != .Settings || item_index < 0 || item_index >= len(Settings_Menu_Item) {
