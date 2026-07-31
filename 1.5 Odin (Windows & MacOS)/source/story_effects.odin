@@ -272,18 +272,18 @@ draw_branding_effects :: proc(branding_elapsed_seconds: f64, reduced_flashes: bo
 
 	lantern_pulse := story_effect_pulse(clock, 4, 26, reduced_flashes)
 	draw_story_light(
-		{78, 168},
+		{89, 175},
 		27,
 		rl.GOLD,
 		0.72 + lantern_pulse * 0.28,
 		transition_alpha,
 		reduced_flashes,
 	)
-	draw_story_flame({576, 169}, clock, transition_alpha, reduced_flashes)
+	draw_story_flame({575, 171}, clock, transition_alpha, reduced_flashes)
 
 	mark_pulse := story_effect_pulse(clock, 2, 30, reduced_flashes)
 	draw_story_light(
-		{320, 134},
+		{326, 137},
 		78,
 		rl.RED,
 		0.28 + mark_pulse * 0.18,
@@ -291,8 +291,8 @@ draw_branding_effects :: proc(branding_elapsed_seconds: f64, reduced_flashes: bo
 		reduced_flashes,
 	)
 	mark_points := [6]Story_Point {
-		{283, 94}, {360, 101}, {366, 122},
-		{339, 179}, {250, 174}, {321, 116},
+		{291, 96}, {316, 102}, {349, 127},
+		{340, 177}, {262, 172}, {378, 103},
 	}
 	mark_count := story_effect_count(len(mark_points), reduced_flashes)
 	for point, point_index in mark_points[:mark_count] {
@@ -303,7 +303,7 @@ draw_branding_effects :: proc(branding_elapsed_seconds: f64, reduced_flashes: bo
 	}
 
 	wordmark_points := [5]Story_Point {
-		{195, 217}, {254, 217}, {321, 199}, {381, 217}, {450, 217},
+		{205, 219}, {264, 219}, {331, 201}, {391, 219}, {460, 219},
 	}
 	wordmark_count := story_effect_count(len(wordmark_points), reduced_flashes)
 	for point, point_index in wordmark_points[:wordmark_count] {
@@ -311,7 +311,7 @@ draw_branding_effects :: proc(branding_elapsed_seconds: f64, reduced_flashes: bo
 		draw_story_glint(point, 2, rl.WHITE, pulse, transition_alpha * 0.72, reduced_flashes)
 	}
 
-	treasure := [5]Story_Point {{70, 279}, {82, 271}, {95, 278}, {110, 282}, {118, 274}}
+	treasure := [5]Story_Point {{72, 281}, {87, 272}, {101, 282}, {116, 286}, {132, 277}}
 	treasure_count := story_effect_count(len(treasure), reduced_flashes)
 	for point, point_index in treasure[:treasure_count] {
 		pulse := story_effect_pulse(clock, point_index * 6 + 2, 24, reduced_flashes)
@@ -321,8 +321,8 @@ draw_branding_effects :: proc(branding_elapsed_seconds: f64, reduced_flashes: bo
 	}
 
 	crystals := [6]Story_Point {
-		{37, 354}, {24, 371}, {50, 371},
-		{574, 349}, {592, 365}, {608, 346},
+		{38, 354}, {25, 372}, {52, 374},
+		{564, 346}, {582, 328}, {607, 351},
 	}
 	crystal_count := story_effect_count(len(crystals), reduced_flashes)
 	for point, point_index in crystals[:crystal_count] {
@@ -364,13 +364,13 @@ draw_story_effects :: proc(front_end: Front_End_State, reduced_flashes: bool) {
 	switch effect {
 	case .Stars:
 		planet_pulse := story_effect_pulse(clock, 3, 32, reduced_flashes)
-		draw_story_light({500, 187}, 110, rl.SKYBLUE, 0.32 + planet_pulse * 0.18, transition_alpha, reduced_flashes)
-		draw_story_light({548, 21}, 38, rl.MAGENTA, 0.26, transition_alpha, reduced_flashes)
+		draw_story_light({500, 192}, 110, rl.SKYBLUE, 0.32 + planet_pulse * 0.18, transition_alpha, reduced_flashes)
+		draw_story_light({556, 53}, 38, rl.MAGENTA, 0.26, transition_alpha, reduced_flashes)
 		points := [16]Story_Point {
-			{406, 23}, {501, 31}, {575, 68}, {616, 128},
-			{389, 319}, {531, 343}, {603, 367}, {334, 371},
-			{6, 213}, {468, 52}, {575, 249}, {418, 361},
-			{91, 385}, {267, 390}, {352, 7}, {608, 4},
+			{17, 18}, {101, 14}, {157, 33}, {244, 12},
+			{315, 29}, {388, 14}, {438, 36}, {476, 15},
+			{608, 14}, {401, 276}, {386, 310}, {620, 297},
+			{44, 383}, {101, 378}, {220, 377}, {365, 376},
 		}
 		count := story_effect_count(len(points), reduced_flashes)
 		for point, point_index in points[:count] {
@@ -381,7 +381,7 @@ draw_story_effects :: proc(front_end: Front_End_State, reduced_flashes: bool) {
 		}
 
 	case .Mining_Glints:
-		lanterns := [4]Story_Point {{484, 99}, {542, 80}, {49, 383}, {399, 268}}
+		lanterns := [4]Story_Point {{479, 138}, {524, 119}, {64, 362}, {392, 242}}
 		lantern_count := story_effect_count(len(lanterns), reduced_flashes)
 		for lantern, lantern_index in lanterns[:lantern_count] {
 			pulse := story_effect_pulse(clock, lantern_index * 7, 25, reduced_flashes)
@@ -390,15 +390,15 @@ draw_story_effects :: proc(front_end: Front_End_State, reduced_flashes: bool) {
 			draw_story_light(lantern, radius, rl.GOLD, 0.72 + pulse * 0.28, transition_alpha, reduced_flashes)
 		}
 		gold := [8]Story_Point {
-			{138, 285}, {166, 277}, {195, 287}, {220, 278},
-			{245, 287}, {184, 298}, {224, 301}, {209, 270},
+			{148, 270}, {176, 279}, {205, 263}, {232, 277},
+			{263, 269}, {194, 291}, {225, 294}, {284, 287},
 		}
 		count := story_effect_count(len(gold), reduced_flashes)
 		for point, point_index in gold[:count] {
 			pulse := story_effect_pulse(clock, point_index * 7, 28, reduced_flashes)
 			draw_story_glint(point, i32(3 + point_index % 2), rl.GOLD, pulse, transition_alpha, reduced_flashes)
 		}
-		crystals := [4]Story_Point {{576, 242}, {587, 228}, {565, 257}, {596, 254}}
+		crystals := [4]Story_Point {{554, 194}, {562, 185}, {568, 209}, {553, 217}}
 		crystal_count := story_effect_count(len(crystals), reduced_flashes)
 		for crystal, crystal_index in crystals[:crystal_count] {
 			pulse := story_effect_pulse(clock, crystal_index * 6 + 3, 26, reduced_flashes)
@@ -406,7 +406,7 @@ draw_story_effects :: proc(front_end: Front_End_State, reduced_flashes: bool) {
 		}
 
 	case .Alien_Eyes:
-		eyes := [3]Story_Point {{333, 252}, {487, 155}, {528, 320}}
+		eyes := [3]Story_Point {{330, 245}, {483, 160}, {520, 300}}
 		count := story_effect_count(len(eyes), reduced_flashes)
 		for eye, eye_index in eyes[:count] {
 			pulse := story_effect_pulse(clock, eye_index * 6, 26, reduced_flashes)
@@ -417,7 +417,7 @@ draw_story_effects :: proc(front_end: Front_End_State, reduced_flashes: bool) {
 			rl.DrawLine(eye.x - 3, eye.y, eye.x + 3, eye.y, rl.Fade(rl.ORANGE, glow_alpha * 0.75))
 			rl.DrawRectangle(eye.x - 1, eye.y - 2, 2, 3, rl.Fade(rl.WHITE, (0.68 + pulse * 0.32) * transition_alpha))
 		}
-		crystals := [6]Story_Point {{34, 317}, {23, 339}, {50, 337}, {601, 211}, {586, 236}, {613, 224}}
+		crystals := [6]Story_Point {{28, 303}, {17, 323}, {51, 330}, {603, 185}, {614, 173}, {620, 203}}
 		crystal_count := story_effect_count(len(crystals), reduced_flashes)
 		for crystal, crystal_index in crystals[:crystal_count] {
 			pulse := story_effect_pulse(clock, crystal_index * 5 + 2, 24, reduced_flashes)
@@ -427,61 +427,61 @@ draw_story_effects :: proc(front_end: Front_End_State, reduced_flashes: bool) {
 		}
 
 	case .TNT_Fuse:
-		lights := [3]Story_Point {{61, 277}, {468, 262}, {158, 241}}
+		lights := [3]Story_Point {{76, 259}, {470, 202}, {174, 230}}
 		light_count := story_effect_count(len(lights), reduced_flashes)
 		for light, light_index in lights[:light_count] {
 			pulse := story_effect_pulse(clock, light_index * 8, 25, reduced_flashes)
 			draw_story_light(light, 19, rl.GOLD, 0.66 + pulse * 0.24, transition_alpha, reduced_flashes)
 		}
-		draw_story_fuse({337, 257}, clock, 0, transition_alpha, reduced_flashes)
-		draw_story_fuse({421, 294}, clock, 9, transition_alpha, reduced_flashes)
+		draw_story_fuse({351, 229}, clock, 0, transition_alpha, reduced_flashes)
+		draw_story_fuse({431, 277}, clock, 9, transition_alpha, reduced_flashes)
 
 	case .Torch_And_Treasure:
-		draw_story_flame({198, 273}, clock, transition_alpha, reduced_flashes)
+		draw_story_flame({194, 248}, clock, transition_alpha, reduced_flashes)
 		helmet_pulse := story_effect_pulse(clock, 9, 25, reduced_flashes)
-		draw_story_light({488, 263}, 15, rl.GOLD, 0.62 + helmet_pulse * 0.24, transition_alpha, reduced_flashes)
-		gold := [7]Story_Point {{380, 322}, {418, 302}, {450, 314}, {489, 319}, {436, 329}, {466, 298}, {405, 311}}
+		draw_story_light({484, 244}, 15, rl.GOLD, 0.62 + helmet_pulse * 0.24, transition_alpha, reduced_flashes)
+		gold := [7]Story_Point {{390, 293}, {416, 280}, {443, 271}, {469, 282}, {504, 303}, {452, 304}, {484, 315}}
 		count := story_effect_count(len(gold), reduced_flashes)
 		for point, point_index in gold[:count] {
 			glint := story_effect_pulse(clock, point_index * 6, 25, reduced_flashes)
 			draw_story_glint(point, 3, rl.GOLD, glint, transition_alpha, reduced_flashes)
 		}
 		diamond_pulse := story_effect_pulse(clock, 4, 24, reduced_flashes)
-		draw_story_glint({406, 352}, 5, rl.SKYBLUE, diamond_pulse, transition_alpha, reduced_flashes)
+		draw_story_glint({415, 318}, 5, rl.SKYBLUE, diamond_pulse, transition_alpha, reduced_flashes)
 		potion_pulse := story_effect_pulse(clock, 13, 24, reduced_flashes)
-		draw_story_glint({580, 352}, 4, rl.SKYBLUE, potion_pulse, transition_alpha, reduced_flashes)
+		draw_story_glint({581, 291}, 4, rl.SKYBLUE, potion_pulse, transition_alpha, reduced_flashes)
 
 	case .Explosion:
 		blast_pulse := story_effect_pulse(clock, 0, 20, reduced_flashes)
-		draw_story_light({462, 192}, 62, rl.ORANGE, 0.70 + blast_pulse * 0.30, transition_alpha, reduced_flashes)
-		draw_story_light({462, 192}, 27, rl.GOLD, 0.80 + blast_pulse * 0.20, transition_alpha, reduced_flashes)
-		rays := [6]Story_Point {{435, 133}, {501, 135}, {412, 172}, {517, 205}, {438, 231}, {493, 232}}
+		draw_story_light({462, 222}, 62, rl.ORANGE, 0.70 + blast_pulse * 0.30, transition_alpha, reduced_flashes)
+		draw_story_light({462, 222}, 27, rl.GOLD, 0.80 + blast_pulse * 0.20, transition_alpha, reduced_flashes)
+		rays := [6]Story_Point {{435, 163}, {501, 165}, {412, 202}, {517, 235}, {438, 261}, {493, 262}}
 		ray_count := story_effect_count(len(rays), reduced_flashes)
 		for ray in rays[:ray_count] {
 			ray_alpha := (0.10 + blast_pulse * 0.16) * transition_alpha
 			if reduced_flashes do ray_alpha *= 0.60
-			rl.DrawLine(462, 192, ray.x, ray.y, rl.Fade(rl.GOLD, ray_alpha))
+			rl.DrawLine(462, 222, ray.x, ray.y, rl.Fade(rl.GOLD, ray_alpha))
 		}
-		smoke_origin := Story_Point {462, 151}
+		smoke_origin := Story_Point {462, 181}
 		for particle_index in 0 ..< story_effect_count(9, reduced_flashes) {
 			draw_story_smoke(smoke_origin, particle_index, clock, transition_alpha, reduced_flashes)
 		}
-		ember_origin := Story_Point {462, 198}
+		ember_origin := Story_Point {462, 228}
 		for particle_index in 0 ..< story_effect_count(13, reduced_flashes) {
 			draw_story_ember(ember_origin, particle_index, clock, transition_alpha, reduced_flashes)
 		}
-		draw_story_fuse({244, 309}, clock, 5, transition_alpha, reduced_flashes)
+		draw_story_fuse({225, 286}, clock, 5, transition_alpha, reduced_flashes)
 		diamond_pulse := story_effect_pulse(clock, 3, 24, reduced_flashes)
-		draw_story_glint({412, 359}, 5, rl.SKYBLUE, diamond_pulse, transition_alpha, reduced_flashes)
+		draw_story_glint({405, 334}, 5, rl.SKYBLUE, diamond_pulse, transition_alpha, reduced_flashes)
 		potion_pulse := story_effect_pulse(clock, 12, 24, reduced_flashes)
-		draw_story_glint({523, 358}, 4, rl.GREEN, potion_pulse, transition_alpha, reduced_flashes)
+		draw_story_glint({518, 333}, 4, rl.GREEN, potion_pulse, transition_alpha, reduced_flashes)
 
 	case .Homecoming:
 		exit_pulse := story_effect_pulse(clock, 5, 34, reduced_flashes)
-		draw_story_light({521, 111}, 58, rl.SKYBLUE, 0.28 + exit_pulse * 0.16, transition_alpha, reduced_flashes)
+		draw_story_light({526, 132}, 58, rl.SKYBLUE, 0.28 + exit_pulse * 0.16, transition_alpha, reduced_flashes)
 		gold := [8]Story_Point {
-			{390, 257}, {414, 251}, {454, 246}, {480, 255},
-			{444, 269}, {504, 264}, {428, 261}, {468, 265},
+			{393, 261}, {416, 253}, {444, 246}, {472, 254},
+			{447, 269}, {499, 264}, {430, 260}, {459, 263},
 		}
 		count := story_effect_count(len(gold), reduced_flashes)
 		for point, point_index in gold[:count] {
@@ -489,8 +489,8 @@ draw_story_effects :: proc(front_end: Front_End_State, reduced_flashes: bool) {
 			draw_story_glint(point, i32(3 + point_index % 2), rl.GOLD, pulse, transition_alpha, reduced_flashes)
 		}
 		motes := [7]Story_Point {
-			{446, 112}, {480, 137}, {520, 101}, {560, 153},
-			{596, 126}, {503, 185}, {574, 194},
+			{476, 79}, {503, 97}, {529, 70}, {552, 104},
+			{582, 83}, {515, 129}, {570, 133},
 		}
 		mote_count := story_effect_count(len(motes), reduced_flashes)
 		for point, point_index in motes[:mote_count] {

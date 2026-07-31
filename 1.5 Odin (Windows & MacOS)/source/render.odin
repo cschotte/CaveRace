@@ -286,7 +286,7 @@ main_menu_item_gap :: proc(item_index: int) -> i32 {
 // over the quiet sky area of the title art so the menu feels alive even
 // before the player touches a control.
 draw_main_menu_ambience :: proc(game: ^Game) {
-	points := [5]Story_Point{{40, 26}, {130, 54}, {238, 22}, {74, 96}, {305, 68}}
+	points := [5]Story_Point{{18, 16}, {35, 8}, {207, 4}, {306, 6}, {627, 22}}
 	for point, point_index in points {
 		pulse := story_effect_pulse(game.ui_clock, point_index * 6, 26, game.settings.reduced_flashes)
 		draw_story_glint(point, 2, rl.SKYBLUE, pulse, 1, game.settings.reduced_flashes)
@@ -519,10 +519,6 @@ draw_bindings_menu :: proc(game: ^Game) {
 	}
 }
 
-draw_how_to_play :: proc(game: ^Game) {
-	rl.DrawRectangle(0, 374, WINDOW_WIDTH, 26, rl.Fade(rl.BLACK, 0.86))
-}
-
 // First-Run needs a wider narrow panel than Settings/Bindings/Pause: its
 // instructional line alone measures ~357px, wider than MENU_NARROW_PANEL_WIDTH.
 FIRST_RUN_PANEL_WIDTH :: 400
@@ -575,7 +571,7 @@ draw_main_menu :: proc(game: ^Game) {
 	switch game.menu.page {
 	case .Settings:    draw_settings_menu(game)
 	case .Bindings:    draw_bindings_menu(game)
-	case .How_To_Play: draw_how_to_play(game)
+	case .How_To_Play:
 	case .Main:
 		draw_main_menu_page(game)
 	case .First_Run:
@@ -684,7 +680,7 @@ draw_tutorial_prompt :: proc(game: ^Game) {
 // in the game-over artwork for a dusty, gloomy mood, reusing the same story
 // effect used for intro panels.
 draw_game_over_ambience :: proc(game: ^Game) {
-	origin := Story_Point{330, 90}
+	origin := Story_Point{334, 160}
 	for particle_index in 0 ..< story_effect_count(5, game.settings.reduced_flashes) {
 		draw_story_smoke(origin, particle_index, game.ui_clock, 1, game.settings.reduced_flashes)
 	}
