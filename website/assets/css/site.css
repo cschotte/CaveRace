@@ -736,12 +736,13 @@ h3 {
 .gallery {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.25rem;
+  gap: 1.4rem;
 }
 
 .gallery-item {
   position: relative;
   margin: 0;
+  padding: 0.65rem;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -751,40 +752,27 @@ h3 {
 .gallery-item img {
   width: 100%;
   aspect-ratio: 16 / 10;
-  transition: transform 500ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  border-radius: 0.8rem;
+  background: #000;
   image-rendering: pixelated;
   object-fit: cover;
 }
 
-.gallery-featured img {
-  aspect-ratio: 16 / 9;
-}
-
-.gallery-item:hover img {
-  transform: scale(1.018);
-}
-
 .gallery-item figcaption {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 2.8rem 1.1rem 0.9rem;
-  background: linear-gradient(transparent, rgba(4, 4, 6, 0.92));
+  display: grid;
+  gap: 0.4rem;
+  padding: 1.2rem 1rem 1rem;
 }
 
 .gallery-item figcaption strong {
-  font-size: 0.92rem;
+  font-size: 1rem;
 }
 
 .gallery-item figcaption span {
-  color: #c1c0bd;
-  font-size: 0.75rem;
-  text-align: right;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  text-align: left;
 }
 
 .reasons {

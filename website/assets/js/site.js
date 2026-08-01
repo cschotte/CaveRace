@@ -1,4 +1,12 @@
 (() => {
+  const classicDownloads = document.querySelector("#classic-downloads");
+
+  document.querySelectorAll('a[href="#classic-downloads"]').forEach((link) => {
+    link.addEventListener("click", () => {
+      if (classicDownloads) classicDownloads.open = true;
+    });
+  });
+
   const video = document.querySelector("#hero-gameplay");
   const toggle = document.querySelector("#hero-video-toggle");
 
