@@ -1,9 +1,7 @@
 # Generated files
 .DS_Store
+/.codex
+Thumbs.db
+caverace.res
 /1.5 Odin (Windows & MacOS)/build/
 /1.5 Odin (Windows & MacOS)/dist
-*.res
-/.codex
-1.5 Odin (Windows & MacOS)/source/media/sprites/Thumbs.db
-1.5 Odin (Windows & MacOS)/artwork/Thumbs.db
-1.5 Odin (Windows & MacOS)/packaging/windows/caverace.res
