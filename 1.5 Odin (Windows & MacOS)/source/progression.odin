@@ -3,6 +3,7 @@ package caverace
 Run_Mode :: enum {
 	Campaign,
 	Tutorial,
+	Autoplay,
 }
 
 Medal :: enum {

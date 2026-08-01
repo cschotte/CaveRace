@@ -31,6 +31,8 @@ Game :: struct {
 	effects:               Game_Effects,
 	cheats_enabled:        bool,
 	pause:                 Pause_State,
+	autoplay:              Autoplay_State,
+	next_autoplay_level_index: int,
 	debug_overlay_visible: bool,
 	branding_elapsed_seconds: f64,
 	// Free-running cosmetic clock for menu glow/pulse/twinkle animation only;
@@ -82,6 +84,7 @@ init_game :: proc(
 // start_new_game begins a fresh campaign run, clearing leftover pause and
 // cosmetic-effect state from whatever screen was active before.
 start_new_game :: proc(game: ^Game) {
+	game.autoplay = {}
 	init_gameplay(&game.gameplay, game.settings.difficulty)
 	game.gameplay.mode = .Campaign
 	game.effects = {}
@@ -91,6 +94,7 @@ start_new_game :: proc(game: ^Game) {
 
 // start_game_tutorial builds the tutorial's own in-memory level and enters it.
 start_game_tutorial :: proc(game: ^Game) {
+	game.autoplay = {}
 	game.gameplay.difficulty = game.settings.difficulty
 	setup_tutorial_level(&game.gameplay, &game.tutorial)
 	game.gameplay.mode = .Tutorial
@@ -105,6 +109,7 @@ show_main_menu :: proc(game: ^Game) {
 	begin_main_menu(&game.front_end)
 	begin_menu(&game.menu)
 	game.pause = {}
+	game.autoplay = {}
 	game.effects = {}
 	game.screen = .Main_Menu
 }
@@ -181,6 +186,9 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			game.screen = .Intro
 		} else if menu_result.quit_requested {
 			result.quit_requested = true
+		} else if advance_main_menu_autoplay(&game.autoplay, &game.menu, input, frame_seconds) {
+			start_autoplay(game)
+			result.load_level_requested = true
 		}
 	case .Tutorial:
 		if game.pause.open {
@@ -217,7 +225,39 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 			}
 		}
 	case .Playing:
-		if game.pause.open {
+		if game.autoplay.active {
+			if autoplay_exit_requested(input) {
+				show_main_menu(game)
+			} else {
+				game.autoplay.elapsed_seconds += clamp(
+					frame_seconds,
+					0,
+					MAX_FRAME_DELTA_SECONDS,
+				)
+				if game.autoplay.elapsed_seconds >= AUTOPLAY_DURATION_SECONDS {
+					show_main_menu(game)
+				} else {
+					switch previous_gameplay_state {
+					case .Won, .Game_Won, .Game_Over:
+						restart_autoplay_run(game)
+						result.load_level_requested = true
+					case .Load_Failed:
+						show_main_menu(game)
+					case .Load_Level, .Playing, .Dead:
+						autoplay_input := build_autoplay_input(&game.autoplay, &game.gameplay)
+						result.gameplay = update_gameplay(
+							&game.gameplay,
+							autoplay_input,
+							frame_seconds,
+							false,
+						)
+						if game.gameplay.state == .Load_Level {
+							result.load_level_requested = true
+						}
+					}
+				}
+			}
+		} else if game.pause.open {
 			pause_result := update_pause_menu(game, input, frame_seconds)
 			result.settings_changed = pause_result.settings_changed
 			result.display_changed = pause_result.display_changed
@@ -275,6 +315,9 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 	          result.gameplay.ticks.treasures_collected > 0 {
 		result.rumble = .Light
 	}
+	// An unattended attract-mode run should never make a connected controller
+	// buzz on the desk. Its on-screen and audio feedback continue normally.
+	if game.autoplay.active do result.rumble = .None
 	request_game_effects(
 		&game.effects,
 		&game.gameplay,

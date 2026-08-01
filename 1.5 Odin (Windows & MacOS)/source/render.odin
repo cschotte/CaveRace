@@ -40,6 +40,7 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 	if (game.screen == .Playing || game.screen == .Tutorial) && game.pause.open {
 		draw_game_pause(game)
 	}
+	if game.autoplay.active do draw_autoplay_prompt()
 
 	draw_game_feedback(game.feedback)
 	when ODIN_DEBUG {
@@ -47,6 +48,16 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 			draw_debug_overlay(game)
 		}
 	}
+}
+
+draw_autoplay_prompt :: proc() {
+	message: cstring = "AUTOPLAY - PRESS ANY KEY OR CLICK"
+	font_size: i32 = 16
+	width := rl.MeasureText(message, font_size)
+	x := (WINDOW_WIDTH - width) / 2
+	rl.DrawRectangle(x - 10, 7, width + 20, 24, rl.Fade(rl.BLACK, 0.88))
+	rl.DrawRectangleLines(x - 10, 7, width + 20, 24, rl.GOLD)
+	rl.DrawText(message, x, 11, font_size, rl.WHITE)
 }
 
 pause_menu_item_label :: proc(item: Pause_Menu_Item) -> cstring {

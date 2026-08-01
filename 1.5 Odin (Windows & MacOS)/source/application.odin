@@ -429,6 +429,7 @@ prepare_application_frame :: proc(
 ) -> (Game_Input, f64) {
 	if window_focused do return input, frame_seconds
 	game.gameplay.tick_state.input = {}
+	if game.autoplay.active do return {}, 0
 	if game.settings.pause_on_focus_loss {
 		open_game_pause(game)
 		return {}, 0

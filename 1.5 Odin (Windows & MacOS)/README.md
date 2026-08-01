@@ -92,6 +92,15 @@ Escape/controller B stay reserved for Back.
 Xbox-style labels below use raylib's standard layout. Controller rumble can
 be disabled independently, and Screen Shake at 0% is exactly still.
 
+After one minute without input on the root main menu, CaveRace starts a
+one-minute autoplay demo. Any keyboard key, controller action, or mouse click
+returns immediately to the main menu; another idle minute starts the next demo.
+The idle clock pauses off the root menu and while the window is unfocused.
+Autoplay alternates between caves 1 and 2, restarting its selected cave after
+a win so it never advances into the rest of the campaign. It uses the selected
+difficulty and the same starting stats, pickups, bomb power, fuse timing,
+damage, and enemy behavior as a normal game; only the player's input is automated.
+
 | Input | Action |
 | --- | --- |
 | Mouse | Point and click menu actions or advance story panels; use the wheel to navigate or adjust the hovered setting; right-click to go back |
