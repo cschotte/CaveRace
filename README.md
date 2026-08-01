@@ -9,8 +9,8 @@ bombs, and defeat alien invaders.
 | --- | --- | --- |
 | ![Forest level](images/demo1.png) | ![Winter level](images/demo2.png) | ![Lava level](images/demo3.png) |
 
-More screenshots, background information, and a download of the original
-MS-DOS release are available on the [CaveRace] website.
+Screenshots, background information, and game downloads are available on the
+[CaveRace] website.
 
 ## Story of CaveRace
 
@@ -39,7 +39,7 @@ now available for Windows and macOS. Its goal is to bring
 the game back to modern systems while preserving the original levels,
 artwork, sounds, and feel.
 
-Download from the [releases](releases/) folder!
+[Download CaveRace](https://caverace.com/) for Windows or macOS.
 
 | Story | Main menu | Controls |
 | --- | --- | --- |
@@ -49,8 +49,8 @@ Download from the [releases](releases/) folder!
 
 Every preserved CaveRace version has its own README with version-specific
 requirements, build instructions, controls, source layout, and compatibility
-notes. **1.5 is the only actively developed edition and the recommended
-download**; 1.2, 1.3, 1.4, and 2.0 are kept for historical reference.
+notes. **1.5 is the finished current edition and the recommended download**;
+1.2, 1.3, 1.4, and 2.0 are kept for historical reference.
 
 | Version | Year | Platform and technology | Documentation |
 | --- | --- | --- | --- |

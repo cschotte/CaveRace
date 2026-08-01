@@ -4,6 +4,8 @@ CaveRace 2.0 is a 2012 C# edition built with Microsoft XNA Game Studio 4.0. The
 shared game project has targets for Windows, Windows Phone, and Xbox 360, along
 with a Windows level editor and a shared XNA content pipeline project.
 
+Game downloads are available at [caverace.com](https://caverace.com/).
+
 ## Historical toolchain
 
 This is an archived XNA solution. Its original development environment was

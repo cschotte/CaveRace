@@ -44,8 +44,8 @@ A keyboard is sufficient. A mouse or compatible game controller is optional.
 
 ## Installation
 
-Ready-to-run packages are available in the repository's [releases](../releases/)
-folder.
+Download CaveRace for Windows or macOS from
+[caverace.com](https://caverace.com/).
 
 - On macOS, place `CaveRace.app` in Applications and launch it normally.
 - On Windows, keep `CaveRace.exe`, `media/`, and `levels/` together in the same
