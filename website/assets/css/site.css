@@ -358,52 +358,6 @@ h3 {
   content: "✓";
 }
 
-.pixel-party {
-  display: flex;
-  min-height: 3.8rem;
-  align-items: center;
-  gap: 1.55rem;
-  margin-top: 1.35rem;
-  padding-left: 1rem;
-  overflow: hidden;
-}
-
-.game-sprite {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
-  background-repeat: no-repeat;
-  background-size: 16px auto;
-  image-rendering: pixelated;
-  transform: scale(2.75);
-}
-
-.sprite-miner {
-  background-image: url("../images/sprite-player.png");
-  background-position: 0 0;
-}
-
-.sprite-bomb {
-  background-image: url("../images/sprite-bomb.png");
-  background-position: 0 0;
-}
-
-.sprite-alien {
-  background-image: url("../images/sprite-enemy.png");
-  background-position: 0 -80px;
-}
-
-.sprite-treasure {
-  background-image: url("../images/sprite-treasure.png");
-  background-position: 0 -16px;
-}
-
-.pixel-trail {
-  color: rgba(255, 192, 77, 0.65);
-  font: 800 0.55rem/1 ui-monospace, monospace;
-  letter-spacing: 0.2em;
-}
-
 .hero-media {
   position: relative;
   min-height: clamp(30rem, 45vw, 40rem);
@@ -553,85 +507,9 @@ h3 {
 .section-heading > p:not(.eyebrow),
 .split-heading > p,
 .accessibility-copy > p,
-.requirements-grid > div > p,
 .faq-intro > p {
   color: var(--muted);
   font-size: 1.05rem;
-}
-
-.gameplay {
-  position: relative;
-  border-bottom: 1px solid var(--line);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent),
-    radial-gradient(circle at 0 50%, rgba(36, 96, 66, 0.11), transparent 35rem);
-}
-
-.gameplay::before,
-.history::before {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 1rem;
-  content: "";
-  background: url("../images/tiles-forest.png") left top / 32px auto repeat-x;
-  image-rendering: pixelated;
-  opacity: 0.42;
-}
-
-.game-loop {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.game-loop li {
-  position: relative;
-  min-height: 14rem;
-  padding: 1.4rem;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 0.9rem;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
-}
-
-.game-loop li::after {
-  position: absolute;
-  right: -2.5rem;
-  bottom: -2.5rem;
-  width: 8rem;
-  height: 8rem;
-  border: 1px solid rgba(255, 174, 62, 0.13);
-  border-radius: 50%;
-  content: "";
-  box-shadow: 0 0 0 1.2rem rgba(255, 174, 62, 0.025), 0 0 0 2.4rem rgba(255, 174, 62, 0.02);
-}
-
-.game-loop li > span,
-.reason-number {
-  display: block;
-  margin-bottom: 2.8rem;
-  color: var(--orange);
-  font: 900 0.72rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: 0.12em;
-}
-
-.game-loop strong {
-  display: block;
-  font: 900 1.25rem/1.2 "Arial Black", "Segoe UI Black", sans-serif;
-}
-
-.game-loop p {
-  position: relative;
-  z-index: 1;
-  margin: 0.65rem 0 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.55;
 }
 
 .story-quest {
@@ -775,37 +653,9 @@ h3 {
   text-align: left;
 }
 
-.reasons {
-  border-block: 1px solid var(--line);
-  background:
-    radial-gradient(circle at 50% 0, rgba(255, 137, 42, 0.09), transparent 30rem),
-    var(--bg);
-}
-
 .centered-heading {
   margin-inline: auto;
   text-align: center;
-}
-
-.reason-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.018);
-}
-
-.reason-grid article {
-  padding: clamp(1.6rem, 4vw, 3rem);
-}
-
-.reason-grid article + article {
-  border-left: 1px solid var(--line);
-}
-
-.reason-grid p {
-  margin: 0;
-  color: var(--muted);
 }
 
 .accessibility {
@@ -867,7 +717,15 @@ h3 {
 }
 
 .history::before {
-  background-image: url("../images/tiles-winter.png");
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 1rem;
+  content: "";
+  background: url("../images/tiles-winter.png") left top / 32px auto repeat-x;
+  image-rendering: pixelated;
+  opacity: 0.42;
 }
 
 .timeline {
@@ -1013,61 +871,6 @@ h3 {
   overflow-wrap: anywhere;
   color: #8d8d8c;
   font-size: 0.64rem;
-}
-
-.requirements {
-  border-block: 1px solid var(--line);
-  background: #0d0e12;
-}
-
-.requirements-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(30rem, 1.2fr);
-  align-items: center;
-  gap: clamp(2.5rem, 7vw, 7rem);
-}
-
-.requirements-grid h2 {
-  margin-bottom: 1rem;
-}
-
-.platform-cards {
-  display: grid;
-  gap: 0.8rem;
-}
-
-.platform-cards article {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.2rem;
-  border: 1px solid var(--line);
-  border-radius: 0.8rem;
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.platform-mark {
-  display: grid;
-  width: 3.1rem;
-  height: 3.1rem;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid var(--line-strong);
-  border-radius: 0.65rem;
-  color: var(--gold);
-  background: rgba(255, 174, 62, 0.07);
-  font: 900 1rem/1 ui-monospace, monospace;
-}
-
-.platform-cards h3,
-.platform-cards p {
-  margin: 0;
-}
-
-.platform-cards p {
-  margin-top: 0.25rem;
-  color: var(--muted);
-  font-size: 0.88rem;
 }
 
 .faq-grid {
@@ -1322,24 +1125,12 @@ h3 {
     margin-inline: auto;
   }
 
-  .game-loop {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .accessibility-grid {
     grid-template-columns: 1fr;
   }
 
   .accessibility-art {
     width: min(50rem, 100%);
-  }
-
-  .requirements-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .platform-cards {
-    grid-template-columns: repeat(2, 1fr);
   }
 
   .store-grid {
@@ -1434,19 +1225,6 @@ h3 {
     text-align: left;
   }
 
-  .reason-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .reason-grid article + article {
-    border-top: 1px solid var(--line);
-    border-left: 0;
-  }
-
-  .reason-number {
-    margin-bottom: 1.6rem;
-  }
-
   .timeline {
     grid-template-columns: 1fr;
   }
@@ -1455,8 +1233,7 @@ h3 {
     display: none;
   }
 
-  .classic-grid,
-  .platform-cards {
+  .classic-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1499,14 +1276,6 @@ h3 {
   .price {
     display: grid;
     gap: 0.1rem;
-  }
-
-  .game-loop {
-    grid-template-columns: 1fr;
-  }
-
-  .game-loop li {
-    min-height: 11.5rem;
   }
 
   .fact-strip {
