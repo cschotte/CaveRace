@@ -49,6 +49,7 @@ Level_Result :: struct {
 	score_delta:        int,
 	final_score:        int,
 	medal:              Medal,
+	celebration_sprite: int,
 }
 
 medal_for_conditions :: proc(all_treasure, under_par: bool) -> Medal {
@@ -125,6 +126,7 @@ finalize_level_result :: proc(gameplay: ^Gameplay) {
 		par_bonus            = tuning.score_under_par if under_par else 0,
 		final_score          = gameplay.player.score,
 		medal                = medal_for_conditions(all_treasure, under_par),
+		celebration_sprite   = gameplay_cosmetic_random_max(gameplay, LEVEL_COMPLETE_SPRITE_COUNT),
 	}
 	gameplay.level_result.score_delta =
 		gameplay.level_result.final_score - stats.start_score

@@ -82,14 +82,29 @@ Sound_Assets :: struct {
 }
 
 // Sprite_Assets groups the vertical sprite sheets consumed by level, actor,
-// explosion, and HUD rendering.
+// explosion, and HUD rendering, plus the standalone level-complete
+// celebration portraits (not tile sheets, so sized and validated separately).
 Sprite_Assets :: struct {
-	bomb:     rl.Texture,
-	enemy:    rl.Texture,
-	objects:  rl.Texture,
-	player:   rl.Texture,
-	tools:    rl.Texture,
-	treasure: rl.Texture,
+	bomb:           rl.Texture,
+	enemy:          rl.Texture,
+	objects:        rl.Texture,
+	player:         rl.Texture,
+	tools:          rl.Texture,
+	treasure:       rl.Texture,
+	level_complete: [LEVEL_COMPLETE_SPRITE_COUNT]rl.Texture,
+}
+
+// LEVEL_COMPLETE_SPRITE_COUNT is the number of celebration portraits the
+// level-result screen picks between at random; LEVEL_COMPLETE_SPRITE_WIDTH/
+// _HEIGHT are their fixed source dimensions.
+LEVEL_COMPLETE_SPRITE_COUNT  :: 3
+LEVEL_COMPLETE_SPRITE_WIDTH  :: 150
+LEVEL_COMPLETE_SPRITE_HEIGHT :: 200
+
+LEVEL_COMPLETE_SPRITE_PATHS :: [LEVEL_COMPLETE_SPRITE_COUNT]string {
+	"sprites/level_complete_1.png",
+	"sprites/level_complete_2.png",
+	"sprites/level_complete_3.png",
 }
 
 // Assets is the application-owned aggregate loaded before the main loop and
@@ -195,6 +210,11 @@ load_assets :: proc(assets: ^Assets, resource_root: string, load_audio := true, 
 	assets.sprites.player   = load_resource_texture(resource_root, "sprites/player.png")
 	assets.sprites.tools    = load_resource_texture(resource_root, "sprites/tools.png")
 	assets.sprites.treasure = load_resource_texture(resource_root, "sprites/treasure.png")
+	for relative_path, sprite_index in LEVEL_COMPLETE_SPRITE_PATHS {
+		log_step(verbose, "Loading sprite: %s", relative_path)
+		assets.sprites.level_complete[sprite_index] =
+			load_resource_texture(resource_root, relative_path)
+	}
 	log_step(verbose, "Sprite sheets loaded.")
 
 	log_step(verbose, "Loading terrain tiles...")
@@ -247,6 +267,9 @@ assets_are_valid :: proc(assets: ^Assets, require_audio := true) -> bool {
 	if !vertical_sheet_is_valid(assets.sprites.player, PLAYER_SPRITE_COUNT) do return false
 	if !vertical_sheet_is_valid(assets.sprites.tools, TOOLS_SPRITE_COUNT) do return false
 	if !vertical_sheet_is_valid(assets.sprites.treasure, TREASURE_SPRITE_COUNT) do return false
+	for texture in assets.sprites.level_complete {
+		if !texture_has_size(texture, LEVEL_COMPLETE_SPRITE_WIDTH, LEVEL_COMPLETE_SPRITE_HEIGHT) do return false
+	}
 
 	for tile in assets.tiles {
 		if !vertical_sheet_is_valid(tile, TERRAIN_SPRITE_COUNT) do return false
@@ -309,6 +332,9 @@ unload_assets :: proc(assets: ^Assets) {
 	unload_texture(assets.sprites.player)
 	unload_texture(assets.sprites.tools)
 	unload_texture(assets.sprites.treasure)
+	for texture in assets.sprites.level_complete {
+		unload_texture(texture)
+	}
 
 	for tile in assets.tiles {
 		unload_texture(tile)

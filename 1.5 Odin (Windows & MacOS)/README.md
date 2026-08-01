@@ -1,4 +1,4 @@
-# CaveRace 1.5.3
+# CaveRace 1.5.4
 
 CaveRace 1.5 is the current desktop edition of the 1997
 maze-action game. This edition is a from-scratch rewrite in [Odin] using

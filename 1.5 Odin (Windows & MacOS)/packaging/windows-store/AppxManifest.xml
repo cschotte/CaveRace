@@ -5,7 +5,7 @@
   xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities">
   <Identity Name="270NavaTron.CaveRaceRemastered"
-            Version="1.5.3.0"
+            Version="1.5.4.0"
             Publisher="CN=3E567FD4-563E-4CA2-9863-D982D9A36413"
             ProcessorArchitecture="x64" />
   <Properties>

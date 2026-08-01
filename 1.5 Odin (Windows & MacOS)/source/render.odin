@@ -183,16 +183,24 @@ main_menu_item_label :: proc(item: Main_Menu_Item) -> cstring {
 	return ""
 }
 
-// draw_duration formats a tick count as mm:ss.t, or a "--:--.-" placeholder
-// for a zero or negative value (an unset par time, for example).
-draw_duration :: proc(x, y, size: i32, color: rl.Color, ticks: int) {
+// duration_text_cstring formats a tick count as mm:ss.t into a caller-owned
+// buffer, or a "--:--.-" placeholder for a zero or negative value (an unset
+// par time, for example). draw_duration wraps this for direct left-aligned
+// drawing; callers that need to right-align or recolor the text (the
+// level-result stat rows) call it directly instead.
+duration_text_cstring :: proc(buffer: []byte, ticks: int) -> cstring {
 	if ticks <= 0 {
-		rl.DrawText("--:--.-", x, y, size, color)
-		return
+		return format_cstring(buffer, "--:--.-")
 	}
 	total_seconds := ticks / GAMEPLAY_TICK_HZ
 	tenths := (ticks % GAMEPLAY_TICK_HZ) * 10 / GAMEPLAY_TICK_HZ
-	draw_ui_format(x, y, size, color, "%02d:%02d.%d", total_seconds / 60, total_seconds % 60, tenths)
+	return format_cstring(buffer, "%02d:%02d.%d", total_seconds / 60, total_seconds % 60, tenths)
+}
+
+// draw_duration left-aligns a formatted duration at a fixed position.
+draw_duration :: proc(x, y, size: i32, color: rl.Color, ticks: int) {
+	buffer: [16]byte
+	rl.DrawText(duration_text_cstring(buffer[:], ticks), x, y, size, color)
 }
 
 first_run_item_label :: proc(item: First_Run_Item) -> cstring {
@@ -579,58 +587,183 @@ draw_main_menu :: proc(game: ^Game) {
 	}
 }
 
-// LEVEL_RESULT_LABEL_X, _MULT_RIGHT, and _TOTAL_RIGHT define the ledger's
-// three columns. Each row's multiplier and running total are measured and
-// right-aligned to these fixed edges, so they line up regardless of label
-// length or digit count — something embedding literal spaces in one format
-// string cannot guarantee with raylib's proportional default font.
-LEVEL_RESULT_LABEL_X    :: 72
-LEVEL_RESULT_MULT_RIGHT :: 280
-LEVEL_RESULT_TOTAL_RIGHT :: 380
-
-// draw_level_result_row draws one itemized ledger line: a left-aligned label,
-// a right-aligned "count x rate" multiplier, and a right-aligned "+subtotal".
-draw_level_result_row :: proc(y, size: i32, color: rl.Color, label: cstring, count, rate, subtotal: int) {
-	rl.DrawText(label, LEVEL_RESULT_LABEL_X, y, size, color)
-	mult_buffer: [24]byte
-	mult_text := format_cstring(mult_buffer[:], "%d x %d", count, rate)
-	mult_width := rl.MeasureText(mult_text, size)
-	rl.DrawText(mult_text, LEVEL_RESULT_MULT_RIGHT - mult_width, y, size, color)
-	total_buffer: [16]byte
-	total_text := format_cstring(total_buffer[:], "+%d", subtotal)
-	total_width := rl.MeasureText(total_text, size)
-	rl.DrawText(total_text, LEVEL_RESULT_TOTAL_RIGHT - total_width, y, size, color)
+// medal_color maps a level-result medal to the color its label and badge
+// render in, reused by draw_level_result.
+medal_color :: proc(medal: Medal) -> rl.Color {
+	switch medal {
+	case .Gold:   return rl.GOLD
+	case .Silver: return rl.LIGHTGRAY
+	case .Bronze: return rl.ORANGE
+	case .None:   return rl.GRAY
+	}
+	return rl.GRAY
 }
 
-// draw_level_result draws the full "cave complete" ledger from
-// gameplay.level_result: elapsed/par time, treasure, the itemized score
-// breakdown, and the final total, medal, and continue prompt.
-draw_level_result :: proc(game: ^Game) {
-	result := &game.gameplay.level_result
-	tuning := gameplay_tuning(game.gameplay.difficulty)
-	rl.DrawRectangle(38, 26, 564, 342, rl.Fade(rl.BLACK, 0.96))
-	rl.DrawRectangleLines(38, 26, 564, 342, rl.GOLD)
-	draw_ui_format(216, 40, 23, rl.GOLD, "CAVE %d COMPLETE", result.level_index + 1)
-	draw_ui_format(72, 73, 15, rl.WHITE, "TIME")
-	draw_duration(135, 73, 15, rl.WHITE, result.elapsed_ticks)
-	draw_ui_format(233, 73, 15, rl.LIGHTGRAY, "PAR")
-	draw_duration(276, 73, 15, rl.LIGHTGRAY, result.par_ticks)
-	draw_ui_format(402, 73, 15, rl.WHITE, "TREASURE %d/%d", result.treasure_collected, result.treasure_total)
-	draw_ui_format(72, 96, 14, rl.LIGHTGRAY, "HITS %d   DAMAGE %d   DEATHS %d", result.hits, result.damage_taken, result.deaths)
+// Level-result geometry keeps the portrait and summary in two distinct
+// columns. The footer spans both columns below a divider, so neither the
+// total nor the continue prompt competes with the score card above it.
+LEVEL_RESULT_PANEL_X          :: (WINDOW_WIDTH - 520) / 2
+LEVEL_RESULT_PANEL_Y          :: 30
+LEVEL_RESULT_PANEL_WIDTH      :: 520
+LEVEL_RESULT_PANEL_HEIGHT     :: 340
+LEVEL_RESULT_PORTRAIT_X       :: LEVEL_RESULT_PANEL_X + 20
+LEVEL_RESULT_PORTRAIT_Y       :: LEVEL_RESULT_PANEL_Y + 64
+LEVEL_RESULT_PORTRAIT_WIDTH   :: 154
+LEVEL_RESULT_PORTRAIT_HEIGHT  :: 190
+LEVEL_RESULT_STAT_X           :: LEVEL_RESULT_PANEL_X + 202
+LEVEL_RESULT_STAT_RIGHT       :: LEVEL_RESULT_PANEL_X + LEVEL_RESULT_PANEL_WIDTH - 28
 
-	draw_level_result_row(126, 14, rl.WHITE, "ALIENS", result.enemies_destroyed, tuning.score_enemy_destroyed, result.enemy_points)
-	draw_level_result_row(147, 14, rl.WHITE, "TREASURE", result.treasure_pickups, tuning.score_treasure_pickup, result.treasure_points)
-	draw_level_result_row(168, 14, rl.WHITE, "ITEMS", result.items_collected, tuning.score_item_pickup, result.item_points)
-	draw_level_result_row(189, 14, rl.WHITE, "SALVAGED ITEMS", result.items_salvaged, tuning.score_capped_item_salvage, result.salvage_points)
-	draw_menu_value_row(LEVEL_RESULT_LABEL_X, LEVEL_RESULT_TOTAL_RIGHT, 210, 14, rl.WHITE, "CAVE CLEAR", "+%d", result.clear_bonus)
-	draw_menu_value_row(LEVEL_RESULT_LABEL_X, LEVEL_RESULT_TOTAL_RIGHT, 231, 14, rl.WHITE, "ALL TREASURE", "+%d", result.all_treasure_bonus)
-	draw_menu_value_row(LEVEL_RESULT_LABEL_X, LEVEL_RESULT_TOTAL_RIGHT, 252, 14, rl.WHITE, "NO DAMAGE", "+%d", result.no_damage_bonus)
-	draw_menu_value_row(LEVEL_RESULT_LABEL_X, LEVEL_RESULT_TOTAL_RIGHT, 273, 14, rl.WHITE, "UNDER PAR", "+%d", result.par_bonus)
-	if result.score_adjustment != 0 {
-		draw_menu_value_row(LEVEL_RESULT_LABEL_X, LEVEL_RESULT_TOTAL_RIGHT, 294, 13, rl.RED, "SCORE ADJUSTMENT", "%+d", result.score_adjustment)
-	}
-	draw_ui_format(72, 314, 16, rl.GOLD, "TOTAL +%d     SCORE %08d     MEDAL %s", result.score_delta, result.final_score, medal_label(result.medal))
-	draw_ui_format(72, 348, 13, rl.LIGHTGRAY, "%s: CONTINUE", action_prompt(.Confirm, game.last_input_device, game.settings.bindings, &game.settings.controller_bindings))
+// draw_level_result_stat_row uses one shared baseline and a fixed right edge
+// for every value. A subtle rule separates the rows without adding another
+// box around the already compact summary column.
+draw_level_result_stat_row :: proc(y: i32, label, value: cstring, value_color := rl.WHITE) {
+	rl.DrawText(label, LEVEL_RESULT_STAT_X, y, 15, rl.LIGHTGRAY)
+	value_width := rl.MeasureText(value, 15)
+	rl.DrawText(value, LEVEL_RESULT_STAT_RIGHT - value_width, y, 15, value_color)
+	rl.DrawRectangle(
+		LEVEL_RESULT_STAT_X,
+		y + 23,
+		LEVEL_RESULT_STAT_RIGHT - LEVEL_RESULT_STAT_X,
+		1,
+		rl.Fade(rl.GOLD, 0.16),
+	)
+}
+
+// draw_level_result draws the simplified "cave complete" summary: a random
+// celebration portrait beside the medal earned, time versus par, treasure
+// collected, aliens defeated, and the score gained this level. The full
+// itemized score ledger stays in gameplay.level_result for anyone who wants
+// it (e.g. a future stats screen) but is deliberately left off this panel so
+// the moment reads as a clean, quick celebration rather than a spreadsheet.
+draw_level_result :: proc(game: ^Game, assets: ^Assets) {
+	result := &game.gameplay.level_result
+	title_buffer: [32]byte
+	title := format_cstring(title_buffer[:], "CAVE %d COMPLETE", result.level_index + 1)
+	draw_menu_panel(title, LEVEL_RESULT_PANEL_HEIGHT, LEVEL_RESULT_PANEL_WIDTH, LEVEL_RESULT_PANEL_Y)
+
+	// The portrait sits in its own inset card, with the medal overlapping the
+	// lower edge like an award plaque. This visually associates the medal with
+	// the celebration instead of centering it ambiguously between both columns.
+	rl.DrawRectangle(
+		LEVEL_RESULT_PORTRAIT_X + 3,
+		LEVEL_RESULT_PORTRAIT_Y + 4,
+		LEVEL_RESULT_PORTRAIT_WIDTH,
+		LEVEL_RESULT_PORTRAIT_HEIGHT,
+		rl.Fade(rl.BLACK, 0.50),
+	)
+	rl.DrawRectangle(
+		LEVEL_RESULT_PORTRAIT_X,
+		LEVEL_RESULT_PORTRAIT_Y,
+		LEVEL_RESULT_PORTRAIT_WIDTH,
+		LEVEL_RESULT_PORTRAIT_HEIGHT,
+		rl.Fade(rl.DARKBROWN, 0.20),
+	)
+	rl.DrawRectangleLines(
+		LEVEL_RESULT_PORTRAIT_X,
+		LEVEL_RESULT_PORTRAIT_Y,
+		LEVEL_RESULT_PORTRAIT_WIDTH,
+		LEVEL_RESULT_PORTRAIT_HEIGHT,
+		rl.Fade(rl.GOLD, 0.42),
+	)
+	portrait := assets.sprites.level_complete[result.celebration_sprite]
+	portrait_scale: f32 = 0.80
+	portrait_x := LEVEL_RESULT_PORTRAIT_X + (LEVEL_RESULT_PORTRAIT_WIDTH - i32(LEVEL_COMPLETE_SPRITE_WIDTH * portrait_scale)) / 2
+	portrait_y := LEVEL_RESULT_PORTRAIT_Y + 10
+	rl.DrawTextureEx(portrait, {f32(portrait_x), f32(portrait_y)}, 0, portrait_scale, rl.WHITE)
+
+	medal_buffer: [24]byte
+	medal_text := format_cstring(medal_buffer[:], "%s MEDAL", medal_label(result.medal))
+	medal_width := rl.MeasureText(medal_text, 16)
+	badge_width := medal_width + 30
+	badge_x := LEVEL_RESULT_PORTRAIT_X + (LEVEL_RESULT_PORTRAIT_WIDTH - badge_width) / 2
+	badge_y: i32 = LEVEL_RESULT_PORTRAIT_Y + LEVEL_RESULT_PORTRAIT_HEIGHT - 18
+	badge_color := medal_color(result.medal)
+	rl.DrawRectangle(badge_x, badge_y, badge_width, 28, rl.Fade(rl.BLACK, 0.94))
+	rl.DrawRectangleLines(badge_x, badge_y, badge_width, 28, badge_color)
+	rl.DrawRectangle(badge_x + 4, badge_y + 4, 3, 20, rl.Fade(badge_color, 0.72))
+	rl.DrawRectangle(badge_x + badge_width - 7, badge_y + 4, 3, 20, rl.Fade(badge_color, 0.72))
+	rl.DrawText(medal_text, badge_x + (badge_width - medal_width) / 2, badge_y + 6, 16, badge_color)
+
+	section_label: cstring = "RUN SUMMARY"
+	rl.DrawText(section_label, LEVEL_RESULT_STAT_X, LEVEL_RESULT_PANEL_Y + 62, 12, rl.Fade(rl.GOLD, 0.72))
+	rl.DrawRectangle(
+		LEVEL_RESULT_STAT_X + rl.MeasureText(section_label, 12) + 10,
+		LEVEL_RESULT_PANEL_Y + 68,
+		LEVEL_RESULT_STAT_RIGHT - LEVEL_RESULT_STAT_X - rl.MeasureText(section_label, 12) - 10,
+		1,
+		rl.Fade(rl.GOLD, 0.30),
+	)
+
+	under_par := result.par_bonus > 0
+	all_treasure := result.all_treasure_bonus > 0
+	time_buffer, par_buffer: [16]byte
+	treasure_buffer, aliens_buffer: [16]byte
+	stat_y: i32 = LEVEL_RESULT_PANEL_Y + 84
+	draw_level_result_stat_row(
+		stat_y,
+		"TIME",
+		duration_text_cstring(time_buffer[:], result.elapsed_ticks),
+		under_par ? rl.GREEN : rl.WHITE,
+	)
+	stat_y += 30
+	draw_level_result_stat_row(stat_y, "PAR", duration_text_cstring(par_buffer[:], result.par_ticks), rl.LIGHTGRAY)
+	stat_y += 30
+	draw_level_result_stat_row(
+		stat_y,
+		"TREASURE",
+		format_cstring(treasure_buffer[:], "%d / %d", result.treasure_collected, result.treasure_total),
+		all_treasure ? rl.GREEN : rl.WHITE,
+	)
+	stat_y += 30
+	draw_level_result_stat_row(
+		stat_y,
+		"ALIENS DEFEATED",
+		format_cstring(aliens_buffer[:], "%d", result.enemies_destroyed),
+	)
+
+	// Score earned gets its own heavier row so it is the summary's focal
+	// point; %+d also renders score corrections cleanly instead of "+-N".
+	score_y: i32 = LEVEL_RESULT_PANEL_Y + 216
+	rl.DrawRectangle(
+		LEVEL_RESULT_STAT_X - 8,
+		score_y,
+		LEVEL_RESULT_STAT_RIGHT - LEVEL_RESULT_STAT_X + 16,
+		42,
+		rl.Fade(rl.GOLD, 0.10),
+	)
+	rl.DrawRectangleLines(
+		LEVEL_RESULT_STAT_X - 8,
+		score_y,
+		LEVEL_RESULT_STAT_RIGHT - LEVEL_RESULT_STAT_X + 16,
+		42,
+		rl.Fade(rl.GOLD, 0.48),
+	)
+	rl.DrawText("SCORE EARNED", LEVEL_RESULT_STAT_X, score_y + 11, 17, rl.GOLD)
+	score_buffer: [24]byte
+	score_text := format_cstring(score_buffer[:], "%+d", result.score_delta)
+	score_width := rl.MeasureText(score_text, 20)
+	rl.DrawText(score_text, LEVEL_RESULT_STAT_RIGHT - score_width, score_y + 9, 20, rl.GOLD)
+
+	footer_y: i32 = LEVEL_RESULT_PANEL_Y + LEVEL_RESULT_PANEL_HEIGHT - 68
+	rl.DrawRectangle(
+		LEVEL_RESULT_PANEL_X + 16,
+		footer_y,
+		LEVEL_RESULT_PANEL_WIDTH - 32,
+		1,
+		rl.Fade(rl.GOLD, 0.38),
+	)
+	total_buffer: [32]byte
+	total_text := format_cstring(total_buffer[:], "TOTAL SCORE %08d", result.final_score)
+	total_width := rl.MeasureText(total_text, 14)
+	rl.DrawText(total_text, (WINDOW_WIDTH - total_width) / 2, footer_y + 10, 14, rl.WHITE)
+
+	prompt_buffer: [64]byte
+	prompt_text := format_cstring(
+		prompt_buffer[:], "%s: CONTINUE",
+		action_prompt(.Confirm, game.last_input_device, game.settings.bindings, &game.settings.controller_bindings),
+	)
+	prompt_width := rl.MeasureText(prompt_text, 13)
+	rl.DrawText(prompt_text, (WINDOW_WIDTH - prompt_width) / 2, footer_y + 37, 13, rl.GOLD)
 }
 
 // draw_tutorial_prompt shows the current step's instruction and a skip/pause
@@ -741,7 +874,7 @@ draw_gameplay :: proc(game: ^Game, assets: ^Assets) {
 			)
 		}
 	case .Won:
-		draw_level_result(game)
+		draw_level_result(game, assets)
 	case .Game_Won, .Game_Over:
 	case .Load_Failed:
 		if game.last_input_device == .Controller {

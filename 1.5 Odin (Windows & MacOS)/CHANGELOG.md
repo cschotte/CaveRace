@@ -1,5 +1,15 @@
 # CaveRace 1.5 version history
 
+## 1.5.4
+
+- Redesigned the level-complete screen as a cleaner two-column summary with a
+  framed celebration portrait, medal badge, aligned run statistics, emphasized
+  score earned, and a separated total-score/continue footer.
+- Added three celebration portraits; the game now randomly selects one whenever
+  a cave is completed.
+- Successful time and treasure results now receive clearer color feedback, and
+  negative score adjustments display with the correct sign.
+
 ## 1.5.3
 
 - Pressing Escape (or controller B) during active gameplay now opens the pause
