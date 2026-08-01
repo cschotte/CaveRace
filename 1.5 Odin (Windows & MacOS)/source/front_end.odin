@@ -95,7 +95,7 @@ advance_front_end_transition :: proc(
 
 // advance_intro advances a story panel when its real music stream finishes.
 // The exact packaged duration remains a fallback for silent/no-audio startup
-// and keeps the platform-independent story flow deterministic in tests.
+// and keeps the platform-independent story flow deterministic.
 advance_intro :: proc(
 	front_end: ^Front_End_State,
 	frame_seconds: f64,

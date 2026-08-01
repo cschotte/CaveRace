@@ -33,10 +33,9 @@ Game :: struct {
 	pause:                 Pause_State,
 	autoplay:              Autoplay_State,
 	next_autoplay_level_index: int,
-	debug_overlay_visible: bool,
 	branding_elapsed_seconds: f64,
 	// Free-running cosmetic clock for menu glow/pulse/twinkle animation only;
-	// it never gates gameplay or input and is safe to ignore in tests.
+	// it never gates gameplay or input.
 	ui_clock:              f64,
 }
 
@@ -140,11 +139,6 @@ update_game :: proc(game: ^Game, input: Game_Input, frame_seconds: f64) -> Game_
 	advance_game_feedback(&game.feedback, frame_seconds)
 	advance_game_effects(&game.effects, frame_seconds)
 	game.ui_clock += clamp(frame_seconds, 0, MAX_FRAME_DELTA_SECONDS)
-	when ODIN_DEBUG {
-		if input.debug_toggle_pressed {
-			game.debug_overlay_visible = !game.debug_overlay_visible
-		}
-	}
 	previous_screen := game.screen
 	previous_gameplay_state := game.gameplay.state
 	previous_pause_open := game.pause.open

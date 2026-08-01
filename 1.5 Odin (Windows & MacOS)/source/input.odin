@@ -56,7 +56,6 @@ Game_Input :: struct {
 	controller_connected: bool,
 	presentation_music_controls_timing: bool,
 	presentation_music_finished: bool,
-	debug_toggle_pressed: bool,
 	cheat_pressed:   [Cheat_Key]bool,
 	screenshot_requested: bool,
 	pointer:            Pointer_Input,
@@ -172,9 +171,6 @@ poll_game_input :: proc(
 		stick_right = stick_right,
 	}
 
-	when ODIN_DEBUG {
-		input.debug_toggle_pressed = rl.IsKeyPressed(.F10)
-	}
 	input.cheat_pressed[.F1] = rl.IsKeyPressed(.F1)
 	input.cheat_pressed[.F2] = rl.IsKeyPressed(.F2)
 	input.cheat_pressed[.F3] = rl.IsKeyPressed(.F3)

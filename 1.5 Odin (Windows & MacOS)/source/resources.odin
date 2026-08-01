@@ -45,9 +45,9 @@ owned_resource_root_if_usable :: proc(
 	return cleaned, true
 }
 
-// find_resource_root_from keeps path selection testable without depending on
-// the process that happens to run the tests. The packaged layout is preferred,
-// followed by a macOS bundle and the repository development layout.
+// find_resource_root_from resolves paths without depending on the caller's
+// process layout. Packaged resources are preferred, followed by a macOS bundle
+// and the repository development layout.
 find_resource_root_from :: proc(
 	executable_directory: string,
 	working_directory: string,

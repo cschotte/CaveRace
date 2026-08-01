@@ -1,8 +1,8 @@
 # CaveRace 1.5 version history
 
-## Unreleased
+## 1.5.4
 
-- Added an attract-mode loop: one idle minute on the root main menu starts a
+- Added an demo-mode loop: one idle minute on the root main menu starts a
   one-minute autoplay demo, and any key, controller action, or mouse click
   returns immediately to a freshly reset main menu.
 - Improved the autoplay bot with enemy interception avoidance, purposeful bomb
@@ -12,9 +12,6 @@
   that session's selected cave instead of advancing farther into the campaign.
 - Autoplay uses the selected difficulty's normal starting inventory and rules;
   it has no autoplay-only bomb power, capacity, fuse, damage, or enemy changes.
-
-## 1.5.4
-
 - Redesigned the level-complete screen as a cleaner two-column summary with a
   framed celebration portrait, medal badge, aligned run statistics, emphasized
   score earned, and a separated total-score/continue footer.

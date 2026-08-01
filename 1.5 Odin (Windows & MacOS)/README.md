@@ -1,172 +1,215 @@
 # CaveRace 1.5.4
 
-CaveRace 1.5 is the current desktop edition of the 1997
-maze-action game. This edition is a from-scratch rewrite in [Odin] using
-Odin's bundled [raylib] bindings for windowing, graphics, keyboard/controller
-input, streamed music, and sound effects. It keeps the ten original level
-files and the recognizable pixel-art rules from the DOS-era releases while
-giving the game a modern, cross-platform (Windows and macOS) application loop.
+CaveRace 1.5.4 is the finished desktop edition of the 1997 maze-action game.
+This from-scratch rewrite uses [Odin] and its bundled [raylib] bindings to run
+the original ten caves on modern Windows and macOS systems.
 
-## Requirements
+Enter the mines of Eldora, collect treasure, open passages with bombs, and
+defeat every alien to clear each cave. Bombs can also destroy treasure,
+power-ups, and the player, so careful placement and a safe escape route are
+essential.
 
-- A current [Odin compiler]
-- Windows or macOS
+CaveRace is fully offline and contains no accounts, advertising, in-app
+purchases, analytics, or online services.
 
-No separate raylib installation or third-party package download is required;
-the source imports `vendor:raylib` from the Odin distribution.
+## Release status
 
-## Build and run
+Version 1.5.4 is under code and documentation freeze. Changes are limited to
+issues identified during Apple App Store or Microsoft Store submission and
+certification. Other development belongs in a future version.
 
-From this directory, the reproducible package scripts build the executable and
-copy every runtime resource into the platform layout the game expects:
+See [CHANGELOG.md](CHANGELOG.md) for the complete 1.5 release history.
 
-```sh
-./scripts/build_macos.sh release   # or debug
-```
+## Features
 
-```powershell
-.\scripts\build_windows.ps1 release   # or debug
-```
+- Ten preserved caves from the original CaveRace releases
+- Original story and recognizable pixel-art gameplay
+- Campaign and interactive tutorial
+- Standard and Assisted difficulty profiles
+- Keyboard, mouse, and controller support with remappable controls
+- Windowed and borderless display modes with 1×, 2×, and 3× scaling
+- Adjustable music, sound effects, screen shake, controller rumble, reduced
+  flashes, high-contrast bomb previews, and focus-loss pausing
+- Automatic one-minute gameplay demonstrations when the main menu is idle
+- Local settings storage; no network connection is required
 
-Outputs are `dist/macos/CaveRace.app` and `dist/windows/CaveRace.exe` with
-their adjacent `media/` and `levels/` directories. Each script starts from a
-clean platform output directory and fails if the executable, screen marker,
-or final level is absent.
+## System requirements
 
-### Debugging in VS Code
+| Platform | Minimum version | Architecture |
+| --- | --- | --- |
+| Windows | Windows 10 version 1809 | 64-bit x86 |
+| macOS | macOS 10.15 Catalina | Intel or Apple silicon |
 
-Open the repository root in VS Code, make sure `odin` is available on `PATH`,
-and install the recommended CodeLLDB extension. Press F5 and select
-**Debug CaveRace**. The pre-launch task creates the build directory, builds a
-checked debug executable, and starts it with `source/` as its working directory
-so the development assets and levels can be found.
+A keyboard is sufficient. A mouse or compatible game controller is optional.
 
-The shared configuration emits `build/caverace` on macOS and
-`build/caverace.exe` on Windows, both inside this version's directory.
+## Installation
 
-Both packages carry the app icons from `icons/`: `build_macos.sh` copies
-`packaging/macos/CaveRace.icns` into the bundle alongside
-`packaging/macos/Info.plist` (`CFBundleIconFile`); `build_windows.ps1` and
-`build_windows_store.ps1` both pass `packaging/windows/caverace.rc` (which
-embeds `packaging/windows/caverace.ico`, `packaging/windows/caverace.manifest`,
-and version info) to Odin's `-resource:` flag, which compiles and links it
-into the executable, so the direct-distribution `.exe` and the Store `.msix`
-carry identical icon/DPI/version resources. Regenerate the `.icns`/`.ico` from
-`icons/*.png` if the source artwork changes.
+Ready-to-run packages are available in the repository's [releases](../releases/)
+folder.
 
-The icon resource is named `GLFW_ICON` rather than a numbered `IDI_` constant
-so raylib's GLFW backend adopts it as the live window/taskbar/Alt-Tab icon,
-not just the `.exe` file icon shown in Explorer. `caverace.manifest` declares
-Per-Monitor-V2 DPI awareness, matching `NSHighResolutionCapable` on macOS, so
-Windows hands the process real pixels on scaled displays instead of
-bitmap-stretching a low-DPI-rendered window; `rl.SetConfigFlags({.WINDOW_HIGHDPI})`
-before `InitWindow` in `application.odin` is the raylib-side half of that.
+- On macOS, place `CaveRace.app` in Applications and launch it normally.
+- On Windows, keep `CaveRace.exe`, `media/`, and `levels/` together in the same
+  distribution folder. Microsoft Store installations manage these files
+  automatically.
 
-For a credentialed release, `scripts/build_macos.sh` reads
-`CAVERACE_SIGN_IDENTITY` and `CAVERACE_NOTARY_PROFILE` to sign with hardened
-runtime, submit, wait, staple, and validate. `scripts/build_windows.ps1`
-optionally reads `CAVERACE_WINDOWS_CERT_SHA1` for Authenticode signing.
+## Controls
 
-Correctness checks used during development:
+Menus support keyboard, controller, and mouse navigation. Moving the pointer
+over a row selects it; left-click activates it; right-click goes back; and the
+mouse wheel navigates or adjusts the selected setting.
 
-```sh
-cd source
-odin check . -vet -vet-cast -vet-style -vet-tabs -warnings-as-errors
-```
-
-The privacy policy used by the Microsoft Store listing is available at
-[navatron.com/privacy](https://navatron.com/privacy/).
-
-Distributable builds are available in the repository's
-[releases](../releases/) folder. See [CHANGELOG.md](CHANGELOG.md) for the
-1.5.x version history.
-
-## Controls and launch options
-
-All menus support mouse, keyboard, and controller navigation. Hovering a menu
-row selects it, left-click activates it, right-click goes back, and the mouse
-wheel navigates lists. Settings provide clickable decrease/increase controls
-and wheel adjustment. Keyboard and controller bindings can still be remapped;
-arrow keys and the left stick remain movement fallbacks, while
-Escape/controller B stay reserved for Back.
-Xbox-style labels below use raylib's standard layout. Controller rumble can
-be disabled independently, and Screen Shake at 0% is exactly still.
-
-After one minute without input on the root main menu, CaveRace starts a
-one-minute autoplay demo. Any keyboard key, controller action, or mouse click
-returns immediately to the main menu; another idle minute starts the next demo.
-The idle clock pauses off the root menu and while the window is unfocused.
-Autoplay alternates between caves 1 and 2, restarting its selected cave after
-a win so it never advances into the rest of the campaign. It uses the selected
-difficulty and the same starting stats, pickups, bomb power, fuse timing,
-damage, and enemy behavior as a normal game; only the player's input is automated.
+Keyboard and controller gameplay bindings can be changed in Settings. Arrow
+keys and the left stick remain movement fallbacks, while Escape and controller
+B remain reserved for Back.
 
 | Input | Action |
 | --- | --- |
-| Mouse | Point and click menu actions or advance story panels; use the wheel to navigate or adjust the hovered setting; right-click to go back |
-| Arrow keys or WASD | Move; navigate menus (left stick/D-pad on controller) |
-| Space / controller A | Place a bomb during gameplay; skip the current story panel |
-| Enter or Space / controller A | Confirm menu and outcome actions |
-| R / controller X | Quick-retry after death or start a new run from game over |
-| P / controller Start | Open/close pause during active campaign or tutorial play |
-| Escape / controller B | Go back; during active gameplay it opens pause with an "abandon run" confirmation instead of leaving instantly |
+| Arrow keys or WASD | Move; navigate menus |
+| Controller D-pad or left stick | Move; navigate menus |
+| Space or controller A | Place a bomb; confirm; skip the current story panel |
+| Enter | Confirm menu and outcome actions |
+| R or controller X | Retry after death or begin a new run after game over |
+| P or controller Start | Open or close the pause menu |
+| Escape or controller B | Go back; during gameplay, open pause with an abandon-run confirmation |
+| Mouse | Select and activate menu actions |
+| Mouse wheel | Navigate menus or adjust a hovered setting |
+| Right mouse button | Go back |
 | Main-menu Quit or window close | Quit safely |
-| F10 | Toggle the diagnostics overlay in debug builds; absent from release builds |
-| F1 | Destroy all enemies and complete the level when cheats are enabled |
-| F2 | Restore four lives and eight energy when cheats are enabled |
-| F3 | Grant four-bomb capacity when cheats are enabled |
-| F4 | Increase bomb power, up to 10, when cheats are enabled |
-| F5 | Double the score when cheats are enabled |
-| 1 | Save a timestamped PNG screenshot of the current frame when cheats are enabled |
 
-The original `-powerblast` and `-slow` switches remain supported, and 1.5 adds
-`-log`:
+## Demo mode
+
+After one minute without input on the main menu, CaveRace starts a one-minute
+automated demonstration. The demonstrations alternate between caves 1 and 2.
+Any keyboard key, controller action, or mouse click immediately returns to the
+main menu, where the idle cycle begins again.
+
+Demo mode uses the selected difficulty and exactly the same starting stats,
+pickups, bomb behavior, damage, and enemy rules as normal gameplay. Only the
+player input is automated. The idle timer pauses outside the main menu and
+while the game window is unfocused.
+
+## Settings
+
+Settings are saved automatically in the operating system's per-user
+application-data location. If the settings file is missing or invalid, the
+game starts with safe defaults.
+
+The Settings menu provides:
+
+- Music and sound-effect volume
+- Windowed or borderless display
+- Window scale
+- Reduced flashes and screen-shake strength
+- Controller rumble
+- High-contrast bomb danger previews
+- Pause on focus loss
+- Standard or Assisted difficulty
+- Keyboard and controller rebinding
+
+## Launch options
+
+The desktop executable accepts three optional command-line switches:
+
+| Option | Purpose |
+| --- | --- |
+| `-powerblast` | Enable the original function-key cheats and screenshot key |
+| `-slow` | Limit presentation to 30 FPS while gameplay remains fixed at 60 Hz |
+| `-log` | Print detailed startup and runtime diagnostics for support cases |
+
+Unknown arguments are reported and ignored.
+
+When `-powerblast` is active:
+
+| Key | Result |
+| --- | --- |
+| F1 | Destroy all enemies and complete the current cave |
+| F2 | Restore four lives and eight energy |
+| F3 | Grant four-bomb capacity |
+| F4 | Increase bomb power, up to 10 |
+| F5 | Double the score |
+| 1 | Save a timestamped PNG screenshot |
+
+## Building from source
+
+A current [Odin compiler] is required. No separate raylib installation or
+third-party package download is needed because the source imports
+`vendor:raylib` from the Odin distribution.
+
+Run the appropriate command from this `1.5 Odin (Windows & MacOS)` directory.
+
+### Direct distribution
+
+macOS:
 
 ```sh
-./dist/macos/CaveRace.app/Contents/MacOS/CaveRace -powerblast
-./dist/macos/CaveRace.app/Contents/MacOS/CaveRace -slow
-./dist/macos/CaveRace.app/Contents/MacOS/CaveRace -log
+./scripts/build_macos.sh release
 ```
+
+Windows PowerShell:
 
 ```powershell
-.\dist\windows\CaveRace.exe -powerblast
-.\dist\windows\CaveRace.exe -slow
-.\dist\windows\CaveRace.exe -log
+.\scripts\build_windows.ps1 release
 ```
 
-- `-powerblast` enables F1–F5 and the 1 screenshot key. Without it, those keys do not change game state.
-- `-slow` limits presentation to 30 FPS. Simulation still runs at a fixed 60 Hz.
-- `-log` prints detailed `[LOG]` lines tracing startup (resource root, window/audio/asset init) and key runtime events (level loads, settings saves, quits), in addition to raylib's own verbose trace log. Useful for diagnosing a crash or silent exit on another machine — ask for a `-log` run and share the last lines printed before it stops.
-- Unknown arguments are reported and ignored.
+The resulting packages are written to `dist/macos/CaveRace.app` and
+`dist/windows/`. Passing `debug` instead of `release` creates a checked debug
+build.
 
-## Level data
+The macOS script optionally uses `CAVERACE_SIGN_IDENTITY` and
+`CAVERACE_NOTARY_PROFILE` for Developer ID signing and notarization. The
+Windows script optionally uses `CAVERACE_WINDOWS_CERT_SHA1` for Authenticode
+signing.
 
-`source/levels/` contains `01.bin` through `10.bin`, carried over unchanged
-from the original 1.2/1.3 releases. Every file is exactly 1,045 bytes and
-stores five 19×11 byte grids in this order:
+### Store submission packages
 
-| Layer | Bytes | Purpose |
-| --- | ---: | --- |
-| Background | 209 | Terrain sprite index |
-| Item | 209 | Object or power-up sprite index |
-| Treasure | 209 | Treasure sprite index |
-| Enemy | 209 | Enemy spawn and sprite kind |
-| Player | 209 | Single player spawn marker |
+Mac App Store:
 
-Before activation, the loader checks the exact file size, every sprite
-index, one and only one player spawn, and the 16-enemy capacity. A validated
-file is copied into mutable gameplay state; player, enemies, bombs,
-explosions, and bomb occupancy are maintained separately from the stored
-spawn grids.
+```sh
+./scripts/build_macos_appstore.sh release
+```
 
-Each level has fixed metadata for its display name, tile theme, treasure
-total, par time, tutorial-hint flag, and enemy-pursuit bias. Reloading or
-retrying a cave therefore preserves its visual identity. Themes remain
-visual and do not change map rules.
+This creates a universal Intel/Apple-silicon `CaveRace.pkg` in
+`dist/macos-appstore/`. The script requires the Apple distribution identity,
+installer identity, and provisioning profile described in the script.
 
----
+Microsoft Store:
 
-Copyright © 1997–2026 NavaTron B.V. All rights reserved.
+```powershell
+.\scripts\build_windows_store.ps1 release
+```
+
+This creates `dist/windows-store/CaveRace.msix`. It requires the Windows SDK
+and the final Partner Center identity in `packaging/windows-store/AppxManifest.xml`.
+The Microsoft Store applies its own signature during certification.
+
+All packaging scripts compile with strict Odin vetting and warnings treated as
+errors, copy the required media and level resources, and verify the package's
+essential files before completing.
+
+## Preserved game content
+
+The files `source/levels/01.bin` through `10.bin` are the original CaveRace
+level data. The 1.5 loader validates each file before play, while keeping live
+player, enemy, bomb, and explosion state separate from the preserved data.
+
+The five visual themes are presentation-only and do not alter the rules of a
+cave.
+
+## Privacy and support
+
+The privacy policy used for Store distribution is available at
+[navatron.com/privacy](https://navatron.com/privacy/). For game information and
+support, visit [caverace.com](https://caverace.com/).
+
+For startup or packaging problems, run the direct-distribution executable with
+`-log` and include the final diagnostic lines with the report.
+
+## License
+
+Copyright © 1997–2026 NavaTron B.V.
+
+The source code is licensed under the [Apache License 2.0](../LICENSE). Game
+content, artwork, music, and sound effects remain copyright NavaTron B.V.
 
 [Odin]: https://odin-lang.org/
 [Odin compiler]: https://odin-lang.org/docs/install/

@@ -40,8 +40,7 @@ gameplay_cosmetic_random_max :: proc(gameplay: ^Gameplay, upper_bound: int) -> i
 	return rand.int_max(upper_bound, generator)
 }
 
-// active_enemy_count counts surviving enemies when resolving level completion
-// and when tests need to inspect the fixed enemy array.
+// active_enemy_count counts surviving enemies when resolving level completion.
 active_enemy_count :: proc(gameplay: ^Gameplay) -> int {
 	count := 0
 	for enemy in enemy_slots(gameplay) {

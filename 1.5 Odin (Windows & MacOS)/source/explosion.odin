@@ -41,8 +41,8 @@ build_explosion_state :: proc(bomb: ^Bomb_State) -> Explosion_State {
 	return explosion
 }
 
-// explosion_contains_cell tests one active footprint and is reused by chain
-// reactions, entity damage, and focused regression tests.
+// explosion_contains_cell checks one active footprint and is reused by chain
+// reactions and entity damage.
 explosion_contains_cell :: proc(
 	explosion: ^Explosion_State,
 	position: Grid_Position,
@@ -100,7 +100,7 @@ chain_bombs_in_explosion :: proc(gameplay: ^Gameplay, explosion: ^Explosion_Stat
 
 // start_ready_explosions settles every bomb ready on the current fixed tick,
 // rescanning fixed slots until chains stop. Iteration avoids recursive mutation
-// and keeps score, sounds, and tests repeatable.
+// while keeping score, sounds, and gameplay repeatable.
 start_ready_explosions :: proc(
 	gameplay: ^Gameplay,
 	result: ^Gameplay_Tick_Result,

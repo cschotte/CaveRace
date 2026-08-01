@@ -1,13 +1,5 @@
 package caverace
 
-// Cave_Music_Band keeps level progression independent from raylib music
-// handles while giving Application an explicit A/B/C campaign cue.
-Cave_Music_Band :: enum {
-	A,
-	B,
-	C,
-}
-
 // Level_Metadata adds modern presentation and tuning data beside the preserved
 // 1,045-byte legacy level format. Par times and pursuit chances are initial
 // Milestone 4 targets. They are intentionally generous and remain
@@ -15,24 +7,22 @@ Cave_Music_Band :: enum {
 Level_Metadata :: struct {
 	name:                  string,
 	theme:                 Tile_Theme,
-	music_band:            Cave_Music_Band,
 	treasure_total:         int,
 	par_seconds:            f32,
-	show_tutorial_hints:    bool,
 	enemy_pursuit_chance:   f32,
 }
 
 LEVEL_METADATA :: [LEVEL_COUNT]Level_Metadata {
-	{"Cave 1",  .Forest, .A, 4, 120, true,  0.00},
-	{"Cave 2",  .Winter, .A, 3, 150, true,  0.00},
-	{"Cave 3",  .Desert, .A, 3, 180, true,  0.00},
-	{"Cave 4",  .Oil,    .B, 3, 210, false, 0.00},
-	{"Cave 5",  .Lava,   .B, 3, 240, false, 0.05},
-	{"Cave 6",  .Forest, .B, 3, 270, false, 0.10},
-	{"Cave 7",  .Winter, .B, 3, 300, false, 0.15},
-	{"Cave 8",  .Desert, .C, 3, 330, false, 0.20},
-	{"Cave 9",  .Oil,    .C, 3, 360, false, 0.25},
-	{"Cave 10", .Lava,   .C, 5, 420, false, 0.30},
+	{"Cave 1",  .Forest, 4, 120, 0.00},
+	{"Cave 2",  .Winter, 3, 150, 0.00},
+	{"Cave 3",  .Desert, 3, 180, 0.00},
+	{"Cave 4",  .Oil,    3, 210, 0.00},
+	{"Cave 5",  .Lava,   3, 240, 0.05},
+	{"Cave 6",  .Forest, 3, 270, 0.10},
+	{"Cave 7",  .Winter, 3, 300, 0.15},
+	{"Cave 8",  .Desert, 3, 330, 0.20},
+	{"Cave 9",  .Oil,    3, 360, 0.25},
+	{"Cave 10", .Lava,   5, 420, 0.30},
 }
 
 #assert(len(LEVEL_METADATA) == LEVEL_COUNT)

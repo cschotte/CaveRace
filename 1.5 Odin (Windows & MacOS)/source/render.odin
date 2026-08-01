@@ -43,11 +43,6 @@ draw_game :: proc(game: ^Game, assets: ^Assets) {
 	if game.autoplay.active do draw_autoplay_prompt()
 
 	draw_game_feedback(game.feedback)
-	when ODIN_DEBUG {
-		if (game.screen == .Playing || game.screen == .Tutorial) && game.debug_overlay_visible {
-			draw_debug_overlay(game)
-		}
-	}
 }
 
 draw_autoplay_prompt :: proc() {
