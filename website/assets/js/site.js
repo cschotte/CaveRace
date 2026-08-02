@@ -1,5 +1,18 @@
 (() => {
   const classicDownloads = document.querySelector("#classic-downloads");
+  const mobileMenu = document.querySelector(".mobile-menu");
+
+  mobileMenu?.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      mobileMenu.open = false;
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    if (mobileMenu?.open && !mobileMenu.contains(event.target)) {
+      mobileMenu.open = false;
+    }
+  });
 
   document.querySelectorAll('a[href="#classic-downloads"]').forEach((link) => {
     link.addEventListener("click", () => {
