@@ -2,7 +2,6 @@ package caverace
 
 Menu_Page :: enum {
 	Main,
-	First_Run,
 	How_To_Play,
 	Settings,
 	Bindings,
@@ -15,12 +14,6 @@ Main_Menu_Item :: enum {
 	Settings,
 	Replay_Story,
 	Quit,
-}
-
-First_Run_Item :: enum {
-	Tutorial,
-	Campaign,
-	Back,
 }
 
 Settings_Menu_Item :: enum {
@@ -75,15 +68,6 @@ menu_item_rect :: proc(menu: ^Menu_State, item_index: int) -> (UI_Rect, bool) {
 		panel_x, panel_y, panel_width, _ := main_menu_panel_geometry(menu.page_elapsed_seconds)
 		y := panel_y + MAIN_MENU_LIST_TOP + i32(item_index) * 24 + main_menu_item_gap(item_index)
 		return {f32(panel_x + 10), f32(y - 3), f32(panel_width - 20), 22}, true
-	case .First_Run:
-		panel_x, panel_y, _, items_top, _ := first_run_panel_geometry()
-		y := panel_y + items_top + i32(item_index) * FIRST_RUN_ROW_SPACING
-		return {
-			f32(panel_x + MENU_GLOW_INSET),
-			f32(y - 3),
-			f32(FIRST_RUN_PANEL_WIDTH - MENU_GLOW_INSET * 2),
-			f32(FIRST_RUN_ROW_HEIGHT),
-		}, true
 	case .Settings, .Bindings:
 		row_count := menu_item_count(menu.page)
 		height := menu_narrow_panel_height(row_count)
@@ -150,7 +134,6 @@ begin_menu :: proc(menu: ^Menu_State) {
 menu_item_count :: proc(page: Menu_Page) -> int {
 	switch page {
 	case .Main:        return len(Main_Menu_Item)
-	case .First_Run:   return len(First_Run_Item)
 	case .Settings:    return len(Settings_Menu_Item)
 	case .Bindings:    return len(Input_Action) + 1
 	case .How_To_Play: return 0
@@ -222,7 +205,7 @@ adjust_setting :: proc(
 }
 
 // update_menu is the single per-frame input handler for every menu page
-// (Main, Settings, Bindings, Level info, First-Run). It handles rebind-
+// (Main, Settings, Bindings, Level info). It handles rebind-
 // waiting and back navigation first, then falls through to page-specific
 // confirm handling, returning any settings/display/session changes to apply.
 update_menu :: proc(
@@ -280,7 +263,7 @@ update_menu :: proc(
 	if back_pressed {
 		switch menu.page {
 		case .Main:
-		case .First_Run, .Settings:
+		case .Settings:
 			open_menu_page(menu, .Main)
 		case .Bindings:
 			open_menu_page(menu, .Settings)
@@ -354,27 +337,13 @@ update_menu :: proc(
 	switch menu.page {
 	case .Main:
 		switch Main_Menu_Item(menu.selected) {
-		case .Start_Game:
-			if settings.tutorial_complete {
-				result.start_campaign = true
-			} else {
-				open_menu_page(menu, .First_Run)
-			}
+		case .Start_Game:   result.start_campaign = true
 		case .Tutorial:     result.start_tutorial = true
 		case .How_To_Play:
 			open_menu_page(menu, .How_To_Play)
 		case .Settings:     open_menu_page(menu, .Settings)
 		case .Replay_Story: result.replay_story = true
 		case .Quit:         result.quit_requested = true
-		}
-	case .First_Run:
-		switch First_Run_Item(menu.selected) {
-		case .Tutorial: result.start_tutorial = true
-		case .Campaign:
-			settings.tutorial_complete = true
-			result.settings_changed = true
-			result.start_campaign = true
-		case .Back: open_menu_page(menu, .Main)
 		}
 	case .Settings:
 		item := Settings_Menu_Item(menu.selected)

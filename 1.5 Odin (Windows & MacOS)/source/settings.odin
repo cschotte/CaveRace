@@ -30,7 +30,7 @@ default_settings :: proc() -> Settings {
 		music_volume         = 80,
 		sfx_volume           = 85,
 		display_mode         = .Windowed,
-		window_scale         = 1,
+		window_scale         = 2,
 		reduced_flashes      = false,
 		screen_shake         = 50,
 		controller_rumble    = true,

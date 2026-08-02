@@ -209,15 +209,6 @@ draw_duration :: proc(x, y, size: i32, color: rl.Color, ticks: int) {
 	rl.DrawText(duration_text_cstring(buffer[:], ticks), x, y, size, color)
 }
 
-first_run_item_label :: proc(item: First_Run_Item) -> cstring {
-	switch item {
-	case .Tutorial: return "TUTORIAL (RECOMMENDED)"
-	case .Campaign: return "START CAMPAIGN"
-	case .Back:     return "BACK"
-	}
-	return ""
-}
-
 // format_cstring writes formatted text into a caller-owned buffer and
 // null-terminates it, letting callers measure or center text before drawing.
 format_cstring :: proc(buffer: []byte, format: string, args: ..any) -> cstring {
@@ -533,53 +524,6 @@ draw_bindings_menu :: proc(game: ^Game) {
 	}
 }
 
-// First-Run needs a wider narrow panel than Settings/Bindings/Pause: its
-// instructional line alone measures ~357px, wider than MENU_NARROW_PANEL_WIDTH.
-FIRST_RUN_PANEL_WIDTH :: 400
-FIRST_RUN_ROW_SPACING :: 38
-FIRST_RUN_ROW_HEIGHT  :: 24
-
-first_run_panel_geometry :: proc() -> (panel_x, panel_y, height, items_top, rules_offset: i32) {
-	items_top = MENU_PANEL_CONTENT_GAP + 22
-	last_row_offset := items_top + i32(len(First_Run_Item) - 1) * FIRST_RUN_ROW_SPACING
-	rules_offset = last_row_offset + FIRST_RUN_ROW_HEIGHT + 10
-	height = rules_offset + 14 + 16
-	panel_y = WINDOW_HEIGHT - height - MENU_PANEL_BOTTOM_MARGIN
-	panel_x = (WINDOW_WIDTH - FIRST_RUN_PANEL_WIDTH) / 2
-	return
-}
-
-// draw_first_run_menu shares the same narrow, bottom-anchored, no-footer-hint
-// treatment as Settings/Bindings/Pause, sized instead to fit its own wider
-// instructional line and larger item text.
-draw_first_run_menu :: proc(game: ^Game) {
-	_, panel_y, height, items_top, rules_offset := first_run_panel_geometry()
-	panel_x := draw_menu_panel("CHOOSE YOUR START", height, FIRST_RUN_PANEL_WIDTH, panel_y)
-
-	instruction: cstring = "LEARN MOVEMENT, BOMBS, PICKUPS AND SAFETY."
-	instruction_width := rl.MeasureText(instruction, 14)
-	rl.DrawText(instruction, panel_x + (FIRST_RUN_PANEL_WIDTH - instruction_width) / 2, panel_y + MENU_PANEL_CONTENT_GAP, 14, rl.WHITE)
-
-	prefix_x := panel_x + MENU_SIDE_INSET
-	label_x := panel_x + MENU_SIDE_INSET + 16
-	glow_x := panel_x + MENU_GLOW_INSET
-	glow_width := i32(FIRST_RUN_PANEL_WIDTH) - MENU_GLOW_INSET * 2
-	pulse := ui_pulse(game.ui_clock, 1.6)
-	for item_index in 0 ..< len(First_Run_Item) {
-		color := rl.LIGHTGRAY
-		prefix: cstring = "  "
-		y := panel_y + items_top + i32(item_index) * FIRST_RUN_ROW_SPACING
-		if game.menu.selected == item_index {
-			draw_selection_glow(glow_x, y - 3, glow_width, FIRST_RUN_ROW_HEIGHT, pulse)
-			color = rl.GOLD
-			prefix = "> "
-		}
-		rl.DrawText(prefix, prefix_x, y, 18, color)
-		rl.DrawText(first_run_item_label(First_Run_Item(item_index)), label_x, y, 18, color)
-	}
-	draw_ui_format(prefix_x, panel_y + rules_offset, 14, rl.GOLD, "RULES: %s", difficulty_label(game.settings.difficulty))
-}
-
 // draw_main_menu dispatches to the active menu page's own drawing procedure.
 draw_main_menu :: proc(game: ^Game) {
 	switch game.menu.page {
@@ -588,8 +532,6 @@ draw_main_menu :: proc(game: ^Game) {
 	case .How_To_Play:
 	case .Main:
 		draw_main_menu_page(game)
-	case .First_Run:
-		draw_first_run_menu(game)
 	}
 }
 
