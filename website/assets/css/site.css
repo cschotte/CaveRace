@@ -1366,6 +1366,144 @@ h3 {
   line-height: 1.5;
 }
 
+.error-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.error-main {
+  position: relative;
+  min-height: 42rem;
+  display: grid;
+  flex: 1;
+  align-items: center;
+  overflow: hidden;
+  padding: clamp(3.5rem, 8vw, 7rem) 0;
+  isolation: isolate;
+}
+
+.error-main::before {
+  position: absolute;
+  z-index: -3;
+  inset: 0;
+  content: "";
+  background:
+    linear-gradient(90deg, rgba(9, 9, 13, 0.99), rgba(9, 9, 13, 0.78) 54%, rgba(9, 9, 13, 0.9)),
+    url("../images/caverace-key-art-800.jpg") center / cover no-repeat;
+  opacity: 0.42;
+  mask-image: linear-gradient(to bottom, black 0%, black 84%, transparent 100%);
+}
+
+.error-glow {
+  position: absolute;
+  z-index: -2;
+  top: 15%;
+  right: 8%;
+  width: min(48vw, 38rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(255, 112, 24, 0.13);
+  filter: blur(80px);
+}
+
+.error-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(28rem, 1.15fr);
+  align-items: center;
+  gap: clamp(2.5rem, 7vw, 7rem);
+}
+
+.error-copy {
+  position: relative;
+  z-index: 2;
+}
+
+.error-copy h1 {
+  max-width: 9ch;
+  margin-bottom: 1.35rem;
+  font-size: clamp(3.2rem, 6vw, 6.2rem);
+}
+
+.error-description {
+  max-width: 37rem;
+  margin: 0;
+  color: #cfccc5;
+  font-size: clamp(1rem, 1.5vw, 1.14rem);
+}
+
+.error-art {
+  position: relative;
+  padding: clamp(2rem, 5vw, 4.5rem) 0 0 clamp(1rem, 4vw, 4rem);
+}
+
+.error-art figure {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  border: 0.5rem solid #050506;
+  border-radius: var(--radius);
+  background: #050506;
+  box-shadow: var(--shadow);
+  transform: rotate(1.2deg);
+}
+
+.error-art img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
+.error-art figcaption {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.42rem 0.62rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.4rem;
+  color: #efefed;
+  background: rgba(4, 4, 5, 0.86);
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.error-code {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.18em;
+  color: var(--gold);
+  font-family: "Arial Black", "Segoe UI Black", ui-sans-serif, sans-serif;
+  font-size: clamp(4.5rem, 9vw, 8rem);
+  letter-spacing: -0.08em;
+  line-height: 0.8;
+  text-shadow: 0 12px 35px rgba(0, 0, 0, 0.68), 0 0 2rem rgba(255, 124, 24, 0.22);
+}
+
+.error-code i {
+  width: 0.48em;
+  aspect-ratio: 1;
+  border: 0.08em solid #1b1005;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, #ffd786 0 8%, transparent 9%),
+    radial-gradient(circle, #222 0 55%, #050506 56% 100%);
+  box-shadow: 0 0 0 0.04em var(--orange), 0 0 0.35em rgba(255, 101, 24, 0.38);
+}
+
+.error-footer {
+  position: relative;
+  z-index: 2;
+}
+
 @media (max-width: 1040px) {
   .hero-grid {
     grid-template-columns: 1fr;
@@ -1404,6 +1542,19 @@ h3 {
 
   .store-grid {
     max-width: 30rem;
+  }
+
+  .error-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .error-copy {
+    max-width: 45rem;
+  }
+
+  .error-art {
+    width: min(46rem, 100%);
+    margin-inline: auto;
   }
 }
 
@@ -1553,6 +1704,19 @@ h3 {
   .footer-grid {
     display: grid;
   }
+
+  .error-main {
+    min-height: 0;
+    padding-top: 3.5rem;
+  }
+
+  .error-art {
+    padding: 2.8rem 0 0 0.8rem;
+  }
+
+  .error-art figure {
+    transform: none;
+  }
 }
 
 @media (max-width: 460px) {
@@ -1604,6 +1768,25 @@ h3 {
 
   .buy-panel {
     padding: 1.6rem 1rem;
+  }
+
+  .error-page .header-cta {
+    font-size: 0.7rem;
+  }
+
+  .error-copy h1 {
+    font-size: clamp(3rem, 15vw, 4.2rem);
+  }
+
+  .error-code {
+    font-size: 4.4rem;
+  }
+
+  .error-art figcaption {
+    right: 0.5rem;
+    bottom: 0.5rem;
+    max-width: calc(100% - 1rem);
+    font-size: 0.55rem;
   }
 }
 
