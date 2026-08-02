@@ -10,7 +10,7 @@ bombs, and defeat alien invaders.
 | ![Forest level](images/demo1.png) | ![Winter level](images/demo2.png) | ![Lava level](images/demo3.png) |
 
 Screenshots, background information, and game downloads are available on the
-[CaveRace] website.
+official [CaveRace] website.
 
 ## Story of CaveRace
 
@@ -39,7 +39,8 @@ now available for Windows and macOS. Its goal is to bring
 the game back to modern systems while preserving the original levels,
 artwork, sounds, and feel.
 
-[Download CaveRace](https://caverace.com/) for Windows or macOS.
+[Download CaveRace from the official website](https://caverace.com/) for
+Windows or macOS.
 
 | Story | Main menu | Controls |
 | --- | --- | --- |

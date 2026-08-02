@@ -3,7 +3,8 @@
 An original, cohesive General MIDI score for CaveRace, designed around a Roland
 SC-55-style 1990s DOS/Amiga sound.
 
-Game downloads are available at [caverace.com](https://caverace.com/).
+Game downloads are available from the
+[official CaveRace website](https://caverace.com/).
 
 ## Included
 

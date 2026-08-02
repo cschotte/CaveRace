@@ -44,8 +44,8 @@ A keyboard is sufficient. A mouse or compatible game controller is optional.
 
 ## Installation
 
-Download CaveRace for Windows or macOS from
-[caverace.com](https://caverace.com/).
+Download CaveRace for Windows or macOS from the
+[official CaveRace website](https://caverace.com/).
 
 - On macOS, place `CaveRace.app` in Applications and launch it normally.
 - On Windows, keep `CaveRace.exe`, `media/`, and `levels/` together in the same
@@ -199,7 +199,7 @@ cave.
 
 The privacy policy used for Store distribution is available at
 [navatron.com/privacy](https://navatron.com/privacy/). For game information and
-support, visit [caverace.com](https://caverace.com/).
+support, visit the [official CaveRace website](https://caverace.com/).
 
 For startup or packaging problems, run the direct-distribution executable with
 `-log` and include the final diagnostic lines with the report.

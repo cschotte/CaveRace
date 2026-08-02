@@ -7,9 +7,9 @@ gameplay.
 
 ## Running the game
 
-Download the historical Windows edition from
-[caverace.com](https://caverace.com/). Extract the entire archive and run
-`CaveRace.exe` on a compatible 32-bit Windows system.
+Download the historical Windows edition from the
+[official CaveRace website](https://caverace.com/). Extract the entire archive
+and run `CaveRace.exe` on a compatible 32-bit Windows system.
 Keep the `Levels` and `Media` directories beside the executable; the game loads
 those files through relative paths.
 
@@ -57,4 +57,4 @@ Copyright © 2002–2026 NavaTron B.V. The source code is licensed under the
 [Apache License 2.0](../LICENSE).
 
 More history is available in the [repository README](../README.md) and on the
-[CaveRace website](https://caverace.com/).
+[official CaveRace website](https://caverace.com/).

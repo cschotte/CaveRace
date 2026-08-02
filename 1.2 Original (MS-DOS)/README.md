@@ -14,8 +14,8 @@ enemies in the mines of Eldora.
 The easiest way to run this historical version is with DOSBox or a comparable
 MS-DOS environment:
 
-1. Download the historical MS-DOS edition from
-   [caverace.com](https://caverace.com/) and extract it.
+1. Download the historical MS-DOS edition from the
+   [official CaveRace website](https://caverace.com/) and extract it.
 2. Mount the extracted directory in DOSBox.
 3. Run `CAVERACE.EXE`.
 
@@ -64,4 +64,4 @@ Copyright © 1997–2026 NavaTron B.V. The source code is licensed under the
 [Apache License 2.0](../LICENSE).
 
 More history is available in the [repository README](../README.md) and on the
-[CaveRace website](https://caverace.com/).
+[official CaveRace website](https://caverace.com/).

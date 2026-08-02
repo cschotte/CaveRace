@@ -5,7 +5,8 @@ Windows Store app and uses SharpDX with Direct3D 11, Direct2D, and XAudio2.
 This edition contains 23 playable Forest, Desert, Winter, and Lava levels,
 plus intro and ending level data.
 
-Game downloads are available at [caverace.com](https://caverace.com/).
+Game downloads are available from the
+[official CaveRace website](https://caverace.com/).
 
 ## Historical toolchain
 
@@ -58,4 +59,4 @@ Copyright © 2012–2026 NavaTron B.V. The source code is licensed under the
 [Apache License 2.0](../LICENSE).
 
 More history is available in the [repository README](../README.md) and on the
-[CaveRace website](https://caverace.com/).
+[official CaveRace website](https://caverace.com/).
